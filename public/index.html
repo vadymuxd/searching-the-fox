@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👁️‍🗨️ True List - Demo </title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>👁️‍🗨️ True List - Demo</h1>
+            <p>Find the latest job postings from LinkedIn</p>
+        </header>
+
+        <main>
+            <div class="search-form-container">
+                <form id="jobSearchForm" class="search-form">
+                    <div class="form-group">
+                        <label for="jobTitle">Job Title</label>
+                        <input 
+                            type="text" 
+                            id="jobTitle" 
+                            name="jobTitle" 
+                            placeholder="e.g., Software Engineer, Marketing Manager"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="location">Location</label>
+                        <input 
+                            type="text" 
+                            id="location" 
+                            name="location" 
+                            placeholder="e.g., New York, San Francisco, Remote"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="jobCount">Number of Jobs</label>
+                        <input 
+                            type="number" 
+                            id="jobCount" 
+                            name="jobCount" 
+                            placeholder="100"
+                            min="10"
+                            max="500"
+                            value="100"
+                        >
+                    </div>
+
+                    <button type="submit" class="search-btn">
+                        <span class="btn-text">Search Jobs</span>
+                        <span class="spinner" style="display: none;"></span>
+                    </button>
+                </form>
+
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+            </div>
+
+            <div class="info-section">
+                <h3>How it works</h3>
+                <ul>
+                    <li>Enter a job title and location</li>
+                    <li>Our scraper will fetch the latest LinkedIn job postings</li>
+                    <li>View results in a clean, organized table</li>
+                </ul>
+            </div>
+        </main>
+
+        <footer>
+            <p>Built with ❤️ for job seekers</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html> 

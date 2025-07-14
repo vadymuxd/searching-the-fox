@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Job Scraper - Results</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>LinkedIn Job Scraper</h1>
+            <div class="header-actions">
+                <button id="refreshBtn" class="back-btn">↻ Refresh Results</button>
+            </div>
+        </header>
+
+        <main>
+            <div id="searchInfo" class="search-info" onclick="window.location.href='/'">
+                <h2>Job Search Results</h2>
+                <p id="searchCriteria"></p>
+            </div>
+            
+            <div id="resultCountContainer" class="result-count-container">
+                <p id="resultCount"></p>
+            </div>
+
+            <div id="loadingMessage" class="loading-message">
+                <div class="spinner-large"></div>
+                <p>Scraping LinkedIn for the latest job postings...</p>
+                <p><small>This may take a few seconds</small></p>
+            </div>
+
+            <div id="errorContainer" class="error-container" style="display: none;">
+                <div class="error-message">
+                    <h3>Error</h3>
+                    <p id="errorText"></p>
+                    <a href="/" class="retry-btn">Try Again</a>
+                </div>
+            </div>
+
+            <div id="resultsContainer" class="results-container" style="display: none;">
+                <div class="table-container">
+                    <table id="jobsTable" class="jobs-table">
+                        <thead>
+                            <tr>
+                                <th>Date Posted</th>
+                                <th>Title</th>
+                                <th>Location</th>
+                                <th>Company</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="jobsTableBody">
+                            <!-- Job data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="noResults" class="no-results" style="display: none;">
+                    <h3>No jobs found</h3>
+                    <p>We couldn't find any job postings matching your criteria.</p>
+                    <p>Try adjusting your search terms or location.</p>
+                    <a href="/" class="retry-btn">Try Different Search</a>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Built with ❤️ for job seekers</p>
+        </footer>
+    </div>
+
+    <script src="results.js"></script>
+</body>
+</html> 
