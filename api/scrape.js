@@ -1,130 +1,161 @@
-export default async function handler(req, res) {
-    // Set CORS headers
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+module.exports = async function handler(req, res) {
+  // Add CORS headers for better compatibility
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
 
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
+  try {
+    // Use dynamic imports to avoid bundling issues
+    const axios = await import('axios');
+    const cheerio = await import('cheerio');
+    
+    const { jobTitle, location, count = 100 } = req.body;
+    if (!jobTitle || !location) {
+      res.status(400).json({ error: 'Job title and location are required' });
+      return;
     }
 
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
+    const allJobs = [];
+    const jobsPerPage = 25;
+    const pages = Math.ceil(count / jobsPerPage);
+
+    for (let page = 0; page < pages; page++) {
+      const start = page * jobsPerPage;
+      const url = `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=${encodeURIComponent(jobTitle)}&location=${encodeURIComponent(location)}&trk=public_jobs_jobs-search-bar_search-submit&start=${start}&count=${jobsPerPage}`;
+      
+      const response = await axios.default.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        },
+        timeout: 15000
+      });
+
+      const $ = cheerio.load(response.data);
+      
+      const possibleSelectors = [
+        'li[data-occludable-job-id]',
+        '.job-search-card',
+        '.base-card',
+        '.result-card',
+        'li.result-card',
+        'article',
+        '.jobs-search__results-list li',
+        '.job-card-container',
+        'li'
+      ];
+
+      let jobElements = null;
+      for (const selector of possibleSelectors) {
+        const elements = $(selector);
+        if (elements.length > 0) {
+          jobElements = elements;
+          break;
+        }
+      }
+
+      if (!jobElements || jobElements.length === 0) continue;
+
+      jobElements.each((index, element) => {
+        const $element = $(element);
+        
+        let title = $element.find('h3 a span[title]').attr('title') ||
+          $element.find('h3 a span').first().text().trim() ||
+          $element.find('.base-search-card__title').text().trim() ||
+          $element.find('h3').text().trim() ||
+          $element.find('a[data-tracking-control-name="public_jobs_jserp-result_search-card"]').text().trim() ||
+          $element.find('.job-title a').text().trim();
+
+        let company = $element.find('h4 a span[title]').attr('title') ||
+          $element.find('h4 a').text().trim() ||
+          $element.find('.base-search-card__subtitle').text().trim() ||
+          $element.find('.subline-level-1').text().trim() ||
+          $element.find('h4').text().trim();
+
+        let logo = $element.find('img[alt*="logo"], img[alt*="Logo"], img[alt*="company"], img[alt*="Company"]').attr('src') ||
+          $element.find('.artdeco-entity-image').attr('src') ||
+          $element.find('img[data-delayed-url]').attr('data-delayed-url') ||
+          $element.find('img').first().attr('src') ||
+          null;
+
+        if (logo && !logo.startsWith('http')) {
+          logo = `https://www.linkedin.com${logo}`;
+        }
+
+        let jobLocation = $element.find('.job-search-card__location').text().trim() ||
+          $element.find('.subline-level-2').text().trim() ||
+          $element.find('[data-test="job-location"]').text().trim() ||
+          '';
+
+        let link = $element.find('h3 a').attr('href') ||
+          $element.find('.base-card__full-link').attr('href') ||
+          $element.find('a[data-tracking-control-name="public_jobs_jserp-result_search-card"]').attr('href') ||
+          $element.find('a').first().attr('href');
+
+        let datePosted = $element.find('time').attr('datetime') ||
+          $element.find('time').text().trim() ||
+          $element.find('.job-search-card__listdate').text().trim() ||
+          $element.find('[data-test="job-posted-date"]').text().trim() ||
+          'Date not available';
+
+        // Clean up the strings
+        title = title ? title.replace(/\s+/g, ' ').trim() : '';
+        company = company ? company.replace(/\s+/g, ' ').trim() : '';
+        jobLocation = jobLocation ? jobLocation.replace(/\s+/g, ' ').trim() : '';
+
+        if (title && title.length > 0) {
+          allJobs.push({
+            title,
+            company: company || 'Company not specified',
+            location: jobLocation || 'Location not specified',
+            datePosted: datePosted || 'Date not available',
+            link: link ? (link.startsWith('http') ? link : `https://www.linkedin.com${link}`) : null,
+            logo: logo
+          });
+        }
+      });
+
+      // Add delay between requests to avoid rate limiting
+      if (page < pages - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
 
-    try {
-        // Dynamic imports for serverless environment
-        const axios = (await import('axios')).default;
-        const cheerio = (await import('cheerio')).default;
+    res.status(200).json({
+      success: true,
+      data: allJobs,
+      count: allJobs.length,
+      searchCriteria: {
+        jobTitle,
+        location
+      }
+    });
 
-        const { jobTitle, location, count = 100 } = req.body;
-
-        if (!jobTitle || !location) {
-            return res.status(400).json({ error: 'Job title and location are required' });
-        }
-
-        // Construct LinkedIn search URL with date filter for last 30 days
-        const searchUrl = `https://www.linkedin.com/jobs/search?keywords=${encodeURIComponent(jobTitle)}&location=${encodeURIComponent(location)}&f_TPR=r2592000&start=0`;
-
-        const response = await axios.get(searchUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            },
-            timeout: 10000
-        });
-
-        const $ = cheerio.load(response.data);
-        const jobs = [];
-
-        // Extract job listings
-        $('.result-card').each((index, element) => {
-            const $element = $(element);
-            
-            const title = $element.find('.result-card__title').text().trim();
-            const company = $element.find('.result-card__subtitle').text().trim();
-            const location = $element.find('.job-result-card__location').text().trim();
-            const link = $element.find('.result-card__full-card-link').attr('href');
-            const datePosted = $element.find('.job-result-card__listdate').text().trim();
-            const logo = $element.find('.artdeco-entity-image').attr('src');
-
-            if (title && company) {
-                jobs.push({
-                    title,
-                    company,
-                    location,
-                    link,
-                    datePosted: datePosted || new Date().toISOString().split('T')[0],
-                    logo
-                });
-            }
-        });
-
-        // Alternative selector for job listings
-        if (jobs.length === 0) {
-            $('.job-search-card').each((index, element) => {
-                const $element = $(element);
-                
-                const title = $element.find('.base-search-card__title').text().trim();
-                const company = $element.find('.base-search-card__subtitle').text().trim();
-                const location = $element.find('.job-search-card__location').text().trim();
-                const link = $element.find('.base-card__full-link').attr('href');
-                const datePosted = $element.find('.job-search-card__listdate').text().trim();
-                const logo = $element.find('.search-entity-media img').attr('src');
-
-                if (title && company) {
-                    jobs.push({
-                        title,
-                        company,
-                        location,
-                        link,
-                        datePosted: datePosted || new Date().toISOString().split('T')[0],
-                        logo
-                    });
-                }
-            });
-        }
-
-        // If still no jobs found, try another selector
-        if (jobs.length === 0) {
-            $('[data-entity-urn*="job"]').each((index, element) => {
-                const $element = $(element);
-                
-                const title = $element.find('h3, .job-title, [data-test="job-title"]').first().text().trim();
-                const company = $element.find('.company-name, [data-test="company-name"], .job-search-card__subtitle-link').first().text().trim();
-                const location = $element.find('.job-location, [data-test="job-location"]').first().text().trim();
-                const link = $element.find('a').first().attr('href');
-                const datePosted = $element.find('.job-posted-date, [data-test="job-posted-date"]').first().text().trim();
-                const logo = $element.find('img').first().attr('src');
-
-                if (title && company) {
-                    jobs.push({
-                        title,
-                        company,
-                        location,
-                        link: link ? (link.startsWith('http') ? link : `https://www.linkedin.com${link}`) : null,
-                        datePosted: datePosted || new Date().toISOString().split('T')[0],
-                        logo
-                    });
-                }
-            });
-        }
-
-        // Limit results
-        const limitedJobs = jobs.slice(0, parseInt(count));
-
-        return res.status(200).json({
-            success: true,
-            data: limitedJobs,
-            total: limitedJobs.length
-        });
-
-    } catch (error) {
-        console.error('Scraping error:', error);
-        return res.status(500).json({ 
-            error: 'Failed to scrape job listings',
-            details: error.message 
-        });
-    }
-}
+  } catch (error) {
+    console.error('Scrape API error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error message:', error.message);
+    
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
