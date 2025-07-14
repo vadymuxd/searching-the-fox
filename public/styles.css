@@ -414,9 +414,27 @@ main {
 }
 
 .unhide-btn {
-    background: #e8f5e8 !important;
-    color: #2d5a2d !important;
-    border-color: #c3e6c3 !important;
+    /* Make unhide button look exactly like hide button */
+    background: #f1f1ef;
+    color: #787774;
+    border: 1px solid #e9e8e6;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    box-sizing: border-box;
+    line-height: 1.2;
+    height: 28px;
+    min-width: 50px;
+    text-align: center;
+}
+
+.unhide-btn:hover {
+    background: #e9e8e6;
+    color: #37352f;
 }
 
 .jobs-table tr.shown-hidden-row {
@@ -555,4 +573,4 @@ footer {
     .error-container {
         padding: 24px;
     }
-} 
+}

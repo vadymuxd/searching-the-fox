@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const jobTitle = document.getElementById('jobTitle').value.trim();
         const location = document.getElementById('location').value.trim();
-        const jobCount = parseInt(document.getElementById('jobCount').value) || 100;
+        const jobCount = 100; // Removed jobCount field, so use default value
         
         if (!jobTitle || !location) {
             showError('Please fill in both job title and location');
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Save search criteria
         localStorage.setItem('lastJobTitle', jobTitle);
         localStorage.setItem('lastLocation', location);
-        localStorage.setItem('searchCriteria', JSON.stringify({ jobTitle, location, jobCount }));
+        localStorage.setItem('searchCriteria', JSON.stringify({ jobTitle, location }));
         
         // Show loading state
         setLoadingState(true);
@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
             localStorage.setItem('jobResults', JSON.stringify(data));
             
             // Redirect to results page
-            window.location.href = '/results';
+            window.location.href = '/results.html';
             
         } catch (error) {
             console.error('Error:', error);
@@ -101,4 +101,4 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-}); 
+});
