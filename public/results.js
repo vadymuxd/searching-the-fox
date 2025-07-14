@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const criteria = JSON.parse(savedCriteria);
-    searchCriteria.textContent = `Searching for "${criteria.jobTitle}" in "${criteria.location}" for last "${criteria.datePosted}"`;
+    searchCriteria.textContent = `Searching for "${criteria.jobTitle}" in "${criteria.location}"`;
 
     // Add refresh button functionality
     const refreshBtn = document.getElementById('refreshBtn');
@@ -47,6 +47,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Clear hidden jobs for fresh start
         localStorage.removeItem('hiddenJobs');
+        
+        // Clear seen jobs for fresh start
+        localStorage.removeItem('seenJobs');
         
         // Perform new search
         await performSearch(criteria);
@@ -105,6 +108,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Apply hidden state from localStorage
         applyHiddenState();
+        
+        // Apply seen state from localStorage
+        applySeenState();
 
         // Update result count
         updateResultCount();
@@ -117,8 +123,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialize table sorting after table is created
         addTableSorting();
         
-        // Sort by date by default (column 0)
-        sortTable(0);
+        // Sort by date by default (column 1, since Seen is now column 0)
+        sortTable(1);
         
         // Add event delegation for hide buttons
         addHideButtonListeners();
@@ -128,16 +134,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const row = document.createElement('tr');
         row.dataset.jobId = job.link ? job.link.split('/').pop().split('?')[0] : `job-${index}`;
         
-        // Format date in user-friendly format
+        // Format date in user-friendly format without dummy time
         let formattedDate = 'Date not available';
         if (job.datePosted && job.datePosted !== 'Date not available') {
             try {
                 const date = new Date(job.datePosted);
                 if (!isNaN(date.getTime())) {
-                    const day = date.getDate().toString().padStart(2, '0');
-                    const month = date.toLocaleDateString('en-US', { month: 'long' });
-                    const year = date.getFullYear();
-                    formattedDate = `${day} ${month} ${year}`;
+                    // Format as "14 July" (no dummy time since scraping data doesn't include time)
+                    const dateOptions = { 
+                        day: 'numeric', 
+                        month: 'long' 
+                    };
+                    
+                    formattedDate = date.toLocaleDateString('en-US', dateOptions);
                 } else {
                     formattedDate = job.datePosted;
                 }
@@ -147,16 +156,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         row.innerHTML = `
-            <td>${formattedDate}</td>
             <td>
-                <div class="job-title">${escapeHtml(job.title || 'No title')}</div>
+                <div class="seen-checkbox-container">
+                    <button class="seen-btn" data-job-id="${row.dataset.jobId}" title="Mark as seen">
+                        <span class="material-icons">check_box_outline_blank</span>
+                    </button>
+                </div>
             </td>
-            <td>${escapeHtml(job.location || 'Location not specified')}</td>
+            <td>${formattedDate}</td>
             <td>
                 <div class="company-info">
                     ${job.logo ? `<img src="${escapeHtml(job.logo)}" alt="${escapeHtml(job.company)}" class="company-logo" onerror="this.style.display='none'">` : ''}
                     <span class="company-name">${escapeHtml(job.company || 'Company not specified')}</span>
                 </div>
+            </td>
+            <td>
+                <div class="job-title">${escapeHtml(job.title || 'No title')}</div>
             </td>
             <td>
                 <div class="action-buttons">
@@ -195,7 +210,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return div.innerHTML;
     }
 
-    // Add event delegation for hide/unhide buttons
+    // Add event delegation for hide/unhide buttons and seen buttons
     function addHideButtonListeners() {
         document.getElementById('jobsTableBody').addEventListener('click', function(e) {
             if (e.target.classList.contains('hide-btn')) {
@@ -205,6 +220,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     hideJobRow(jobId);
                 }
+            } else if (e.target.classList.contains('seen-btn') || e.target.closest('.seen-btn')) {
+                const button = e.target.classList.contains('seen-btn') ? e.target : e.target.closest('.seen-btn');
+                const jobId = button.dataset.jobId;
+                toggleSeenJob(jobId);
             }
         });
     }
@@ -254,6 +273,58 @@ document.addEventListener('DOMContentLoaded', function() {
             if (row) {
                 row.style.display = 'none';
                 row.classList.add('hidden-row');
+            }
+        });
+    }
+
+    // Seen functionality
+    function toggleSeenJob(jobId) {
+        const row = document.querySelector(`tr[data-job-id="${jobId}"]`);
+        const seenBtn = row.querySelector('.seen-btn');
+        const iconSpan = seenBtn.querySelector('.material-icons');
+        
+        if (row.classList.contains('job-row-seen')) {
+            // Mark as unseen
+            row.classList.remove('job-row-seen');
+            seenBtn.classList.remove('seen');
+            seenBtn.title = 'Mark as seen';
+            iconSpan.textContent = 'check_box_outline_blank';
+            
+            // Remove from localStorage
+            const seenJobs = JSON.parse(localStorage.getItem('seenJobs') || '[]');
+            const updatedSeenJobs = seenJobs.filter(id => id !== jobId);
+            localStorage.setItem('seenJobs', JSON.stringify(updatedSeenJobs));
+        } else {
+            // Mark as seen
+            row.classList.add('job-row-seen');
+            seenBtn.classList.add('seen');
+            seenBtn.title = 'Mark as unseen';
+            iconSpan.textContent = 'check_box';
+            
+            // Save to localStorage
+            const seenJobs = JSON.parse(localStorage.getItem('seenJobs') || '[]');
+            if (!seenJobs.includes(jobId)) {
+                seenJobs.push(jobId);
+                localStorage.setItem('seenJobs', JSON.stringify(seenJobs));
+            }
+        }
+    }
+
+    function applySeenState() {
+        const seenJobs = JSON.parse(localStorage.getItem('seenJobs') || '[]');
+        seenJobs.forEach(jobId => {
+            const row = document.querySelector(`tr[data-job-id="${jobId}"]`);
+            if (row) {
+                row.classList.add('job-row-seen');
+                const seenBtn = row.querySelector('.seen-btn');
+                if (seenBtn) {
+                    seenBtn.classList.add('seen');
+                    seenBtn.title = 'Mark as unseen';
+                    const iconSpan = seenBtn.querySelector('.material-icons');
+                    if (iconSpan) {
+                        iconSpan.textContent = 'check_box';
+                    }
+                }
             }
         });
     }
@@ -324,7 +395,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function addTableSorting() {
         const headers = document.querySelectorAll('.jobs-table th');
         headers.forEach((header, index) => {
-            if (index < 5) { // Make all columns except Actions sortable
+            // Skip first column (Seen) and last column (Actions) - make columns 1, 2, 3 sortable (Date, Title, Company)
+            if (index > 0 && index < 4) {
                 header.style.cursor = 'pointer';
                 header.title = 'Click to sort';
                 header.classList.add('sortable');
@@ -350,8 +422,8 @@ document.addEventListener('DOMContentLoaded', function() {
         rows.sort((a, b) => {
             let aText, bText;
             
-            // Handle company column (index 3) - extract company name from the span
-            if (columnIndex === 3) {
+            // Handle company column (index 2) - extract company name from the span
+            if (columnIndex === 2) {
                 aText = a.cells[columnIndex].querySelector('.company-name')?.textContent.trim() || '';
                 bText = b.cells[columnIndex].querySelector('.company-name')?.textContent.trim() || '';
             } else {
@@ -359,16 +431,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 bText = b.cells[columnIndex].textContent.trim();
             }
             
-            // Handle date sorting for first column
-            if (columnIndex === 0) {
-                const aDate = new Date(aText);
-                const bDate = new Date(bText);
-                if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
-                    return newDirection === 'asc' ? aDate - bDate : bDate - aDate;
+            // Handle date sorting for second column (index 1)
+            if (columnIndex === 1) {
+                // Parse dates in "14 July" format
+                if (aText && bText) {
+                    const currentYear = new Date().getFullYear();
+                    const aDate = new Date(`${aText} ${currentYear}`);
+                    const bDate = new Date(`${bText} ${currentYear}`);
+                    
+                    if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
+                        return newDirection === 'asc' ? aDate - bDate : bDate - aDate;
+                    }
                 }
             }
-            
-
             
             // Default string sorting
             return newDirection === 'asc' ? 

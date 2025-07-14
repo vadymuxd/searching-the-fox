@@ -292,6 +292,13 @@ main {
     border-bottom: 1px solid #e9e8e6;
 }
 
+/* Make Actions column wider */
+.jobs-table th:last-child,
+.jobs-table td:last-child {
+    width: 180px;
+    min-width: 180px;
+}
+
 .jobs-table td {
     padding: 16px;
     border-bottom: 1px solid #f1f1ef;
@@ -356,8 +363,10 @@ main {
 
 .action-buttons {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
 }
 
 .hide-btn {
@@ -403,6 +412,20 @@ main {
     border-color: #d3d1cd;
 }
 
+/* Seen checkbox styling */
+.seen-checkbox-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.jobs-table th:first-child,
+.jobs-table td:first-child {
+    width: 60px;
+    min-width: 60px;
+    text-align: center;
+}
+
 /* Hidden row styles */
 .jobs-table tr.hidden-row {
     display: none;
@@ -414,27 +437,9 @@ main {
 }
 
 .unhide-btn {
-    /* Make unhide button look exactly like hide button */
-    background: #f1f1ef;
-    color: #787774;
-    border: 1px solid #e9e8e6;
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: inherit;
-    box-sizing: border-box;
-    line-height: 1.2;
-    height: 28px;
-    min-width: 50px;
-    text-align: center;
-}
-
-.unhide-btn:hover {
-    background: #e9e8e6;
-    color: #37352f;
+    background: #e8f5e8 !important;
+    color: #2d5a2d !important;
+    border-color: #c3e6c3 !important;
 }
 
 .jobs-table tr.shown-hidden-row {
@@ -527,12 +532,40 @@ main {
     background: #2f2e2a;
 }
 
-/* Footer */
-footer {
-    text-align: center;
-    margin-top: 60px;
-    color: #9b9a97;
-    font-size: 14px;
+/* Job seen styling */
+.job-row-seen {
+    background-color: #f7f6f3 !important;
+}
+
+.job-row-seen:hover {
+    background-color: #efede9 !important;
+}
+
+/* Eye icon styling */
+.seen-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #787774;
+    transition: all 0.2s;
+}
+
+.seen-btn:hover {
+    background-color: #efede9;
+    color: #787774;
+}
+
+.seen-btn.seen {
+    color: #787774;
+}
+
+.seen-btn .material-icons {
+    font-size: 18px;
 }
 
 /* Responsive design */
@@ -549,15 +582,6 @@ footer {
         padding: 24px;
     }
     
-    .jobs-table {
-        font-size: 14px;
-    }
-    
-    .jobs-table th,
-    .jobs-table td {
-        padding: 12px;
-    }
-    
     header {
         text-align: center;
         flex-direction: column;
@@ -572,5 +596,165 @@ footer {
     .loading-message,
     .error-container {
         padding: 24px;
+    }
+}
+
+/* Tablet and larger mobile devices */
+@media (min-width: 501px) and (max-width: 768px) {
+    .jobs-table {
+        font-size: 14px;
+    }
+    
+    .jobs-table th,
+    .jobs-table td {
+        padding: 12px;
+    }
+}
+
+/* Mobile responsive layout - single column format */
+@media (max-width: 500px) {
+    .table-container {
+        overflow-x: visible;
+    }
+    
+    .jobs-table {
+        display: block;
+        width: 100%;
+    }
+    
+    .jobs-table thead {
+        display: none; /* Hide table headers on mobile */
+    }
+    
+    .jobs-table tbody {
+        display: block;
+        width: 100%;
+    }
+    
+    .jobs-table tr {
+        display: block;
+        width: 100%;
+        margin-bottom: 16px;
+        border: 1px solid #e9e8e6;
+        border-radius: 8px;
+        background: #ffffff;
+        /* Remove shadow */
+    }
+    
+    .jobs-table tr:hover {
+        background: #ffffff;
+        /* Remove shadow on hover */
+    }
+    
+    .jobs-table td {
+        display: block;
+        width: 100%;
+        padding: 12px 16px;
+        border-bottom: none; /* Remove internal dividers */
+        border-right: none;
+        text-align: left;
+        position: relative;
+    }
+    
+    .jobs-table td:last-child {
+        border-bottom: none;
+    }
+    
+    /* Remove column labels on mobile */
+    .jobs-table td:nth-child(1)::before,
+    .jobs-table td:nth-child(2)::before,
+    .jobs-table td:nth-child(3)::before,
+    .jobs-table td:nth-child(4)::before,
+    .jobs-table td:nth-child(5)::before {
+        display: none;
+    }
+    
+    /* Style the seen checkbox for mobile */
+    .seen-checkbox-container {
+        display: inline-block;
+        margin-left: 0;
+    }
+    
+    .jobs-table td:nth-child(1) {
+        text-align: left;
+    }
+    
+    /* Job title styling for mobile - make it twice bigger */
+    .job-title {
+        font-size: 32px;
+        font-weight: 600;
+        line-height: 1.4;
+        margin-bottom: 0;
+    }
+    
+    /* Company info styling for mobile */
+    .company-info {
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .company-logo {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+    }
+    
+    /* Action buttons styling for mobile - full width with 50% each and 16px gap */
+    .action-buttons {
+        display: flex;
+        gap: 16px;
+        flex-wrap: nowrap;
+        width: 100%;
+    }
+    
+    .job-link,
+    .hide-btn {
+        flex: 1;
+        font-size: 16px;
+        padding: 16px 12px;
+        height: 56px; /* Make buttons twice bigger */
+        min-width: 0;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Seen job styling for mobile - remove shadow */
+    .job-row-seen {
+        background-color: #f7f6f3 !important;
+        border-color: #e9e8e6 !important;
+    }
+    
+    .job-row-seen:hover {
+        background-color: #efede9 !important;
+        /* Remove shadow on hover */
+    }
+    
+    /* Hidden rows styling for mobile */
+    .jobs-table tr.hidden-row {
+        display: none;
+    }
+    
+    .jobs-table tr.shown-hidden-row {
+        background: #fafafa;
+        border-color: #e9e8e6;
+        opacity: 0.9;
+    }
+    
+    /* Override column width restrictions for mobile */
+    .jobs-table th:first-child,
+    .jobs-table td:first-child,
+    .jobs-table th:last-child,
+    .jobs-table td:last-child {
+        width: 100%;
+        min-width: 100%;
+    }
+    
+    /* Remove container border on mobile */
+    .results-container {
+        border: none;
+        background: transparent;
+        border-radius: 0;
     }
 }
