@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Save search criteria
         localStorage.setItem('lastJobTitle', jobTitle);
         localStorage.setItem('lastLocation', location);
-        localStorage.setItem('searchCriteria', JSON.stringify({ jobTitle, location }));
+        localStorage.setItem('searchCriteria', JSON.stringify({ jobTitle, location, datePosted: 'last 30 days' }));
         
         // Show loading state
         setLoadingState(true);

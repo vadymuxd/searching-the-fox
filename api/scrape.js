@@ -31,7 +31,7 @@ module.exports = async function handler(req, res) {
 
     for (let page = 0; page < pages; page++) {
       const start = page * jobsPerPage;
-      const url = `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=${encodeURIComponent(jobTitle)}&location=${encodeURIComponent(location)}&trk=public_jobs_jobs-search-bar_search-submit&start=${start}&count=${jobsPerPage}`;
+      const url = `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=${encodeURIComponent(jobTitle)}&location=${encodeURIComponent(location)}&f_TPR=r2592000&sortBy=R&trk=public_jobs_jobs-search-bar_search-submit&start=${start}&count=${jobsPerPage}`;
       
       const response = await axios.default.get(url, {
         headers: {

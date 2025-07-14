@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const criteria = JSON.parse(savedCriteria);
-    searchCriteria.textContent = `Searching for "${criteria.jobTitle}" in "${criteria.location}"`;
+    searchCriteria.textContent = `Searching for "${criteria.jobTitle}" in "${criteria.location}" for last "${criteria.datePosted}"`;
 
     // Add refresh button functionality
     const refreshBtn = document.getElementById('refreshBtn');
@@ -387,4 +387,4 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-}); 
+});
