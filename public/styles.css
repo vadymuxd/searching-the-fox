@@ -11,6 +11,7 @@ body {
     color: #37352f;
     background: #ffffff;
     min-height: 100vh;
+    font-size: 14px;
 }
 
 .container {
@@ -40,10 +41,17 @@ header h1 {
     letter-spacing: -0.02em;
 }
 
-header p {
-    color: #787774;
-    font-size: 1.1rem;
-    font-weight: 400;
+header p,
+.main-tagline,
+.small-tagline,
+.form-group label,
+.form-group input,
+.search-btn,
+.info-section,
+.info-section h3,
+.info-section li,
+.result-count-container p {
+    font-size: 14px !important;
 }
 
 .header-actions {
@@ -83,11 +91,14 @@ main {
     padding: 40px;
     border-radius: 8px;
     border: 1px solid #e9e8e6;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
 }
 
 .search-form {
-    max-width: 500px;
-    margin: 0 auto;
+    width: 100%;
 }
 
 .form-group {
@@ -757,4 +768,34 @@ main {
         background: transparent;
         border-radius: 0;
     }
+}
+
+/* === Redesign for homepage === */
+.main-logo {
+    display: block;
+    margin: 0 auto 8px auto;
+    max-width: 220px;
+    height: auto;
+}
+
+.main-tagline {
+    text-align: center;
+    color: #37352f;
+    font-weight: 400;
+    margin-bottom: 0;
+}
+
+.small-tagline {
+    font-size: 1.1rem;
+    color: #787774;
+    display: block;
+    text-align: center;
+    font-weight: 400;
+}
+
+.logo-tagline-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
 }
