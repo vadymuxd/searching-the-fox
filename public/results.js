@@ -21,6 +21,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add refresh button functionality
     const refreshBtn = document.getElementById('refreshBtn');
     refreshBtn.addEventListener('click', () => {
+        // Save current sort state
+        const table = document.getElementById('jobsTable');
+        const sortColumn = table ? table.dataset.sortColumn : null;
+        const sortDirection = table ? table.dataset.sortDirection : null;
+        if (sortColumn !== undefined && sortDirection !== undefined) {
+            localStorage.setItem('jobSortColumn', sortColumn);
+            localStorage.setItem('jobSortDirection', sortDirection);
+        }
         refreshResults(criteria);
     });
 
@@ -123,8 +131,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialize table sorting after table is created
         addTableSorting();
         
-        // Sort by date by default (column 1, since Seen is now column 0)
-        sortTable(1);
+        // Restore previous sort state if available
+        const savedSortColumn = localStorage.getItem('jobSortColumn');
+        const savedSortDirection = localStorage.getItem('jobSortDirection');
+        if (savedSortColumn !== null && savedSortDirection !== null) {
+            sortTable(parseInt(savedSortColumn), savedSortDirection, true);
+        } else {
+            // Sort by date by default (column 1, since Seen is now column 0)
+            sortTable(1);
+        }
         
         // Add event delegation for hide buttons
         addHideButtonListeners();
@@ -395,12 +410,18 @@ document.addEventListener('DOMContentLoaded', function() {
     function addTableSorting() {
         const headers = document.querySelectorAll('.jobs-table th');
         headers.forEach((header, index) => {
+            // Remove previous click listeners by cloning
+            const newHeader = header.cloneNode(true);
+            header.parentNode.replaceChild(newHeader, header);
+        });
+        // Re-select headers after cloning
+        const freshHeaders = document.querySelectorAll('.jobs-table th');
+        freshHeaders.forEach((header, index) => {
             // Skip first column (Seen) and last column (Actions) - make columns 1, 2, 3 sortable (Date, Title, Company)
             if (index > 0 && index < 4) {
                 header.style.cursor = 'pointer';
                 header.title = 'Click to sort';
                 header.classList.add('sortable');
-                
                 header.addEventListener('click', () => {
                     sortTable(index);
                 });
@@ -408,21 +429,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function sortTable(columnIndex) {
+    function sortTable(columnIndex, directionOverride, isRestore) {
         const table = document.getElementById('jobsTable');
         const tbody = table.querySelector('tbody');
         const rows = Array.from(tbody.querySelectorAll('tr'));
         const headers = document.querySelectorAll('.jobs-table th');
         
-        // Toggle sort direction
-        const currentDirection = table.dataset.sortDirection || 'asc';
-        const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+        let newDirection;
+        if (directionOverride) {
+            newDirection = directionOverride;
+        } else {
+            const currentDirection = table.dataset.sortDirection || 'asc';
+            newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+        }
         table.dataset.sortDirection = newDirection;
+        table.dataset.sortColumn = columnIndex;
         
         rows.sort((a, b) => {
             let aText, bText;
-            
-            // Handle company column (index 2) - extract company name from the span
             if (columnIndex === 2) {
                 aText = a.cells[columnIndex].querySelector('.company-name')?.textContent.trim() || '';
                 bText = b.cells[columnIndex].querySelector('.company-name')?.textContent.trim() || '';
@@ -430,36 +454,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 aText = a.cells[columnIndex].textContent.trim();
                 bText = b.cells[columnIndex].textContent.trim();
             }
-            
-            // Handle date sorting for second column (index 1)
             if (columnIndex === 1) {
-                // Parse dates in "14 July" format
-                if (aText && bText) {
-                    const currentYear = new Date().getFullYear();
-                    const aDate = new Date(`${aText} ${currentYear}`);
-                    const bDate = new Date(`${bText} ${currentYear}`);
-                    
-                    if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
-                        return newDirection === 'asc' ? aDate - bDate : bDate - aDate;
-                    }
+                const currentYear = new Date().getFullYear();
+                const aDate = new Date(`${aText} ${currentYear}`);
+                const bDate = new Date(`${bText} ${currentYear}`);
+                if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
+                    return newDirection === 'asc' ? aDate - bDate : bDate - aDate;
                 }
             }
-            
-            // Default string sorting
             return newDirection === 'asc' ? 
                 aText.localeCompare(bText) : 
                 bText.localeCompare(aText);
         });
-        
-        // Re-append sorted rows
         rows.forEach(row => tbody.appendChild(row));
-        
-        // Update header indicators
         headers.forEach((h, i) => {
             h.classList.remove('sort-asc', 'sort-desc');
             if (i === columnIndex) {
                 h.classList.add(`sort-${newDirection}`);
             }
         });
+        // If restoring, don't toggle direction on next click
+        if (isRestore) {
+            table.dataset.sortDirection = newDirection;
+        }
     }
 });

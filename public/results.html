@@ -3,23 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>👁️‍🗨️ True List Demo - Results</title>
+    <title>Just View - Results</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>👁️‍🗨️ True List Demo</h1>
-            <div class="header-actions">
-                <button id="refreshBtn" class="back-btn">↻ Refresh Results</button>
-            </div>
+            <img src="Just View - White.png" alt="TrueList Logo" class="main-logo" />
         </header>
 
         <main>
-            <div id="searchInfo" class="search-info" onclick="window.location.href='/'">
+            <div id="searchInfo" class="search-info job-search-static">
                 <h2>Job Search Results</h2>
                 <p id="searchCriteria"></p>
+                <div class="header-actions">
+                    <button id="refreshBtn" class="back-btn">↻ Refresh Results</button>
+                    <button id="editSearchBtn" class="back-btn" onclick="window.location.href='/'">
+                        <span class="material-icons" style="vertical-align: middle; font-size: 1em;">search</span> Edit Search
+                    </button>
+                </div>
             </div>
             
             <div id="resultCountContainer" class="result-count-container">
