@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load saved search criteria if available
     const savedJobTitle = localStorage.getItem('lastJobTitle');
     const savedLocation = localStorage.getItem('lastLocation');
+    const savedDateRange = localStorage.getItem('lastDateRange');
     
     if (savedJobTitle) {
         document.getElementById('jobTitle').value = savedJobTitle;
@@ -15,12 +16,19 @@ document.addEventListener('DOMContentLoaded', function() {
     if (savedLocation) {
         document.getElementById('location').value = savedLocation;
     }
+    if (savedDateRange) {
+        document.getElementById('dateRange').value = savedDateRange;
+    } else {
+        // Default to "Last 24 hours" (value="1")
+        document.getElementById('dateRange').value = '1';
+    }
 
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         
         const jobTitle = document.getElementById('jobTitle').value.trim();
         const location = document.getElementById('location').value.trim();
+        const dateRange = document.getElementById('dateRange').value;
         const jobCount = 100; // Removed jobCount field, so use default value
         
         if (!jobTitle || !location) {
@@ -31,7 +39,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Save search criteria
         localStorage.setItem('lastJobTitle', jobTitle);
         localStorage.setItem('lastLocation', location);
-        localStorage.setItem('searchCriteria', JSON.stringify({ jobTitle, location, datePosted: 'last 30 days' }));
+        localStorage.setItem('lastDateRange', dateRange);
+        localStorage.setItem('searchCriteria', JSON.stringify({ jobTitle, location, dateRange, jobCount }));
         
         // Show loading state
         setLoadingState(true);
@@ -43,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ jobTitle, location, count: jobCount })
+                body: JSON.stringify({ jobTitle, location, dateRange, count: jobCount })
             });
             
             const data = await response.json();

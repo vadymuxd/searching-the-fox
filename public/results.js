@@ -2,11 +2,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadingMessage = document.getElementById('loadingMessage');
     const errorContainer = document.getElementById('errorContainer');
     const resultsContainer = document.getElementById('resultsContainer');
-    const searchCriteria = document.getElementById('searchCriteria');
     const resultCount = document.getElementById('resultCount');
     const jobsTableBody = document.getElementById('jobsTableBody');
     const noResults = document.getElementById('noResults');
     const errorText = document.getElementById('errorText');
+
+    // Store the original API data for re-filtering
+    let originalApiData = null;
 
     // Check if we have search criteria
     const savedCriteria = localStorage.getItem('searchCriteria');
@@ -16,11 +18,88 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const criteria = JSON.parse(savedCriteria);
-    searchCriteria.textContent = `Searching for "${criteria.jobTitle}" in "${criteria.location}"`;
+    
+    // Populate the inline input fields
+    const jobTitleInput = document.getElementById('jobTitleInput');
+    const locationInput = document.getElementById('locationInput');
+    const dateRangeInput = document.getElementById('dateRangeInput');
+    jobTitleInput.value = criteria.jobTitle;
+    locationInput.value = criteria.location;
+    dateRangeInput.value = criteria.dateRange || '1'; // Default to "Last 24 hours"
+    
+    console.log('Initial criteria loaded:', criteria);
+    console.log('Date range input value set to:', dateRangeInput.value);
+    
+    // Add event listener to date range dropdown to log changes
+    dateRangeInput.addEventListener('change', () => {
+        console.log('Date range changed to:', dateRangeInput.value);
+        
+        // If we have original data, re-filter it instead of making a new API call
+        if (originalApiData) {
+            console.log('Re-filtering existing data...');
+            const newDateRange = parseInt(dateRangeInput.value, 10);
+            const filteredJobs = filterJobsByDateRange(originalApiData, newDateRange);
+            
+            console.log(`Re-filtered: ${filteredJobs.length} jobs for ${newDateRange} days`);
+            
+            // Update the criteria
+            criteria.dateRange = dateRangeInput.value;
+            
+            // Clear and repopulate table
+            jobsTableBody.innerHTML = '';
+            
+            if (filteredJobs.length === 0) {
+                showNoResults();
+                return;
+            }
+            
+            filteredJobs.forEach((job, index) => {
+                const row = createJobRow(job, index);
+                jobsTableBody.appendChild(row);
+            });
+            
+            // Apply states and update UI
+            applyHiddenState();
+            applySeenState();
+            updateResultCount();
+            addShowAllButton();
+            addTableSorting();
+            
+            // Restore sort if exists
+            if (savedSortColumn !== null && savedSortDirection !== null) {
+                const table = document.getElementById('jobsTable');
+                table.dataset.sortColumn = savedSortColumn;
+                table.dataset.sortDirection = savedSortDirection;
+                sortTable(parseInt(savedSortColumn), savedSortDirection, true);
+            }
+        }
+    });
 
     // Add refresh button functionality
     const refreshBtn = document.getElementById('refreshBtn');
     refreshBtn.addEventListener('click', () => {
+        console.log('Refresh button clicked');
+        
+        // Get current values from input fields
+        const updatedCriteria = {
+            jobTitle: jobTitleInput.value.trim(),
+            location: locationInput.value.trim(),
+            dateRange: dateRangeInput.value,
+            jobCount: criteria.jobCount || 100
+        };
+        
+        console.log('Updated criteria:', updatedCriteria);
+        console.log('Previous criteria:', criteria);
+        
+        // Validate input
+        if (!updatedCriteria.jobTitle || !updatedCriteria.location) {
+            alert('Please enter both job title and location.');
+            return;
+        }
+        
+        // Update localStorage with new criteria
+        localStorage.setItem('searchCriteria', JSON.stringify(updatedCriteria));
+        
         // Save current sort state
         const table = document.getElementById('jobsTable');
         const sortColumn = table ? table.dataset.sortColumn : null;
@@ -28,10 +107,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (sortColumn !== undefined && sortDirection !== undefined) {
             localStorage.setItem('jobSortColumn', sortColumn);
             localStorage.setItem('jobSortDirection', sortDirection);
-        }
-        refreshResults(criteria);
+        }        
+        refreshResults(updatedCriteria);
     });
 
+    // Restore sorting preference on page load
+    let savedSortColumn = localStorage.getItem('jobSortColumn');
+    let savedSortDirection = localStorage.getItem('jobSortDirection');
     // Check if we already have results (from a redirect)
     const savedResults = localStorage.getItem('jobResults');
     if (savedResults) {
@@ -45,6 +127,8 @@ document.addEventListener('DOMContentLoaded', function() {
     performSearch(criteria);
 
     async function refreshResults(criteria) {
+        console.log('refreshResults called with:', criteria);
+        
         // Show loading state
         showLoading();
         
@@ -68,20 +152,34 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function performSearch(criteria) {
+        console.log('performSearch called with criteria:', criteria);
+        
         try {
+            const requestBody = {
+                jobTitle: criteria.jobTitle,
+                location: criteria.location,
+                dateRange: criteria.dateRange || '1',
+                count: criteria.jobCount || 100
+            };
+            
+            console.log('Making API request with body:', requestBody);
+            
             const response = await fetch('/api/scrape', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    jobTitle: criteria.jobTitle,
-                    location: criteria.location,
-                    count: criteria.jobCount || 100
-                })
+                body: JSON.stringify(requestBody)
             });
 
             const data = await response.json();
+            
+            console.log('API response received:', {
+                success: data.success,
+                count: data.count,
+                debug: data.debug,
+                searchCriteria: data.searchCriteria
+            });
 
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to scrape jobs');
@@ -96,20 +194,42 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function displayResults(data) {
+        console.log('displayResults called with:', {
+            success: data.success,
+            count: data.count,
+            debug: data.debug,
+            sampleJobs: data.data ? data.data.slice(0, 3).map(job => ({ title: job.title, date: job.datePosted })) : []
+        });
+        
         hideLoading();
 
         if (!data.success || !data.data || data.data.length === 0) {
+            console.log('No results to display');
             showNoResults();
             return;
         }
 
-        const jobs = data.data;
+        // Store original data for re-filtering
+        originalApiData = data.data;
+
+        // Get the current date range from the criteria
+        const currentDateRange = parseInt(criteria.dateRange || '1', 10);
+        
+        // Filter jobs based on date range
+        const filteredJobs = filterJobsByDateRange(data.data, currentDateRange);
+        
+        console.log(`Original jobs: ${data.data.length}, Filtered jobs: ${filteredJobs.length} (${currentDateRange} days)`);
+
+        if (filteredJobs.length === 0) {
+            showNoResults();
+            return;
+        }
 
         // Clear existing table data
         jobsTableBody.innerHTML = '';
 
-        // Populate table with job data
-        jobs.forEach((job, index) => {
+        // Populate table with filtered job data
+        filteredJobs.forEach((job, index) => {
             const row = createJobRow(job, index);
             jobsTableBody.appendChild(row);
         });
@@ -131,10 +251,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialize table sorting after table is created
         addTableSorting();
         
-        // Restore previous sort state if available
-        const savedSortColumn = localStorage.getItem('jobSortColumn');
-        const savedSortDirection = localStorage.getItem('jobSortDirection');
+        // Always restore previous sort state if available, and set table's dataset to match
         if (savedSortColumn !== null && savedSortDirection !== null) {
+            const table = document.getElementById('jobsTable');
+            table.dataset.sortColumn = savedSortColumn;
+            table.dataset.sortDirection = savedSortDirection;
             sortTable(parseInt(savedSortColumn), savedSortDirection, true);
         } else {
             // Sort by date by default (column 1, since Seen is now column 0)
@@ -174,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <td>
                 <div class="seen-checkbox-container">
                     <button class="seen-btn" data-job-id="${row.dataset.jobId}" title="Mark as seen">
-                        <span class="material-icons">check_box_outline_blank</span>
+                        <span class="material-icons">star_border</span>
                     </button>
                 </div>
             </td>
@@ -223,6 +344,76 @@ document.addEventListener('DOMContentLoaded', function() {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // Frontend date filtering function
+    function filterJobsByDateRange(jobs, dateRangeDays) {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - dateRangeDays);
+        
+        return jobs.filter(job => {
+            if (!job.datePosted || job.datePosted === 'Date not available') return false;
+            
+            try {
+                const lowerDateString = job.datePosted.toLowerCase().trim();
+                
+                // Handle "X hours ago", "X minutes ago", etc. - within 24 hours
+                const hourMatch = lowerDateString.match(/(\d+)\s+hours?\s+ago/i);
+                if (hourMatch) {
+                    const hoursAgo = parseInt(hourMatch[1], 10);
+                    return hoursAgo <= 24 && dateRangeDays >= 1;
+                }
+                
+                if (lowerDateString.includes('minute') || lowerDateString.includes('second')) {
+                    return dateRangeDays >= 1;
+                }
+                
+                // Handle "X days ago"
+                const dayMatch = lowerDateString.match(/(\d+)\s+days?\s+ago/i);
+                if (dayMatch) {
+                    const daysAgo = parseInt(dayMatch[1], 10);
+                    return daysAgo <= dateRangeDays;
+                }
+                
+                // Handle "X weeks ago"
+                const weekMatch = lowerDateString.match(/(\d+)\s+weeks?\s+ago/i);
+                if (weekMatch) {
+                    const weeksAgo = parseInt(weekMatch[1], 10);
+                    const daysAgo = weeksAgo * 7;
+                    return daysAgo <= dateRangeDays;
+                }
+                
+                // Handle "X months ago"
+                const monthMatch = lowerDateString.match(/(\d+)\s+months?\s+ago/i);
+                if (monthMatch) {
+                    const monthsAgo = parseInt(monthMatch[1], 10);
+                    const daysAgo = monthsAgo * 30;
+                    return daysAgo <= dateRangeDays;
+                }
+                
+                // Handle text variations
+                if (lowerDateString.includes('a day ago') || lowerDateString.includes('1 day ago')) {
+                    return dateRangeDays >= 1;
+                }
+                if (lowerDateString.includes('a week ago') || lowerDateString.includes('1 week ago')) {
+                    return dateRangeDays >= 7;
+                }
+                if (lowerDateString.includes('a month ago') || lowerDateString.includes('1 month ago')) {
+                    return dateRangeDays >= 30;
+                }
+                
+                // Try to parse as ISO date
+                const jobDate = new Date(job.datePosted);
+                if (!isNaN(jobDate.getTime())) {
+                    return jobDate >= cutoffDate;
+                }
+                
+                // If we can't parse it, include for longer ranges
+                return dateRangeDays >= 7;
+            } catch (e) {
+                return dateRangeDays >= 7;
+            }
+        });
     }
 
     // Add event delegation for hide/unhide buttons and seen buttons
@@ -303,7 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
             row.classList.remove('job-row-seen');
             seenBtn.classList.remove('seen');
             seenBtn.title = 'Mark as seen';
-            iconSpan.textContent = 'check_box_outline_blank';
+            iconSpan.textContent = 'star_border';
             
             // Remove from localStorage
             const seenJobs = JSON.parse(localStorage.getItem('seenJobs') || '[]');
@@ -314,7 +505,7 @@ document.addEventListener('DOMContentLoaded', function() {
             row.classList.add('job-row-seen');
             seenBtn.classList.add('seen');
             seenBtn.title = 'Mark as unseen';
-            iconSpan.textContent = 'check_box';
+            iconSpan.textContent = 'star';
             
             // Save to localStorage
             const seenJobs = JSON.parse(localStorage.getItem('seenJobs') || '[]');
@@ -337,7 +528,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     seenBtn.title = 'Mark as unseen';
                     const iconSpan = seenBtn.querySelector('.material-icons');
                     if (iconSpan) {
-                        iconSpan.textContent = 'check_box';
+                    iconSpan.textContent = 'star';
                     }
                 }
             }
@@ -423,7 +614,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 header.title = 'Click to sort';
                 header.classList.add('sortable');
                 header.addEventListener('click', () => {
+                    // Toggle sort direction and save to localStorage
                     sortTable(index);
+                    const table = document.getElementById('jobsTable');
+                    localStorage.setItem('jobSortColumn', index);
+                    localStorage.setItem('jobSortDirection', table.dataset.sortDirection);
                 });
             }
         });
