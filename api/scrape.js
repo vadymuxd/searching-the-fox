@@ -101,17 +101,18 @@ module.exports = async function handler(req, res) {
     }
 
     const allJobs = [];
-    const jobsPerPage = 25; // LinkedIn's typical page size
-    const maxPages = Math.min(8, Math.ceil(count / jobsPerPage * 2));
+    const jobsPerPage = 25;
+    // Always scrape multiple pages to get more jobs for better frontend filtering
+    const maxPages = Math.min(8, Math.ceil(count / jobsPerPage * 2)); // Scrape 2x more jobs than requested
 
-    console.log(`Scraping up to ${maxPages} pages using direct search URL strategy.`);
+    console.log(`Scraping up to ${maxPages} pages to get more jobs for frontend filtering`);
     
     let totalJobsScraped = 0;
 
     for (let page = 0; page < maxPages; page++) {
       const start = page * jobsPerPage;
-      // NEW STRATEGY: Use the primary jobs search URL which embeds JSON data.
-      const url = `https://www.linkedin.com/jobs/search?keywords=${encodeURIComponent(jobTitle)}&location=${encodeURIComponent(location)}&start=${start}`;
+      // REVERTED: Use the original seeMoreJobPostings endpoint that works on Vercel
+      const url = `https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=${encodeURIComponent(jobTitle)}&location=${encodeURIComponent(location)}&trk=public_jobs_jobs-search-bar_search-submit&position=1&pageNum=0&start=${start}`;
       
       try {
         const response = await axios.default.get(url, {
@@ -130,35 +131,91 @@ module.exports = async function handler(req, res) {
 
         const $ = cheerio.load(response.data);
         
-        // NEW STRATEGY: Find the embedded JSON data within a script tag.
-        const scriptTag = $('script[type="application/ld+json"]');
-        
-        if (scriptTag.length === 0) {
-          console.log(`No JSON-LD script tag found on page ${page + 1}. Stopping pagination.`);
-          break;
+        // REVERTED: Use HTML parsing with CSS selectors
+        const possibleSelectors = [
+          'li[data-occludable-job-id]',
+          '.job-search-card',
+          '.base-card',
+          '.result-card',
+          'li.result-card',
+          'article',
+          '.jobs-search__results-list li',
+          '.job-card-container',
+          'li'
+        ];
+
+        let jobElements = null;
+        for (const selector of possibleSelectors) {
+          const elements = $(selector);
+          if (elements.length > 0) {
+            jobElements = elements;
+            break;
+          }
         }
 
-        const jsonData = JSON.parse(scriptTag.html());
-        const jobPostings = jsonData.itemListElement;
-
-        if (!jobPostings || jobPostings.length === 0) {
-          console.log(`No more jobs found in JSON data on page ${page + 1}. Stopping pagination.`);
-          break;
+        if (!jobElements || jobElements.length === 0) {
+          console.log(`No more jobs found on page ${page + 1}. Stopping pagination.`);
+          break; // Exit loop if a page has no jobs
         }
         
-        totalJobsScraped += jobPostings.length;
-        console.log(`Page ${page + 1}: Found ${jobPostings.length} jobs in JSON. Total scraped so far: ${totalJobsScraped}`);
+        totalJobsScraped += jobElements.length;
+        console.log(`Page ${page + 1}: Found ${jobElements.length} jobs. Total scraped so far: ${totalJobsScraped}`);
 
-        jobPostings.forEach((jobItem) => {
-          const job = jobItem.item;
-          if (job) {
+        jobElements.each((i, el) => {
+          const jobTitleText = $(el).find('h3.base-search-card__title').text().trim() ||
+            $(el).find('h3 a span[title]').attr('title') ||
+            $(el).find('h3 a span').first().text().trim() ||
+            $(el).find('.base-search-card__title').text().trim() ||
+            $(el).find('h3').text().trim() ||
+            $(el).find('a[data-tracking-control-name="public_jobs_jserp-result_search-card"]').text().trim() ||
+            $(el).find('.job-title a').text().trim();
+
+          let company = $(el).find('h4 a span[title]').attr('title') ||
+            $(el).find('h4 a').text().trim() ||
+            $(el).find('.base-search-card__subtitle').text().trim() ||
+            $(el).find('.subline-level-1').text().trim() ||
+            $(el).find('h4').text().trim();
+
+          let logo = $(el).find('img[alt*="logo"], img[alt*="Logo"], img[alt*="company"], img[alt*="Company"]').attr('src') ||
+            $(el).find('.artdeco-entity-image').attr('src') ||
+            $(el).find('img[data-delayed-url]').attr('data-delayed-url') ||
+            $(el).find('img').first().attr('src') ||
+            null;
+
+          if (logo && !logo.startsWith('http')) {
+            logo = `https://www.linkedin.com${logo}`;
+          }
+
+          let jobLocation = $(el).find('.job-search-card__location').text().trim() ||
+            $(el).find('.subline-level-2').text().trim() ||
+            $(el).find('[data-test="job-location"]').text().trim() ||
+            '';
+
+          let link = $(el).find('h3 a').attr('href') ||
+            $(el).find('.base-card__full-link').attr('href') ||
+            $(el).find('a[data-tracking-control-name="public_jobs_jserp-result_search-card"]').attr('href') ||
+            $(el).find('a').first().attr('href');
+
+          let datePosted = $(el).find('time').attr('datetime') ||
+            $(el).find('time').text().trim() ||
+            $(el).find('.job-search-card__listdate').text().trim() ||
+            $(el).find('[data-test="job-posted-date"]').text().trim() ||
+            'Date not available';
+
+          // Clean up the strings
+          const cleanedTitle = jobTitleText ? jobTitleText.replace(/\s+/g, ' ').trim() : '';
+          company = company ? company.replace(/\s+/g, ' ').trim() : '';
+          jobLocation = jobLocation ? jobLocation.replace(/\s+/g, ' ').trim() : '';
+
+          // Only add job if it has a title and a link
+          if (cleanedTitle && link) {
             const jobData = {
-              title: job.title,
-              company: job.hiringOrganization ? job.hiringOrganization.name : 'Company not specified',
-              location: job.jobLocation ? job.jobLocation.address.addressLocality : 'Location not specified',
-              link: job.url,
-              datePosted: job.datePosted,
-              logo: job.hiringOrganization && job.hiringOrganization.logo ? job.hiringOrganization.logo : null
+              title: cleanedTitle,
+              company,
+              location: jobLocation,
+              link,
+              datePosted,
+              logo
             };
             allJobs.push(jobData);
           }
@@ -169,6 +226,7 @@ module.exports = async function handler(req, res) {
 
       } catch (error) {
         // If a single page fails (e.g., 404 or timeout), log the error and stop paginating.
+        // This prevents the entire process from crashing.
         console.warn(`Failed to fetch page ${page + 1} at URL: ${url}`);
         console.warn(`Error: ${error.message}. Stopping pagination.`);
         break;
@@ -192,7 +250,7 @@ module.exports = async function handler(req, res) {
         cutoffDate: cutoffDate.toISOString(),
         originalDateRange: dateRange,
         timestamp: new Date().toISOString(),
-        apiVersion: '2.1', // Updated version
+        apiVersion: '2.2', // Reverted to working method
         totalJobsScraped: totalJobsScraped,
         finalCount: finalResults.length,
         note: 'Date filtering moved to frontend'
