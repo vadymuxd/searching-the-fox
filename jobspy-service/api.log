@@ -1744,3 +1744,35 @@
 2025-09-17 15:48:29,422 - INFO - Logo fetch completed in 6.66 seconds
 2025-09-17 15:48:29,423 - INFO - Successfully fetched logos for 89 jobs
 2025-09-17 15:48:29,423 - INFO - Successfully processed 89 jobs
+2025-09-17 16:37:05,017 - INFO - Starting job scrape request: {'search_term': 'lead product designer', 'location': 'London', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 16:37:05,018 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 16:37:17,731 - INFO - Found 24 jobs
+2025-09-17 16:37:17,733 - INFO - Successfully processed 24 jobs, starting logo fetch...
+2025-09-17 16:37:17,734 - INFO - Starting logo fetch for 24 jobs with 10 workers
+2025-09-17 16:37:19,102 - INFO - Found LinkedIn logo for Soldo: https://media.licdn.com/dms/image/v2/C560BAQHUHulOsRnXWA/company-logo_100_100/company-logo_100_100/0/1630654015313/soldo_logo?e=2147483647&v=beta&t=6oQBVnCVk9-jtYutI3UhOkLUwxdBNPZolRDuYiD5iXw
+2025-09-17 16:37:19,120 - INFO - Found LinkedIn logo for AlphaSights: https://media.licdn.com/dms/image/v2/C560BAQFwAv8LC2z7Hg/company-logo_100_100/company-logo_100_100/0/1657205295670?e=2147483647&v=beta&t=JfLQ1TWTH2oM9mNvcnTXeXJ7GZaoapQjWGGYdai0XQg
+2025-09-17 16:37:19,128 - INFO - Found LinkedIn logo for Montash: https://media.licdn.com/dms/image/v2/D4E0BAQGwwBHnUTJozg/company-logo_100_100/company-logo_100_100/0/1681993986507/montash_logo?e=2147483647&v=beta&t=-6HXuOkOAop6vVcRthyrwbMLvmY4esfdh48n15rnh5s
+2025-09-17 16:37:19,169 - INFO - Found LinkedIn logo for monday.com: https://media.licdn.com/dms/image/v2/D4D0BAQF5myPUNW-9Cw/company-logo_100_100/company-logo_100_100/0/1737730740312/mondaydotcom_logo?e=2147483647&v=beta&t=niTVwzrxGONAyuSiRKjZVuQLVvYWxKrcTbvZSd7ToOs
+2025-09-17 16:37:19,172 - INFO - Found LinkedIn logo for Definite Article Media: https://media.licdn.com/dms/image/v2/C4E0BAQGzaS6juk1hbA/company-logo_100_100/company-logo_100_100/0/1631306515300?e=2147483647&v=beta&t=YxRzQZL7OxSVhQQnV0b2A0bBpE2EV7bbDK7WcRwbJ38
+2025-09-17 16:37:19,177 - INFO - Found LinkedIn logo for oryxsearch.io: https://media.licdn.com/dms/image/v2/D4D0BAQGRf4mlnIEQTw/company-logo_100_100/B4DZbYuFd.IEAQ-/0/1747392682323?e=2147483647&v=beta&t=JxT_45tl1hrdll6kTIo9mzEiVcB9lcMSV6i1aUHd6Lc
+2025-09-17 16:37:19,186 - INFO - Found LinkedIn logo for Hudl: https://media.licdn.com/dms/image/v2/C4D0BAQERgTBCtQxz_A/company-logo_100_100/company-logo_100_100/0/1658256964963/hudl_logo?e=2147483647&v=beta&t=-LiNAQFQgV3EKdsSECvzGZFb_CnkwXuNACBRv1uwMFc
+2025-09-17 16:37:19,198 - INFO - Found LinkedIn logo for Crypto.com: https://media.licdn.com/dms/image/v2/D560BAQH4i3rbKCnuYg/company-logo_100_100/company-logo_100_100/0/1735530715083/cryptocom_logo?e=2147483647&v=beta&t=9LHfk4h3U_OsFCHIXGAOyPxAXzr-9BD5M70r9oqiOXg
+2025-09-17 16:37:19,204 - INFO - Found LinkedIn logo for Preply: https://media.licdn.com/dms/image/v2/D4D0BAQFW-E6FYkTtzQ/company-logo_100_100/company-logo_100_100/0/1698235073236/preply_logo?e=2147483647&v=beta&t=SJMcL1yxTFIcp17V8W6Z7neh02CTzzye0hTJbkghZFo
+2025-09-17 16:37:19,221 - INFO - Found LinkedIn logo for rmg digital: https://media.licdn.com/dms/image/v2/C4D0BAQFDVS7ATEQrgQ/company-logo_100_100/company-logo_100_100/0/1631355382415?e=2147483647&v=beta&t=S-4NpgYg8R9MrNfiFYCwqb1NN4DLOtTdSvmqESf1WlU
+2025-09-17 16:37:19,812 - INFO - Found LinkedIn logo for Worldpay: https://media.licdn.com/dms/image/v2/D560BAQF6ewEnvD6daQ/company-logo_100_100/company-logo_100_100/0/1721999981440/worldpay_logo?e=2147483647&v=beta&t=A13Roe5dF1-6LqXv6U8HMWLTofvFXRNT1RHQJPceoUs
+2025-09-17 16:37:19,853 - INFO - Found LinkedIn logo for Trainline: https://media.licdn.com/dms/image/v2/D4E0BAQFYaFAEwJLiIg/company-logo_100_100/B4EZfFbNX0GwAY-/0/1751363934324/trainline_logo?e=2147483647&v=beta&t=c8Z5v6pbG609pDtTNfvH9WM0lmfA6wEQGeS119XGj0A
+2025-09-17 16:37:19,859 - INFO - Using Logo.dev for Williams Racing: https://img.logo.dev/williamsracing.com?token=pk_X9vSaQ0wR3WxKzsHQUfhOQ
+2025-09-17 16:37:19,912 - INFO - Found LinkedIn logo for Lottie: https://media.licdn.com/dms/image/v2/C4D0BAQG0lv7IWL8zDw/company-logo_100_100/company-logo_100_100/0/1631876117512/thankslottie_logo?e=2147483647&v=beta&t=Ne_B3ZCrL3uTe3aSk1iqh2pRW0-wYXthqipjCBlO_7U
+2025-09-17 16:37:20,063 - INFO - Found LinkedIn logo for Hudl: https://media.licdn.com/dms/image/v2/C4D0BAQERgTBCtQxz_A/company-logo_100_100/company-logo_100_100/0/1658256964963/hudl_logo?e=2147483647&v=beta&t=-LiNAQFQgV3EKdsSECvzGZFb_CnkwXuNACBRv1uwMFc
+2025-09-17 16:37:20,093 - INFO - Found LinkedIn logo for Stream: https://media.licdn.com/dms/image/v2/D4E0BAQFAYpi4Y1S0dg/company-logo_100_100/B4EZko3E8SKQAQ-/0/1757327151319/wagestream_logo?e=2147483647&v=beta&t=BWCVoHO3i-dv0mmwzBo5boHQ4x2u12qO_U1HfevT-uI
+2025-09-17 16:37:20,102 - INFO - Found LinkedIn logo for Gen: https://media.licdn.com/dms/image/v2/D4E0BAQHNucXukKpDhw/company-logo_100_100/company-logo_100_100/0/1667840512892/gendigitalinc_logo?e=2147483647&v=beta&t=woeOBl1_RjKZ99XEPP2Wek5Zi8QzW6XtKtXQMdmHAo0
+2025-09-17 16:37:20,125 - INFO - Found LinkedIn logo for AlphaSights: https://media.licdn.com/dms/image/v2/C560BAQFwAv8LC2z7Hg/company-logo_100_100/company-logo_100_100/0/1657205295670?e=2147483647&v=beta&t=JfLQ1TWTH2oM9mNvcnTXeXJ7GZaoapQjWGGYdai0XQg
+2025-09-17 16:37:20,136 - INFO - Found LinkedIn logo for Hearst UK: https://media.licdn.com/dms/image/v2/C4E0BAQGrmwJhtjYvNg/company-logo_100_100/company-logo_100_100/0/1675343419553/hearst_magazines_uk_logo?e=2147483647&v=beta&t=E4goJeRMO7OvZhXd09oHqrgiuN1vBIBF4kL4arPwHdI
+2025-09-17 16:37:20,143 - INFO - Found LinkedIn logo for Total Management Group: https://media.licdn.com/dms/image/v2/D4E0BAQG1J_3dkCfpnA/company-logo_100_100/company-logo_100_100/0/1696241807275/total_management_group_logo?e=2147483647&v=beta&t=k6WU0XtU0RkLNzpSmilGFq85Af1Q0YXHvgmThqN88eM
+2025-09-17 16:37:20,311 - INFO - Using Logo.dev for Reach Volunteering: https://img.logo.dev/reachvolunteering.com?token=pk_X9vSaQ0wR3WxKzsHQUfhOQ
+2025-09-17 16:37:20,498 - INFO - Found LinkedIn logo for Pinsent Masons: https://media.licdn.com/dms/image/v2/D4E0BAQErFCI2KWHefQ/company-logo_100_100/B4EZfFMp.LGcAQ-/0/1751360119066/pinsent_masons_logo?e=2147483647&v=beta&t=AQflBcxG2QZVn56Clg_3Df3RsK1fTMHABVpjR4EEwVU
+2025-09-17 16:37:20,518 - INFO - Found LinkedIn logo for Herbalife: https://media.licdn.com/dms/image/v2/C560BAQFwSmN-2wQr_g/company-logo_100_100/company-logo_100_100/0/1678820626878/herbalife_logo?e=2147483647&v=beta&t=p5CS0zp6LLhedXZW45B1u7yBeCWgjiEgDt-USHDjWrY
+2025-09-17 16:37:20,558 - INFO - Found LinkedIn logo for Bank.Green: https://media.licdn.com/dms/image/v2/D560BAQHujo6jrhbeCg/company-logo_100_100/company-logo_100_100/0/1737067414693/bank_green_logo?e=2147483647&v=beta&t=oG_WDdMgSwYRCv_zPgtlSjw1NYWYFzzcbrn54ULWefA
+2025-09-17 16:37:20,559 - INFO - Logo fetch completed in 2.83 seconds
+2025-09-17 16:37:20,559 - INFO - Successfully fetched logos for 24 jobs
+2025-09-17 16:37:20,559 - INFO - Successfully processed 24 jobs

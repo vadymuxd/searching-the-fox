@@ -82,12 +82,34 @@ export default function HomePage() {
         <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
           <Box style={{ width: '100%', maxWidth: '1200px' }}>
             <Stack gap="0" align="center">
-              {/* Fox Animation */}
-              <Box style={{ width: '100px', height: '75px' }}>
+              {/* Fox Logo */}
+              <Box style={{ width: '200px', height: '150px', marginBottom: '24px' }}>
                 <img 
-                  src="/fox.png"
-                  alt="Fox image"
+                  src="/fox_logo.svg"
+                  alt="Fox logo"
                   style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+              </Box>
+              {/* Headline */}
+              <Title order={1} ta="center" mb="lg" style={{ color: '#37352f', fontWeight: 600 }}>
+                Searching The Fox
+              </Title>
+              {/* Job Site Icons */}
+              <Box style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                <img 
+                  src="/indeed.svg" 
+                  alt="Indeed" 
+                  style={{ width: '24px', height: '24px', opacity: 0.2 }}
+                />
+                <img 
+                  src="/Linkedin.svg" 
+                  alt="LinkedIn" 
+                  style={{ width: '24px', height: '24px', opacity: 0.2 }}
+                />
+                <img 
+                  src="/Glassdoor.svg" 
+                  alt="Glassdoor" 
+                  style={{ width: '24px', height: '24px', opacity: 0.2 }}
                 />
               </Box>
               {/* Search Form */}

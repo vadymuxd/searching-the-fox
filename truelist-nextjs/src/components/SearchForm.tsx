@@ -87,21 +87,12 @@ export function SearchForm({ onSearch, loading = false }: SearchFormProps) {
                 size="sm"
                 styles={{
                   root: {
-                    backgroundColor: '#000',
-                    border: '1px solid #000',
                     height: rem(36),
                     width: rem(120), // Fixed width
                     minWidth: rem(120),
                     paddingLeft: rem(8),
                     paddingRight: rem(8),
                     flexShrink: 0, // Prevent shrinking
-                    '&:hover': {
-                      backgroundColor: '#333',
-                      borderColor: '#333',
-                    },
-                    '&:active': {
-                      backgroundColor: '#000',
-                    },
                   },
                   label: {
                     fontSize: rem(14),
