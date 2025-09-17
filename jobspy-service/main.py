@@ -6,6 +6,7 @@ import uvicorn
 import logging
 from datetime import datetime, timedelta
 import markdownify
+from logo_fetcher import fetch_company_logos
 
 # Configure logging
 logging.basicConfig(
@@ -51,6 +52,7 @@ class JobResponse(BaseModel):
     description: Optional[str] = None
     job_type: Optional[str] = None
     emails: Optional[List[str]] = None
+    company_logo_url: Optional[str] = None
 
 class JobSearchResponse(BaseModel):
     success: bool
@@ -121,6 +123,8 @@ async def scrape_jobs(request: JobSearchRequest):
         
         # Convert DataFrame to our response format
         jobs_list = []
+        jobs_for_logo_fetch = []  # Prepare data for logo fetching
+        
         for _, job in jobs_df.iterrows():
             # Convert description from markdown to plain text if it exists
             description = None
@@ -166,21 +170,46 @@ async def scrape_jobs(request: JobSearchRequest):
                 except Exception:
                     pass
             
+            # Prepare job data for logo fetching
+            job_data = {
+                'job_url': str(job.job_url) if hasattr(job, 'job_url') else "",
+                'company': str(job.company) if hasattr(job, 'company') and str(job.company) != 'nan' else "Unknown company",
+                'site': str(job.site) if hasattr(job, 'site') else "unknown"
+            }
+            jobs_for_logo_fetch.append(job_data)
+            
             job_response = JobResponse(
-                site=str(job.site) if hasattr(job, 'site') else "unknown",
+                site=job_data['site'],
                 title=str(job.title) if hasattr(job, 'title') else "No title",
-                company=str(job.company) if hasattr(job, 'company') and str(job.company) != 'nan' else "Unknown company",
+                company=job_data['company'],
                 location=str(job.location) if hasattr(job, 'location') and str(job.location) != 'nan' else "Unknown location",
-                job_url=str(job.job_url) if hasattr(job, 'job_url') else "",
+                job_url=job_data['job_url'],
                 date_posted=str(job.date_posted) if hasattr(job, 'date_posted') and str(job.date_posted) != 'nan' else None,
                 salary_min=salary_min,
                 salary_max=salary_max,
                 salary_currency=salary_currency,
                 description=description,
                 job_type=str(job.job_type) if hasattr(job, 'job_type') and str(job.job_type) != 'nan' else None,
-                emails=emails
+                emails=emails,
+                company_logo_url=None  # Will be filled after logo fetch
             )
             jobs_list.append(job_response)
+        
+        logger.info(f"Successfully processed {len(jobs_list)} jobs, starting logo fetch...")
+        
+        # Fetch company logos in parallel
+        try:
+            logo_urls = fetch_company_logos(jobs_for_logo_fetch, max_workers=10)
+            
+            # Add logo URLs to job responses
+            for i, logo_url in enumerate(logo_urls):
+                if i < len(jobs_list):
+                    jobs_list[i].company_logo_url = logo_url
+                    
+            logger.info(f"Successfully fetched logos for {len(logo_urls)} jobs")
+        except Exception as e:
+            logger.warning(f"Error fetching logos: {e}")
+            # Continue without logos if fetch fails
         
         logger.info(f"Successfully processed {len(jobs_list)} jobs")
         

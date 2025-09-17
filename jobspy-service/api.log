@@ -143,3 +143,214 @@
 2025-09-17 11:06:39,614 - INFO - Scraping jobs with date filter: 2025-09-16
 2025-09-17 11:07:28,735 - INFO - Found 90 jobs
 2025-09-17 11:07:28,740 - INFO - Successfully processed 90 jobs
+2025-09-17 11:18:36,949 - INFO - Starting job scrape request: {'search_term': 'product design', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 11:18:36,950 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 11:19:23,163 - INFO - Found 89 jobs
+2025-09-17 11:19:23,168 - INFO - Successfully processed 89 jobs
+2025-09-17 11:32:17,727 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 11:32:46,030 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 11:50:20,713 - INFO - Starting job scrape request: {'search_term': 'lead product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 11:50:21,024 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 11:50:40,245 - INFO - Found 26 jobs
+2025-09-17 11:50:40,246 - INFO - Successfully processed 26 jobs
+2025-09-17 11:51:04,826 - INFO - Starting job scrape request: {'search_term': 'product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 11:51:04,826 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 11:51:34,286 - INFO - Found 50 jobs
+2025-09-17 11:51:34,289 - INFO - Successfully processed 50 jobs
+2025-09-17 12:07:28,542 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:07:52,500 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:08:16,997 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:08:34,732 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:09:00,258 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:16:12,302 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:18:36,125 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:19:07,579 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:19:28,888 - INFO - Starting job scrape request: {'search_term': 'lead product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 12:19:29,181 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 12:19:47,181 - INFO - Found 24 jobs
+2025-09-17 12:19:47,182 - INFO - Successfully processed 24 jobs, starting logo fetch...
+2025-09-17 12:19:47,182 - INFO - Starting logo fetch for 24 jobs with 10 workers
+2025-09-17 12:19:47,183 - INFO - Logo fetch completed in 0.00 seconds
+2025-09-17 12:19:47,183 - INFO - Successfully fetched logos for 24 jobs
+2025-09-17 12:19:47,183 - INFO - Successfully processed 24 jobs
+2025-09-17 12:22:54,370 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:23:09,897 - INFO - Starting job scrape request: {'search_term': 'lead product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 12:23:10,193 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 12:23:29,093 - INFO - Found 24 jobs
+2025-09-17 12:23:29,095 - INFO - Successfully processed 24 jobs, starting logo fetch...
+2025-09-17 12:23:29,095 - INFO - Starting logo fetch for 24 jobs with 10 workers
+2025-09-17 12:23:29,096 - INFO - Logo fetch completed in 0.00 seconds
+2025-09-17 12:23:29,096 - INFO - Successfully fetched logos for 24 jobs
+2025-09-17 12:23:29,096 - INFO - Successfully processed 24 jobs
+2025-09-17 12:25:16,859 - INFO - Starting job scrape request: {'search_term': 'lead product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 12:25:16,861 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 12:25:33,966 - INFO - Found 25 jobs
+2025-09-17 12:25:33,967 - INFO - Successfully processed 25 jobs, starting logo fetch...
+2025-09-17 12:25:33,967 - INFO - Starting logo fetch for 25 jobs with 10 workers
+2025-09-17 12:25:33,968 - INFO - Logo fetch completed in 0.00 seconds
+2025-09-17 12:25:33,968 - INFO - Successfully fetched logos for 25 jobs
+2025-09-17 12:25:33,968 - INFO - Successfully processed 25 jobs
+2025-09-17 12:28:02,802 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:28:15,768 - INFO - Starting job scrape request: {'search_term': 'lead product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 12:28:16,061 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 12:28:35,277 - INFO - Found 25 jobs
+2025-09-17 12:28:35,278 - INFO - Successfully processed 25 jobs, starting logo fetch...
+2025-09-17 12:28:35,279 - INFO - Starting logo fetch for 25 jobs with 10 workers
+2025-09-17 12:28:35,280 - INFO - Logo fetch completed in 0.00 seconds
+2025-09-17 12:28:35,280 - INFO - Successfully fetched logos for 25 jobs
+2025-09-17 12:28:35,280 - INFO - Successfully processed 25 jobs
+2025-09-17 12:29:57,413 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:30:39,916 - INFO - Starting job scrape request: {'search_term': 'lead product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 12:30:40,239 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 12:30:56,943 - INFO - Found 24 jobs
+2025-09-17 12:30:56,945 - INFO - Successfully processed 24 jobs, starting logo fetch...
+2025-09-17 12:30:56,945 - INFO - Starting logo fetch for 24 jobs with 10 workers
+2025-09-17 12:30:56,946 - INFO - Logo fetch completed in 0.00 seconds
+2025-09-17 12:30:56,946 - INFO - Successfully fetched logos for 24 jobs
+2025-09-17 12:30:56,946 - INFO - Successfully processed 24 jobs
+2025-09-17 12:31:29,562 - INFO - Starting job scrape request: {'search_term': 'lead product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 12:31:29,564 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 12:31:43,201 - INFO - Found 24 jobs
+2025-09-17 12:31:43,203 - INFO - Successfully processed 24 jobs, starting logo fetch...
+2025-09-17 12:31:43,203 - INFO - Starting logo fetch for 24 jobs with 10 workers
+2025-09-17 12:31:43,204 - INFO - Logo fetch completed in 0.00 seconds
+2025-09-17 12:31:43,204 - INFO - Successfully fetched logos for 24 jobs
+2025-09-17 12:31:43,204 - INFO - Successfully processed 24 jobs
+2025-09-17 12:31:51,105 - INFO - Starting job scrape request: {'search_term': 'lead product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 12:31:51,107 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 12:32:03,282 - INFO - Found 24 jobs
+2025-09-17 12:32:03,284 - INFO - Successfully processed 24 jobs, starting logo fetch...
+2025-09-17 12:32:03,284 - INFO - Starting logo fetch for 24 jobs with 10 workers
+2025-09-17 12:32:03,285 - INFO - Logo fetch completed in 0.00 seconds
+2025-09-17 12:32:03,285 - INFO - Successfully fetched logos for 24 jobs
+2025-09-17 12:32:03,285 - INFO - Successfully processed 24 jobs
+2025-09-17 12:34:25,924 - INFO - Starting job scrape request: {'search_term': 'lead product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 12:34:25,930 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 12:34:42,383 - INFO - Found 25 jobs
+2025-09-17 12:34:42,385 - INFO - Successfully processed 25 jobs, starting logo fetch...
+2025-09-17 12:34:42,385 - INFO - Starting logo fetch for 25 jobs with 10 workers
+2025-09-17 12:34:42,386 - INFO - Logo fetch completed in 0.00 seconds
+2025-09-17 12:34:42,386 - INFO - Successfully fetched logos for 25 jobs
+2025-09-17 12:34:42,386 - INFO - Successfully processed 25 jobs
+2025-09-17 12:37:54,826 - INFO - Starting job scrape request: {'search_term': 'product manager', 'location': 'New York', 'site_name': ['linkedin'], 'results_wanted': 3, 'hours_old': 72, 'country_indeed': 'USA'}
+2025-09-17 12:37:54,827 - INFO - Scraping jobs with date filter: 2025-09-14
+2025-09-17 12:37:55,383 - INFO - Found 3 jobs
+2025-09-17 12:37:55,385 - INFO - Successfully processed 3 jobs, starting logo fetch...
+2025-09-17 12:37:55,385 - INFO - Starting logo fetch for 3 jobs with 10 workers
+2025-09-17 12:37:55,385 - INFO - Logo fetch completed in 0.00 seconds
+2025-09-17 12:37:55,385 - INFO - Successfully fetched logos for 3 jobs
+2025-09-17 12:37:55,385 - INFO - Successfully processed 3 jobs
+2025-09-17 12:38:59,112 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:39:16,218 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:39:46,388 - INFO - Starting job scrape request: {'search_term': 'product manager', 'location': 'New York', 'site_name': ['linkedin'], 'results_wanted': 2, 'hours_old': 72, 'country_indeed': 'USA'}
+2025-09-17 12:39:46,659 - INFO - Scraping jobs with date filter: 2025-09-14
+2025-09-17 12:39:47,227 - INFO - Found 2 jobs
+2025-09-17 12:39:47,227 - INFO - Successfully processed 2 jobs, starting logo fetch...
+2025-09-17 12:39:47,227 - INFO - Starting logo fetch for 2 jobs with 10 workers
+2025-09-17 12:39:48,077 - INFO - Found LinkedIn logo for Meta: https://media.licdn.com/dms/image/v2/C4E0BAQFdNatYGiBelg/company-logo_100_100/company-logo_100_100/0/1636138754252/facebook_logo?e=2147483647&amp;v=beta&amp;t=yQdLB8_bCnLl5CaiAOcOMFm39fvGboZVNBYTqgRVKWg
+2025-09-17 12:39:48,092 - INFO - Found LinkedIn logo for Robinhood: https://media.licdn.com/dms/image/v2/D4E0BAQESwNiGp2qYlA/company-logo_100_100/company-logo_100_100/0/1728574763254/robinhood_logo?e=2147483647&amp;v=beta&amp;t=x1L1S_s7Phh3oj-J3NKzHh8PkImOSq47WD-QrwCDcnI
+2025-09-17 12:39:48,093 - INFO - Logo fetch completed in 0.87 seconds
+2025-09-17 12:39:48,093 - INFO - Successfully fetched logos for 2 jobs
+2025-09-17 12:39:48,093 - INFO - Successfully processed 2 jobs
+2025-09-17 12:39:54,522 - INFO - Starting job scrape request: {'search_term': 'software engineer', 'location': 'San Francisco', 'site_name': ['linkedin'], 'results_wanted': 1, 'hours_old': 72, 'country_indeed': 'USA'}
+2025-09-17 12:39:54,522 - INFO - Scraping jobs with date filter: 2025-09-14
+2025-09-17 12:39:55,126 - INFO - Found 1 jobs
+2025-09-17 12:39:55,127 - INFO - Successfully processed 1 jobs, starting logo fetch...
+2025-09-17 12:39:55,127 - INFO - Starting logo fetch for 1 jobs with 10 workers
+2025-09-17 12:39:55,858 - INFO - Found LinkedIn logo for Eventual: https://media.licdn.com/dms/image/v2/D4D0BAQHn_uA4CEMZvw/company-logo_100_100/B4DZeihDpsGsAQ-/0/1750778266102/eventualcomputing_logo?e=2147483647&amp;v=beta&amp;t=rO-F5Aks0QjFvhdMrcstDq6xIVMBDrnz6xouezHZXOU
+2025-09-17 12:39:55,858 - INFO - Logo fetch completed in 0.73 seconds
+2025-09-17 12:39:55,858 - INFO - Successfully fetched logos for 1 jobs
+2025-09-17 12:39:55,858 - INFO - Successfully processed 1 jobs
+2025-09-17 12:41:51,796 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:42:14,762 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:42:41,780 - INFO - Starting job scrape request: {'search_term': 'product manager', 'location': 'New York', 'site_name': ['linkedin'], 'results_wanted': 3, 'hours_old': 72, 'country_indeed': 'USA'}
+2025-09-17 12:42:42,065 - INFO - Scraping jobs with date filter: 2025-09-14
+2025-09-17 12:42:42,752 - INFO - Found 3 jobs
+2025-09-17 12:42:42,752 - INFO - Successfully processed 3 jobs, starting logo fetch...
+2025-09-17 12:42:42,752 - INFO - Starting logo fetch for 3 jobs with 10 workers
+2025-09-17 12:42:43,609 - INFO - Found LinkedIn logo for Meta: https://media.licdn.com/dms/image/v2/C4E0BAQFdNatYGiBelg/company-logo_100_100/company-logo_100_100/0/1636138754252/facebook_logo?e=2147483647&v=beta&t=yQdLB8_bCnLl5CaiAOcOMFm39fvGboZVNBYTqgRVKWg
+2025-09-17 12:42:43,616 - INFO - Found LinkedIn logo for Yext: https://media.licdn.com/dms/image/v2/D4D0BAQF1_JfgwEpWrA/company-logo_100_100/company-logo_100_100/0/1709565326515/yext_logo?e=2147483647&v=beta&t=6641Yz4zwmGm7O2yPxfAihTX_C-UPHVm4ZxhgHSPIRw
+2025-09-17 12:42:43,636 - INFO - Found LinkedIn logo for Robinhood: https://media.licdn.com/dms/image/v2/D4E0BAQESwNiGp2qYlA/company-logo_100_100/company-logo_100_100/0/1728574763254/robinhood_logo?e=2147483647&v=beta&t=x1L1S_s7Phh3oj-J3NKzHh8PkImOSq47WD-QrwCDcnI
+2025-09-17 12:42:43,636 - INFO - Logo fetch completed in 0.88 seconds
+2025-09-17 12:42:43,637 - INFO - Successfully fetched logos for 3 jobs
+2025-09-17 12:42:43,637 - INFO - Successfully processed 3 jobs
+2025-09-17 12:42:49,053 - INFO - Starting job scrape request: {'search_term': 'designer', 'location': 'San Francisco', 'site_name': ['linkedin'], 'results_wanted': 2, 'hours_old': 72, 'country_indeed': 'USA'}
+2025-09-17 12:42:49,053 - INFO - Scraping jobs with date filter: 2025-09-14
+2025-09-17 12:42:49,606 - INFO - Found 2 jobs
+2025-09-17 12:42:49,607 - INFO - Successfully processed 2 jobs, starting logo fetch...
+2025-09-17 12:42:49,607 - INFO - Starting logo fetch for 2 jobs with 10 workers
+2025-09-17 12:42:50,529 - INFO - Found LinkedIn logo for Microsoft: https://media.licdn.com/dms/image/v2/D560BAQH32RJQCl3dDQ/company-logo_100_100/B56ZYQ0mrGGoAU-/0/1744038948046/microsoft_logo?e=2147483647&v=beta&t=rr_7_bFRKp6umQxIHErPOZHtR8dMPIYeTjlKFdotJBY
+2025-09-17 12:42:50,554 - INFO - Found LinkedIn logo for Google: https://media.licdn.com/dms/image/v2/C4D0BAQHiNSL4Or29cg/company-logo_100_100/company-logo_100_100/0/1631311446380?e=2147483647&v=beta&t=fpIR4mVp092kTPQiY9WCtffmz9qUqsnLCSfc0In3daE
+2025-09-17 12:42:50,555 - INFO - Logo fetch completed in 0.95 seconds
+2025-09-17 12:42:50,555 - INFO - Successfully fetched logos for 2 jobs
+2025-09-17 12:42:50,555 - INFO - Successfully processed 2 jobs
+2025-09-17 12:43:38,304 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:46:04,885 - INFO - Starting JobSpy API server on port 8001
+2025-09-17 12:46:30,217 - INFO - Starting job scrape request: {'search_term': 'lead product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 12:46:30,520 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 12:46:47,166 - INFO - Found 26 jobs
+2025-09-17 12:46:47,167 - INFO - Successfully processed 26 jobs, starting logo fetch...
+2025-09-17 12:46:47,167 - INFO - Starting logo fetch for 26 jobs with 10 workers
+2025-09-17 12:46:48,557 - INFO - Found LinkedIn logo for Pulse Recruit: https://media.licdn.com/dms/image/v2/D4E0BAQEau2WV-8QiJQ/company-logo_100_100/B4EZiZ3kucHgAQ-/0/1754928139550/pulse_recruit_logo?e=2147483647&v=beta&t=mr94pWRDSf7QcUsmdDVzJTGWFPX-_otaFmTDjYqrVt0
+2025-09-17 12:46:48,565 - INFO - Found LinkedIn logo for Hudl: https://media.licdn.com/dms/image/v2/C4D0BAQERgTBCtQxz_A/company-logo_100_100/company-logo_100_100/0/1658256964963/hudl_logo?e=2147483647&v=beta&t=-LiNAQFQgV3EKdsSECvzGZFb_CnkwXuNACBRv1uwMFc
+2025-09-17 12:46:48,585 - INFO - Found LinkedIn logo for AlphaSights: https://media.licdn.com/dms/image/v2/C560BAQFwAv8LC2z7Hg/company-logo_100_100/company-logo_100_100/0/1657205295670?e=2147483647&v=beta&t=JfLQ1TWTH2oM9mNvcnTXeXJ7GZaoapQjWGGYdai0XQg
+2025-09-17 12:46:48,587 - INFO - Found LinkedIn logo for Montash: https://media.licdn.com/dms/image/v2/D4E0BAQGwwBHnUTJozg/company-logo_100_100/company-logo_100_100/0/1681993986507/montash_logo?e=2147483647&v=beta&t=-6HXuOkOAop6vVcRthyrwbMLvmY4esfdh48n15rnh5s
+2025-09-17 12:46:48,613 - INFO - Found LinkedIn logo for 9fin: https://media.licdn.com/dms/image/v2/C560BAQEJe1MvwhDM9g/company-logo_100_100/company-logo_100_100/0/1630668411062/9fin_logo?e=2147483647&v=beta&t=cDo_P7c7OpMeNxbsu_3wBTVwnobML8QTtrEUqtsqv0s
+2025-09-17 12:46:48,615 - INFO - Found LinkedIn logo for rmg digital: https://media.licdn.com/dms/image/v2/C4D0BAQFDVS7ATEQrgQ/company-logo_100_100/company-logo_100_100/0/1631355382415?e=2147483647&v=beta&t=S-4NpgYg8R9MrNfiFYCwqb1NN4DLOtTdSvmqESf1WlU
+2025-09-17 12:46:48,642 - INFO - Found LinkedIn logo for Hello Klean: https://media.licdn.com/dms/image/v2/D4E0BAQEE294gwwj1tA/company-logo_100_100/company-logo_100_100/0/1727540892407/hello_klean_logo?e=2147483647&v=beta&t=kDnAaBL5O0CSqv3raTsg48lNavvT3m62z4kStCxwNEQ
+2025-09-17 12:46:48,650 - INFO - Found LinkedIn logo for Crypto.com: https://media.licdn.com/dms/image/v2/D560BAQH4i3rbKCnuYg/company-logo_100_100/company-logo_100_100/0/1735530715083/cryptocom_logo?e=2147483647&v=beta&t=9LHfk4h3U_OsFCHIXGAOyPxAXzr-9BD5M70r9oqiOXg
+2025-09-17 12:46:48,675 - INFO - Found LinkedIn logo for Gen: https://media.licdn.com/dms/image/v2/D4E0BAQHNucXukKpDhw/company-logo_100_100/company-logo_100_100/0/1667840512892/gendigitalinc_logo?e=2147483647&v=beta&t=woeOBl1_RjKZ99XEPP2Wek5Zi8QzW6XtKtXQMdmHAo0
+2025-09-17 12:46:48,820 - INFO - Found LinkedIn logo for Lottie: https://media.licdn.com/dms/image/v2/C4D0BAQG0lv7IWL8zDw/company-logo_100_100/company-logo_100_100/0/1631876117512/thankslottie_logo?e=2147483647&v=beta&t=Ne_B3ZCrL3uTe3aSk1iqh2pRW0-wYXthqipjCBlO_7U
+2025-09-17 12:46:49,192 - INFO - Using Logo.dev for Hearst UK: https://img.logo.dev/hearstuk.com?token=pk_X9vSaQ0wR3WxKzsHQUfhOQ
+2025-09-17 12:46:49,193 - INFO - Using Logo.dev for Major Players | B Corp™: https://img.logo.dev/majorplayersbcorp.com?token=pk_X9vSaQ0wR3WxKzsHQUfhOQ
+2025-09-17 12:46:49,237 - INFO - Found LinkedIn logo for Jendi: https://media.licdn.com/dms/image/v2/D4E0BAQFQK_J1HjQxwQ/company-logo_100_100/company-logo_100_100/0/1734367754520/jendi_logo?e=2147483647&v=beta&t=S2vKzoCwGk0qjffLKY6PEPBCNf3gFNWObm-9Tud7VU4
+2025-09-17 12:46:49,272 - INFO - Found LinkedIn logo for Hudl: https://media.licdn.com/dms/image/v2/C4D0BAQERgTBCtQxz_A/company-logo_100_100/company-logo_100_100/0/1658256964963/hudl_logo?e=2147483647&v=beta&t=-LiNAQFQgV3EKdsSECvzGZFb_CnkwXuNACBRv1uwMFc
+2025-09-17 12:46:49,422 - INFO - Found Clearbit logo for Cherry: https://logo.clearbit.com/cherry.com
+2025-09-17 12:46:49,427 - INFO - Found LinkedIn logo for Williams Racing: https://media.licdn.com/dms/image/v2/D4E0BAQFIqpLl8l5GCA/company-logo_100_100/B4EZUfAD.YHUAU-/0/1739981865953/atlassianwilliamsracing_logo?e=2147483647&v=beta&t=gx-yiOTdIOIszPagmTbPis3ycsSmJeeZX6OIagUWk1g
+2025-09-17 12:46:49,428 - INFO - Found Clearbit logo for Talent: https://logo.clearbit.com/talent.com
+2025-09-17 12:46:49,477 - INFO - Found LinkedIn logo for Definite Article Media: https://media.licdn.com/dms/image/v2/C4E0BAQGzaS6juk1hbA/company-logo_100_100/company-logo_100_100/0/1631306515300?e=2147483647&v=beta&t=YxRzQZL7OxSVhQQnV0b2A0bBpE2EV7bbDK7WcRwbJ38
+2025-09-17 12:46:49,494 - INFO - Found LinkedIn logo for Tomorrow Recruitment Ltd | B Corp™: https://media.licdn.com/dms/image/v2/D4E0BAQG5VxCBguFLrw/company-logo_100_100/B4EZfL_6HxHsAY-/0/1751474217888/tomorrow_recruitment_ltd_logo?e=2147483647&v=beta&t=2d9m2_fv3OhdV197BKtvXDh9os7JFkbF78Q7vKwT7yw
+2025-09-17 12:46:49,520 - INFO - Found LinkedIn logo for Total Management Group: https://media.licdn.com/dms/image/v2/D4E0BAQG1J_3dkCfpnA/company-logo_100_100/company-logo_100_100/0/1696241807275/total_management_group_logo?e=2147483647&v=beta&t=k6WU0XtU0RkLNzpSmilGFq85Af1Q0YXHvgmThqN88eM
+2025-09-17 12:46:49,630 - INFO - Found LinkedIn logo for oryxsearch.io: https://media.licdn.com/dms/image/v2/D4D0BAQGRf4mlnIEQTw/company-logo_100_100/B4DZbYuFd.IEAQ-/0/1747392682323?e=2147483647&v=beta&t=JxT_45tl1hrdll6kTIo9mzEiVcB9lcMSV6i1aUHd6Lc
+2025-09-17 12:46:49,634 - INFO - Found Clearbit logo for Herbalife: https://logo.clearbit.com/herbalife.com
+2025-09-17 12:46:49,663 - INFO - Found LinkedIn logo for AlphaSights: https://media.licdn.com/dms/image/v2/C560BAQFwAv8LC2z7Hg/company-logo_100_100/company-logo_100_100/0/1657205295670?e=2147483647&v=beta&t=JfLQ1TWTH2oM9mNvcnTXeXJ7GZaoapQjWGGYdai0XQg
+2025-09-17 12:46:50,009 - INFO - Found LinkedIn logo for Motability Operations Ltd: https://media.licdn.com/dms/image/v2/D4E0BAQGYj3fGVkEdaA/company-logo_100_100/B4EZh_QV42GcAc-/0/1754481648041/motabilityoperations_logo?e=2147483647&v=beta&t=2mOkZDTjFR5MWOyL-opcvHPcnUYHtkwQPugmaVduIQU
+2025-09-17 12:46:50,227 - INFO - Found LinkedIn logo for Tesco Technology: https://media.licdn.com/dms/image/v2/C4D0BAQFJN5qXVxmIEw/company-logo_100_100/company-logo_100_100/0/1663681176949/tesco_technology_logo?e=2147483647&v=beta&t=xYJWJM2EZiX-0-NGZgWUx6gFsik8MXfFd0jmeopiSTc
+2025-09-17 12:46:50,274 - INFO - Found LinkedIn logo for Reach Volunteering: https://media.licdn.com/dms/image/v2/C4D0BAQEuIhkWXUSSew/company-logo_100_100/company-logo_100_100/0/1631344228287?e=2147483647&v=beta&t=wKcttayjwUGYHTNH2SK4wdvmDutZ6yctLAK7sXK9_RE
+2025-09-17 12:46:50,275 - INFO - Logo fetch completed in 3.11 seconds
+2025-09-17 12:46:50,275 - INFO - Successfully fetched logos for 26 jobs
+2025-09-17 12:46:50,275 - INFO - Successfully processed 26 jobs
+2025-09-17 12:48:39,470 - INFO - Starting job scrape request: {'search_term': 'lead product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 12:48:39,471 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 12:48:56,535 - INFO - Found 26 jobs
+2025-09-17 12:48:56,538 - INFO - Successfully processed 26 jobs, starting logo fetch...
+2025-09-17 12:48:56,538 - INFO - Starting logo fetch for 26 jobs with 10 workers
+2025-09-17 12:48:58,070 - INFO - Found LinkedIn logo for Crypto.com: https://media.licdn.com/dms/image/v2/D560BAQH4i3rbKCnuYg/company-logo_100_100/company-logo_100_100/0/1735530715083/cryptocom_logo?e=2147483647&v=beta&t=9LHfk4h3U_OsFCHIXGAOyPxAXzr-9BD5M70r9oqiOXg
+2025-09-17 12:48:58,074 - INFO - Found LinkedIn logo for Pulse Recruit: https://media.licdn.com/dms/image/v2/D4E0BAQEau2WV-8QiJQ/company-logo_100_100/B4EZiZ3kucHgAQ-/0/1754928139550/pulse_recruit_logo?e=2147483647&v=beta&t=mr94pWRDSf7QcUsmdDVzJTGWFPX-_otaFmTDjYqrVt0
+2025-09-17 12:48:58,075 - INFO - Found LinkedIn logo for Hudl: https://media.licdn.com/dms/image/v2/C4D0BAQERgTBCtQxz_A/company-logo_100_100/company-logo_100_100/0/1658256964963/hudl_logo?e=2147483647&v=beta&t=-LiNAQFQgV3EKdsSECvzGZFb_CnkwXuNACBRv1uwMFc
+2025-09-17 12:48:58,076 - INFO - Found LinkedIn logo for 9fin: https://media.licdn.com/dms/image/v2/C560BAQEJe1MvwhDM9g/company-logo_100_100/company-logo_100_100/0/1630668411062/9fin_logo?e=2147483647&v=beta&t=cDo_P7c7OpMeNxbsu_3wBTVwnobML8QTtrEUqtsqv0s
+2025-09-17 12:48:58,077 - INFO - Found LinkedIn logo for Lottie: https://media.licdn.com/dms/image/v2/C4D0BAQG0lv7IWL8zDw/company-logo_100_100/company-logo_100_100/0/1631876117512/thankslottie_logo?e=2147483647&v=beta&t=Ne_B3ZCrL3uTe3aSk1iqh2pRW0-wYXthqipjCBlO_7U
+2025-09-17 12:48:58,078 - INFO - Found LinkedIn logo for Montash: https://media.licdn.com/dms/image/v2/D4E0BAQGwwBHnUTJozg/company-logo_100_100/company-logo_100_100/0/1681993986507/montash_logo?e=2147483647&v=beta&t=-6HXuOkOAop6vVcRthyrwbMLvmY4esfdh48n15rnh5s
+2025-09-17 12:48:58,080 - INFO - Found LinkedIn logo for rmg digital: https://media.licdn.com/dms/image/v2/C4D0BAQFDVS7ATEQrgQ/company-logo_100_100/company-logo_100_100/0/1631355382415?e=2147483647&v=beta&t=S-4NpgYg8R9MrNfiFYCwqb1NN4DLOtTdSvmqESf1WlU
+2025-09-17 12:48:58,095 - INFO - Found LinkedIn logo for Gen: https://media.licdn.com/dms/image/v2/D4E0BAQHNucXukKpDhw/company-logo_100_100/company-logo_100_100/0/1667840512892/gendigitalinc_logo?e=2147483647&v=beta&t=woeOBl1_RjKZ99XEPP2Wek5Zi8QzW6XtKtXQMdmHAo0
+2025-09-17 12:48:58,140 - INFO - Found LinkedIn logo for AlphaSights: https://media.licdn.com/dms/image/v2/C560BAQFwAv8LC2z7Hg/company-logo_100_100/company-logo_100_100/0/1657205295670?e=2147483647&v=beta&t=JfLQ1TWTH2oM9mNvcnTXeXJ7GZaoapQjWGGYdai0XQg
+2025-09-17 12:48:58,158 - INFO - Found LinkedIn logo for Hello Klean: https://media.licdn.com/dms/image/v2/D4E0BAQEE294gwwj1tA/company-logo_100_100/company-logo_100_100/0/1727540892407/hello_klean_logo?e=2147483647&v=beta&t=kDnAaBL5O0CSqv3raTsg48lNavvT3m62z4kStCxwNEQ
+2025-09-17 12:48:59,296 - INFO - Found LinkedIn logo for Jendi: https://media.licdn.com/dms/image/v2/D4E0BAQFQK_J1HjQxwQ/company-logo_100_100/company-logo_100_100/0/1734367754520/jendi_logo?e=2147483647&v=beta&t=S2vKzoCwGk0qjffLKY6PEPBCNf3gFNWObm-9Tud7VU4
+2025-09-17 12:48:59,329 - INFO - Found LinkedIn logo for Williams Racing: https://media.licdn.com/dms/image/v2/D4E0BAQFIqpLl8l5GCA/company-logo_100_100/B4EZUfAD.YHUAU-/0/1739981865953/atlassianwilliamsracing_logo?e=2147483647&v=beta&t=gx-yiOTdIOIszPagmTbPis3ycsSmJeeZX6OIagUWk1g
+2025-09-17 12:48:59,404 - INFO - Found LinkedIn logo for AlphaSights: https://media.licdn.com/dms/image/v2/C560BAQFwAv8LC2z7Hg/company-logo_100_100/company-logo_100_100/0/1657205295670?e=2147483647&v=beta&t=JfLQ1TWTH2oM9mNvcnTXeXJ7GZaoapQjWGGYdai0XQg
+2025-09-17 12:48:59,407 - INFO - Found LinkedIn logo for Tomorrow Recruitment Ltd | B Corp™: https://media.licdn.com/dms/image/v2/D4E0BAQG5VxCBguFLrw/company-logo_100_100/B4EZfL_6HxHsAY-/0/1751474217888/tomorrow_recruitment_ltd_logo?e=2147483647&v=beta&t=2d9m2_fv3OhdV197BKtvXDh9os7JFkbF78Q7vKwT7yw
+2025-09-17 12:48:59,411 - INFO - Found LinkedIn logo for oryxsearch.io: https://media.licdn.com/dms/image/v2/D4D0BAQGRf4mlnIEQTw/company-logo_100_100/B4DZbYuFd.IEAQ-/0/1747392682323?e=2147483647&v=beta&t=JxT_45tl1hrdll6kTIo9mzEiVcB9lcMSV6i1aUHd6Lc
+2025-09-17 12:48:59,421 - INFO - Found LinkedIn logo for Hearst UK: https://media.licdn.com/dms/image/v2/C4E0BAQGrmwJhtjYvNg/company-logo_100_100/company-logo_100_100/0/1675343419553/hearst_magazines_uk_logo?e=2147483647&v=beta&t=E4goJeRMO7OvZhXd09oHqrgiuN1vBIBF4kL4arPwHdI
+2025-09-17 12:48:59,424 - INFO - Found LinkedIn logo for Major Players | B Corp™: https://media.licdn.com/dms/image/v2/D4E0BAQFmOKhKR7kYHA/company-logo_100_100/B4EZhdXiHeGoAU-/0/1753913107442/major_players_logo?e=2147483647&v=beta&t=hlIvE2iDH3cUKZ14qqrZ8pRhVKeTa7dm53_O7UYK78w
+2025-09-17 12:48:59,434 - INFO - Found LinkedIn logo for Hudl: https://media.licdn.com/dms/image/v2/C4D0BAQERgTBCtQxz_A/company-logo_100_100/company-logo_100_100/0/1658256964963/hudl_logo?e=2147483647&v=beta&t=-LiNAQFQgV3EKdsSECvzGZFb_CnkwXuNACBRv1uwMFc
+2025-09-17 12:48:59,440 - INFO - Found LinkedIn logo for Definite Article Media: https://media.licdn.com/dms/image/v2/C4E0BAQGzaS6juk1hbA/company-logo_100_100/company-logo_100_100/0/1631306515300?e=2147483647&v=beta&t=YxRzQZL7OxSVhQQnV0b2A0bBpE2EV7bbDK7WcRwbJ38
+2025-09-17 12:48:59,458 - INFO - Found LinkedIn logo for Total Management Group: https://media.licdn.com/dms/image/v2/D4E0BAQG1J_3dkCfpnA/company-logo_100_100/company-logo_100_100/0/1696241807275/total_management_group_logo?e=2147483647&v=beta&t=k6WU0XtU0RkLNzpSmilGFq85Af1Q0YXHvgmThqN88eM
+2025-09-17 12:48:59,733 - INFO - Found LinkedIn logo for Cherry: https://media.licdn.com/dms/image/v2/C4D0BAQHxVEgBlqyumg/company-logo_100_100/company-logo_100_100/0/1627068135915?e=2147483647&v=beta&t=lc1X-Yc7KW22r2QxXd51EWWsYRKfgHmKGNhP18T7L4Q
+2025-09-17 12:48:59,914 - INFO - Using Logo.dev for Tesco Technology: https://img.logo.dev/tescotechnology.com?token=pk_X9vSaQ0wR3WxKzsHQUfhOQ
+2025-09-17 12:49:00,168 - INFO - Found LinkedIn logo for Herbalife: https://media.licdn.com/dms/image/v2/C560BAQFwSmN-2wQr_g/company-logo_100_100/company-logo_100_100/0/1678820626878/herbalife_logo?e=2147483647&v=beta&t=p5CS0zp6LLhedXZW45B1u7yBeCWgjiEgDt-USHDjWrY
+2025-09-17 12:49:00,170 - INFO - Found LinkedIn logo for Motability Operations Ltd: https://media.licdn.com/dms/image/v2/D4E0BAQGYj3fGVkEdaA/company-logo_100_100/B4EZh_QV42GcAc-/0/1754481648041/motabilityoperations_logo?e=2147483647&v=beta&t=2mOkZDTjFR5MWOyL-opcvHPcnUYHtkwQPugmaVduIQU
+2025-09-17 12:49:00,175 - INFO - Found LinkedIn logo for Reach Volunteering: https://media.licdn.com/dms/image/v2/C4D0BAQEuIhkWXUSSew/company-logo_100_100/company-logo_100_100/0/1631344228287?e=2147483647&v=beta&t=wKcttayjwUGYHTNH2SK4wdvmDutZ6yctLAK7sXK9_RE
+2025-09-17 12:49:00,191 - INFO - Found LinkedIn logo for Talent: https://media.licdn.com/dms/image/v2/D4E0BAQEK0poTGUn02Q/company-logo_100_100/company-logo_100_100/0/1721034896008/talent_logo?e=2147483647&v=beta&t=o65qPK2jd3Jny5538RtUNbsF6f9duKvOP5qBoH5S3jw
+2025-09-17 12:49:00,192 - INFO - Logo fetch completed in 3.65 seconds
+2025-09-17 12:49:00,192 - INFO - Successfully fetched logos for 26 jobs
+2025-09-17 12:49:00,192 - INFO - Successfully processed 26 jobs

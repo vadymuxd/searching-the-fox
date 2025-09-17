@@ -389,6 +389,55 @@ main {
     border-bottom: 1px solid #e9e8e6;
 }
 
+/* Logo column styling */
+.jobs-table th:first-child,
+.jobs-table td:first-child {
+    width: 80px !important;
+    min-width: 80px !important;
+    max-width: 80px !important;
+    text-align: center;
+    table-layout: fixed;
+}
+
+.jobs-table {
+    table-layout: fixed;
+}
+
+.logo-cell {
+    text-align: center;
+    vertical-align: middle;
+    width: 80px !important;
+}
+
+.company-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    object-fit: cover;
+    border: none;
+    display: block;
+    margin: 0 auto;
+}
+
+.logo-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background: #f1f1ef;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    color: #9b9a97;
+    font-size: 12px;
+}
+
+.logo-placeholder::before {
+    content: "🏢";
+    font-size: 16px;
+}
+
 /* Make Actions column wider */
 .jobs-table th:last-child,
 .jobs-table td:last-child {
@@ -417,14 +466,6 @@ main {
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.company-logo {
-    width: 24px;
-    height: 24px;
-    border-radius: 4px;
-    object-fit: cover;
-    border: 1px solid #e9e8e6;
 }
 
 .company-name {
@@ -866,6 +907,7 @@ main {
     .jobs-table td:last-child {
         width: 100%;
         min-width: 100%;
+        max-width: 100%;
     }
     
     /* Remove container border on mobile */

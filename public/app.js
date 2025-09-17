@@ -284,13 +284,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         row.innerHTML = `
+            <td class="logo-cell">
+                ${job.company_logo_url ? 
+                    `<img src="${escapeHtml(job.company_logo_url)}" alt="${escapeHtml(job.company)}" class="company-logo" 
+                         onerror="this.style.display='none'; console.log('Failed to load logo:', '${escapeHtml(job.company_logo_url)}');"
+                         onload="console.log('Successfully loaded logo:', '${escapeHtml(job.company_logo_url)}');">` : 
+                    '<div class="logo-placeholder"></div>'
+                }
+            </td>
             <td class="job-title">
                 ${job.job_url ? 
                     `<a href="${job.job_url}" target="_blank" rel="noopener noreferrer">${escapeHtml(job.title || 'No title')}</a>` : 
                     escapeHtml(job.title || 'No title')
                 }
             </td>
-            <td>${escapeHtml(job.company || 'Unknown')}</td>
+            <td>
+                <span class="company-name">${escapeHtml(job.company || 'Unknown')}</span>
+            </td>
             <td>${escapeHtml(job.location || 'Unknown')}</td>
             <td>${dateText}</td>
             <td>

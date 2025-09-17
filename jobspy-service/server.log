@@ -189,3 +189,12 @@ INFO:     127.0.0.1:59137 - "POST /scrape HTTP/1.1" 200 OK
 2025-09-17 11:07:28,735 - INFO - Found 90 jobs
 2025-09-17 11:07:28,740 - INFO - Successfully processed 90 jobs
 INFO:     127.0.0.1:59146 - "POST /scrape HTTP/1.1" 200 OK
+2025-09-17 11:18:36,949 - INFO - Starting job scrape request: {'search_term': 'product design', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 11:18:36,950 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 11:19:23,163 - INFO - Found 89 jobs
+2025-09-17 11:19:23,168 - INFO - Successfully processed 89 jobs
+INFO:     127.0.0.1:59297 - "POST /scrape HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [73314]
