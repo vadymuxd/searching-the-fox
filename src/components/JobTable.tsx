@@ -278,7 +278,7 @@ export function JobTable({ jobs }: JobTableProps) {
 
   return (
     <ScrollArea>
-      <Table highlightOnHover withTableBorder>
+      <Table highlightOnHover>
         <Table.Thead>
           <Table.Tr>
             <Th width={60}>Logo</Th>

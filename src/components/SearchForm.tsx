@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import {
-  Paper,
+  Box,
   TextInput,
   Select,
   Button,
@@ -40,7 +40,7 @@ export function SearchForm({ onSearch, loading = false }: SearchFormProps) {
   };
 
   return (
-    <Paper py="xl" radius="md">
+    <Box py="xl">
       <Stack gap="lg">
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack gap="md">
@@ -105,6 +105,6 @@ export function SearchForm({ onSearch, loading = false }: SearchFormProps) {
           </Stack>
         </form>
       </Stack>
-    </Paper>
+    </Box>
   );
 }

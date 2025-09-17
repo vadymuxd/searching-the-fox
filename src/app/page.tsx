@@ -76,131 +76,148 @@ export default function HomePage() {
   };
 
   return (
-    <Container size="xl" py={searchStarted ? "xl" : 0} style={{ minHeight: '100vh' }}>
+    <>
       {!searchStarted ? (
         // Centered layout for initial state
-        <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-          <Box style={{ width: '100%', maxWidth: '1200px' }}>
-            <Stack gap="0" align="center">
-              {/* Fox Logo */}
-              <Box style={{ width: '200px', height: '150px', marginBottom: '24px' }}>
-                <img 
-                  src="/fox_logo.svg"
-                  alt="Fox logo"
-                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                />
-              </Box>
-              {/* Headline */}
-              <Title order={1} ta="center" mb="lg" style={{ color: '#37352f', fontWeight: 600 }}>
-                Searching The Fox
-              </Title>
-              {/* Job Site Icons */}
-              <Box style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                <img 
-                  src="/indeed.svg" 
-                  alt="Indeed" 
-                  style={{ width: '24px', height: '24px', opacity: 0.2 }}
-                />
-                <img 
-                  src="/Linkedin.svg" 
-                  alt="LinkedIn" 
-                  style={{ width: '24px', height: '24px', opacity: 0.2 }}
-                />
-                <img 
-                  src="/Glassdoor.svg" 
-                  alt="Glassdoor" 
-                  style={{ width: '24px', height: '24px', opacity: 0.2 }}
-                />
-              </Box>
-              {/* Search Form */}
-              <SearchForm onSearch={handleSearch} loading={loading} />
-            </Stack>
+        <Container size="xl" style={{ minHeight: '100vh' }}>
+          <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+            <Box style={{ width: '100%', maxWidth: '1200px' }}>
+              <Stack gap="0" align="center">
+                {/* Fox Logo */}
+                <Box style={{ width: '200px', height: '150px', marginBottom: '24px' }}>
+                  <img 
+                    src="/fox_logo.svg"
+                    alt="Fox logo"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                </Box>
+                {/* Headline */}
+                <Title order={1} ta="center" mb="lg" style={{ color: '#37352f', fontWeight: 600 }}>
+                  Searching The Fox
+                </Title>
+                {/* Job Site Icons */}
+                <Box style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                  <img 
+                    src="/indeed.svg" 
+                    alt="Indeed" 
+                    style={{ width: '24px', height: '24px', opacity: 0.2 }}
+                  />
+                  <img 
+                    src="/Linkedin.svg" 
+                    alt="LinkedIn" 
+                    style={{ width: '24px', height: '24px', opacity: 0.2 }}
+                  />
+                  <img 
+                    src="/Glassdoor.svg" 
+                    alt="Glassdoor" 
+                    style={{ width: '24px', height: '24px', opacity: 0.2 }}
+                  />
+                </Box>
+                {/* Search Form */}
+                <SearchForm onSearch={handleSearch} loading={loading} />
+              </Stack>
+            </Box>
           </Box>
-        </Box>
+        </Container>
       ) : (
-        // Top layout after search is started
-        <Stack gap="xl">
-          {/* Search Form */}
-          <SearchForm onSearch={handleSearch} loading={loading} />
+        // Split layout after search is started
+        <>
+          {/* Top Section - Search Form */}
+          <Box 
+            style={{ 
+              backgroundColor: '#f8f9fa',
+              borderBottom: '1px solid #dee2e6',
+              padding: '24px 0'
+            }}
+          >
+            <Container size="xl">
+              <SearchForm onSearch={handleSearch} loading={loading} />
+            </Container>
+          </Box>
 
-          {/* Loading Progress */}
-          {loading && (
-          <Paper p="md" radius="md" withBorder>
-            <Stack gap="md" align="center">
-              <Timer isRunning={loading} />
-              <Text fw={500} size="sm">Searching for jobs...</Text>
-              <Text size="sm" c="dimmed" ta="center">
-                This may take up to 2 minutes depending on the job board and number of results
-              </Text>
+          {/* Bottom Section - Results */}
+          <Container size="xl" py="xl">
+            <Stack gap="xl">
+              {/* Loading Progress */}
+              {loading && (
+                <Paper p="md" radius="md">
+                  <Stack gap="md" align="center">
+                    <Timer isRunning={loading} />
+                    <Text fw={500} size="sm">Searching for jobs...</Text>
+                    <Text size="sm" c="dimmed" ta="center">
+                      This may take up to 2 minutes depending on the job board and number of results
+                    </Text>
+                  </Stack>
+                </Paper>
+              )}
+
+              {/* Error Alert */}
+              {error && (
+                <Alert 
+                  icon={<IconAlertCircle size={16} />} 
+                  title="Search Error" 
+                  color="red"
+                  variant="light"
+                  styles={{
+                    message: { fontSize: '14px' }
+                  }}
+                >
+                  {error}
+                </Alert>
+              )}
+
+              {/* Results */}
+              {searchStarted && !loading && jobs.length === 0 && !error && (
+                <Alert 
+                  icon={<IconInfoCircle size={16} />} 
+                  title="No Jobs Found" 
+                  color="blue"
+                  variant="light"
+                  styles={{
+                    message: { fontSize: '14px' }
+                  }}
+                >
+                  No jobs were found matching your criteria. Try adjusting your search terms or expanding your location.
+                </Alert>
+              )}
+
+              {jobs.length > 0 && (
+                <Stack gap="lg">
+                  {/* Job Counter */}
+                  <Group justify="space-between" align="center">
+                    <Text fw={600} size="sm">
+                      {filteredJobs.length} of {jobs.length} jobs shown
+                    </Text>
+                  </Group>
+
+                  {/* Page Filter */}
+                  <PageFilter 
+                    jobs={jobs} 
+                    onFilteredJobsChange={setFilteredJobs}
+                  />
+
+                  {/* Filtered Results */}
+                  {filteredJobs.length === 0 ? (
+                    <Alert 
+                      icon={<IconInfoCircle size={16} />} 
+                      title="No Matching Jobs" 
+                      color="orange"
+                      variant="light"
+                      styles={{
+                        message: { fontSize: '14px' }
+                      }}
+                    >
+                      No jobs match your filter criteria. Try different job title keywords or clear the filter.
+                    </Alert>
+                  ) : (
+                    <JobTable jobs={filteredJobs} />
+                  )}
+                </Stack>
+              )}
             </Stack>
-          </Paper>
-        )}
-
-        {/* Error Alert */}
-        {error && (
-          <Alert 
-            icon={<IconAlertCircle size={16} />} 
-            title="Search Error" 
-            color="red"
-            variant="light"
-            styles={{
-              message: { fontSize: '14px' }
-            }}
-          >
-            {error}
-          </Alert>
-        )}
-
-        {/* Results */}
-        {searchStarted && !loading && jobs.length === 0 && !error && (
-          <Alert 
-            icon={<IconInfoCircle size={16} />} 
-            title="No Jobs Found" 
-            color="blue"
-            variant="light"
-            styles={{
-              message: { fontSize: '14px' }
-            }}
-          >
-            No jobs were found matching your criteria. Try adjusting your search terms or expanding your location.
-          </Alert>
-        )}
-
-        {jobs.length > 0 && (
-          <Stack gap="lg">
-            {/* Job Counter */}
-            <Group justify="space-between" align="center">
-              <Text fw={600} size="sm">
-                {filteredJobs.length} of {jobs.length} jobs shown
-              </Text>
-            </Group>
-
-            {/* Page Filter */}
-            <PageFilter 
-              jobs={jobs} 
-              onFilteredJobsChange={setFilteredJobs}
-            />
-
-            {/* Filtered Results */}
-            {filteredJobs.length === 0 ? (
-              <Alert 
-                icon={<IconInfoCircle size={16} />} 
-                title="No Matching Jobs" 
-                color="orange"
-                variant="light"
-                styles={{
-                  message: { fontSize: '14px' }
-                }}
-              >
-                No jobs match your filter criteria. Try different job title keywords or clear the filter.
-              </Alert>
-            ) : (
-              <JobTable jobs={filteredJobs} />
-            )}
-          </Stack>
-        )}
-        </Stack>
+          </Container>
+        </>
       )}
-    </Container>
+    </>
   );
 }
