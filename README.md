@@ -1,23 +1,80 @@
-# LinkedIn Job Scraper MVP
+# TrueList - Job Search Application
 
-A simple web application that scrapes LinkedIn job postings based on job title and location. Built with Node.js, Express, and vanilla JavaScript.
+A modern job search application built with Next.js frontend and FastAPI backend.
+
+## Architecture
+
+- **Frontend**: Next.js with Mantine UI (deployed on Vercel)
+- **Backend**: FastAPI with JobSpy integration (deployed on Render)
+
+## Project Structure
+
+```
+/Truelist/
+├── truelist-nextjs/           # Next.js frontend application
+│   ├── src/
+│   │   ├── app/              # Next.js app router pages
+│   │   ├── components/       # React components
+│   │   ├── lib/              # API utilities
+│   │   └── types/            # TypeScript definitions
+│   ├── public/               # Static assets
+│   ├── package.json          # Frontend dependencies
+│   └── vercel.json           # Vercel deployment config
+├── jobspy-service/           # Python FastAPI backend
+│   ├── main.py               # FastAPI server
+│   ├── logo_fetcher.py       # Company logo fetching
+│   ├── requirements.txt      # Python dependencies
+│   └── jobspy-env/           # Python virtual environment
+└── docs/                     # Project documentation
+    ├── NEXTJS_ARCHITECTURE.md
+    ├── TIMEOUT_ANALYSIS.md
+    └── VERCEL_PYTHON_OPTIONS.md
+```
+
+## Development Setup
+
+### Frontend (Next.js)
+```bash
+cd truelist-nextjs
+npm install
+npm run dev
+```
+Frontend will be available at http://localhost:3000
+
+### Backend (FastAPI)
+```bash
+cd jobspy-service
+source jobspy-env/bin/activate
+python main.py
+```
+Backend API will be available at http://localhost:8001
+
+## Deployment
+
+- **Frontend**: Deploy `truelist-nextjs/` folder to Vercel
+- **Backend**: Deploy `jobspy-service/` folder to Render
 
 ## Features
 
-- 🔍 Search jobs by title and location
-- 📊 Display results in a clean, sortable table
-- 📱 Responsive design that works on mobile and desktop
-- ⚡ Fast scraping using LinkedIn's public API
-- 🎨 Modern, beautiful UI with gradient backgrounds
+- Job search across multiple platforms (Indeed, LinkedIn, Glassdoor, ZipRecruiter)
+- Real-time job scraping with JobSpy
+- Company logo fetching
+- Modern UI with Mantine components
+- Responsive design
+- Advanced filtering and sorting
 
-## How It Works
+## API Endpoints
 
-This application uses LinkedIn's public job search API endpoint to fetch job postings. The scraper extracts:
-- Job title
-- Company name
-- Location
-- Date posted
-- Direct link to the job posting
+- `GET /health` - Health check
+- `POST /scrape` - Search jobs with parameters
+
+## Environment Variables
+
+### Frontend (Next.js)
+- `NEXT_PUBLIC_API_URL` - FastAPI backend URL
+
+### Backend (FastAPI)
+- No additional environment variables required for basic setup
 
 ## Installation
 

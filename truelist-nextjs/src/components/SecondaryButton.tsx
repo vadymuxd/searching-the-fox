@@ -5,6 +5,7 @@ import { forwardRef } from 'react';
 
 interface SecondaryButtonProps extends Omit<ButtonProps, 'variant' | 'color'> {
   children: React.ReactNode;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   component?: any;
   href?: string;
   target?: string;
