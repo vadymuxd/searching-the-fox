@@ -1,7 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd truelist-nextjs && npm install && npm run build",
-  "devCommand": "cd truelist-nextjs && npm run dev",
-  "installCommand": "cd truelist-nextjs && npm install",
-  "outputDirectory": "truelist-nextjs/.next"
-}
