@@ -1,0 +1,7 @@
+python-jobspy==1.1.82
+fastapi==0.116.1
+uvicorn==0.32.1
+python-multipart==0.0.20
+pydantic==2.11.9
+requests==2.32.5
+markdownify==0.13.1

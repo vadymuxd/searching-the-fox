@@ -1,0 +1,145 @@
+2025-09-16 18:16:46,540 - INFO - Starting job scrape request: {'search_term': 'developer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 2, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:16:46,820 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:16:47,352 - INFO - Found 2 jobs
+2025-09-16 18:16:47,353 - INFO - Successfully processed 2 jobs
+2025-09-16 18:16:55,711 - INFO - Starting job scrape request: {'search_term': 'developer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 2, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:16:55,712 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:16:56,269 - INFO - Found 2 jobs
+2025-09-16 18:16:56,270 - INFO - Successfully processed 2 jobs
+2025-09-16 18:17:00,562 - INFO - Starting job scrape request: {'search_term': 'lead product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 100, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:17:00,564 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:17:15,547 - INFO - Found 25 jobs
+2025-09-16 18:17:15,549 - INFO - Successfully processed 25 jobs
+2025-09-16 18:21:47,398 - INFO - Starting job scrape request: {'search_term': 'product design', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 100, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:21:47,399 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:22:34,468 - INFO - Found 89 jobs
+2025-09-16 18:22:34,472 - INFO - Successfully processed 89 jobs
+2025-09-16 18:23:45,518 - INFO - Starting job scrape request: {'search_term': 'product design', 'location': 'london', 'site_name': ['indeed'], 'results_wanted': 100, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:23:45,520 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:23:46,138 - INFO - Found 100 jobs
+2025-09-16 18:23:46,160 - INFO - Successfully processed 100 jobs
+2025-09-16 18:24:11,629 - INFO - Starting job scrape request: {'search_term': 'product design lead', 'location': 'london', 'site_name': ['indeed'], 'results_wanted': 100, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:24:11,629 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:24:12,303 - INFO - Found 100 jobs
+2025-09-16 18:24:12,326 - INFO - Successfully processed 100 jobs
+2025-09-16 18:24:32,510 - INFO - Starting job scrape request: {'search_term': 'product design lead', 'location': 'london', 'site_name': ['glassdoor'], 'results_wanted': 100, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:24:32,511 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:25:05,455 - INFO - Found 100 jobs
+2025-09-16 18:25:05,481 - INFO - Successfully processed 100 jobs
+2025-09-16 18:28:56,870 - INFO - Starting job scrape request: {'search_term': 'developer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 200, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:28:56,870 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:29:46,778 - INFO - Found 89 jobs
+2025-09-16 18:29:46,782 - INFO - Successfully processed 89 jobs
+2025-09-16 18:29:57,562 - INFO - Starting job scrape request: {'search_term': 'developer', 'location': 'london', 'site_name': ['indeed'], 'results_wanted': 200, 'hours_old': 168, 'country_indeed': 'UK'}
+2025-09-16 18:29:57,562 - INFO - Scraping jobs with date filter: 2025-09-09
+2025-09-16 18:29:58,995 - INFO - Found 200 jobs
+2025-09-16 18:29:59,036 - INFO - Successfully processed 200 jobs
+2025-09-16 18:30:09,876 - INFO - Starting job scrape request: {'search_term': 'developer', 'location': 'london', 'site_name': ['indeed'], 'results_wanted': 500, 'hours_old': 168, 'country_indeed': 'UK'}
+2025-09-16 18:30:09,876 - INFO - Scraping jobs with date filter: 2025-09-09
+2025-09-16 18:30:12,672 - INFO - Found 297 jobs
+2025-09-16 18:30:12,730 - INFO - Successfully processed 297 jobs
+2025-09-16 18:30:30,646 - INFO - Starting job scrape request: {'search_term': 'software engineer', 'location': 'new york', 'site_name': ['indeed'], 'results_wanted': 1000, 'hours_old': 720, 'country_indeed': 'USA'}
+2025-09-16 18:30:30,647 - INFO - Scraping jobs with date filter: 2025-08-17
+2025-09-16 18:30:46,046 - INFO - Found 983 jobs
+2025-09-16 18:30:46,251 - INFO - Successfully processed 983 jobs
+2025-09-16 18:31:47,036 - INFO - Starting job scrape request: {'search_term': 'product manager', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 168, 'country_indeed': 'UK'}
+2025-09-16 18:31:47,036 - INFO - Scraping jobs with date filter: 2025-09-09
+2025-09-16 18:33:08,186 - INFO - Found 140 jobs
+2025-09-16 18:33:08,191 - INFO - Successfully processed 140 jobs
+2025-09-16 18:33:08,192 - INFO - Starting job scrape request: {'search_term': 'product manager', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 168, 'country_indeed': 'UK'}
+2025-09-16 18:33:08,192 - INFO - Scraping jobs with date filter: 2025-09-09
+2025-09-16 18:34:26,408 - INFO - Found 140 jobs
+2025-09-16 18:34:26,415 - INFO - Successfully processed 140 jobs
+2025-09-16 18:34:26,416 - INFO - Starting job scrape request: {'search_term': 'developer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 50, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:34:26,416 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:34:51,355 - INFO - Found 50 jobs
+2025-09-16 18:34:51,357 - INFO - Successfully processed 50 jobs
+2025-09-16 18:35:35,930 - INFO - Starting job scrape request: {'search_term': 'product design lead', 'location': 'london', 'site_name': ['glassdoor'], 'results_wanted': 100, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:35:35,931 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:35:53,581 - INFO - Found 60 jobs
+2025-09-16 18:35:53,597 - INFO - Successfully processed 60 jobs
+2025-09-16 18:37:31,015 - INFO - Starting job scrape request: {'search_term': 'product design', 'location': 'london', 'site_name': ['glassdoor'], 'results_wanted': 100, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:37:31,016 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:37:33,365 - WARNING - No jobs found
+2025-09-16 18:37:39,388 - INFO - Starting job scrape request: {'search_term': 'lead product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:37:39,389 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:37:58,094 - INFO - Found 26 jobs
+2025-09-16 18:37:58,096 - INFO - Successfully processed 26 jobs
+2025-09-16 18:38:13,421 - INFO - Starting job scrape request: {'search_term': 'product design', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:38:13,421 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:39:03,603 - INFO - Found 89 jobs
+2025-09-16 18:39:03,607 - INFO - Successfully processed 89 jobs
+2025-09-16 18:39:13,854 - INFO - Starting job scrape request: {'search_term': 'product design', 'location': 'london', 'site_name': ['indeed'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:39:13,855 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:39:16,766 - INFO - Found 331 jobs
+2025-09-16 18:39:16,837 - INFO - Successfully processed 331 jobs
+2025-09-16 18:39:45,303 - INFO - Starting job scrape request: {'search_term': 'product design', 'location': 'london', 'site_name': ['glassdoor'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:39:45,303 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:40:46,910 - INFO - Found 221 jobs
+2025-09-16 18:40:46,958 - INFO - Successfully processed 221 jobs
+2025-09-16 18:42:54,083 - INFO - Starting job scrape request: {'search_term': 'product design', 'location': 'london', 'site_name': ['glassdoor'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:42:54,084 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:43:57,105 - INFO - Found 220 jobs
+2025-09-16 18:43:57,152 - INFO - Successfully processed 220 jobs
+2025-09-16 18:44:55,817 - INFO - Starting job scrape request: {'search_term': 'product design', 'location': 'london', 'site_name': ['zip_recruiter'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-16 18:44:55,818 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-16 18:44:56,126 - WARNING - No jobs found
+2025-09-16 18:45:01,904 - INFO - Starting job scrape request: {'search_term': 'product design', 'location': 'london', 'site_name': ['zip_recruiter'], 'results_wanted': 1000, 'hours_old': 168, 'country_indeed': 'UK'}
+2025-09-16 18:45:01,905 - INFO - Scraping jobs with date filter: 2025-09-09
+2025-09-16 18:45:02,241 - WARNING - No jobs found
+2025-09-17 10:18:43,171 - INFO - Starting job scrape request: {'search_term': 'product design', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 10:18:43,173 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 10:19:23,197 - INFO - Found 90 jobs
+2025-09-17 10:19:23,203 - INFO - Successfully processed 90 jobs
+2025-09-17 10:29:16,636 - INFO - Starting job scrape request: {'search_term': 'Product Design Lead', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 10:29:16,639 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 10:29:41,309 - INFO - Found 40 jobs
+2025-09-17 10:29:41,311 - INFO - Successfully processed 40 jobs
+2025-09-17 10:46:39,488 - INFO - Starting job scrape request: {'search_term': 'Product Design Lead', 'location': 'london', 'site_name': ['indeed'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 10:46:39,490 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 10:46:41,107 - INFO - Found 154 jobs
+2025-09-17 10:46:41,141 - INFO - Successfully processed 154 jobs
+2025-09-17 10:47:19,403 - INFO - Starting job scrape request: {'search_term': 'Product Design Lead', 'location': 'london', 'site_name': ['glassdoor'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 10:47:19,404 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 10:47:43,872 - INFO - Found 122 jobs
+2025-09-17 10:47:43,904 - INFO - Successfully processed 122 jobs
+2025-09-17 10:48:09,471 - INFO - Starting job scrape request: {'search_term': 'Product Design', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 10:48:09,472 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 10:48:54,850 - INFO - Found 89 jobs
+2025-09-17 10:48:54,854 - INFO - Successfully processed 89 jobs
+2025-09-17 10:51:29,372 - INFO - Starting job scrape request: {'search_term': 'ux design', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 10:51:29,375 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 10:51:46,873 - INFO - Found 30 jobs
+2025-09-17 10:51:46,875 - INFO - Successfully processed 30 jobs
+2025-09-17 10:53:33,359 - INFO - Starting job scrape request: {'search_term': 'design', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 10:53:33,361 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 10:54:50,523 - INFO - Found 140 jobs
+2025-09-17 10:54:50,530 - INFO - Successfully processed 140 jobs
+2025-09-17 10:57:13,964 - INFO - Starting job scrape request: {'search_term': 'design lead', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 10:57:13,965 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 10:57:57,663 - INFO - Found 80 jobs
+2025-09-17 10:57:57,668 - INFO - Successfully processed 80 jobs
+2025-09-17 10:59:22,444 - INFO - Starting job scrape request: {'search_term': 'product design lead', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 10:59:22,446 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 10:59:46,262 - INFO - Found 40 jobs
+2025-09-17 10:59:46,264 - INFO - Successfully processed 40 jobs
+2025-09-17 11:00:08,132 - INFO - Starting job scrape request: {'search_term': 'lead product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 11:00:08,134 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 11:00:20,900 - INFO - Found 24 jobs
+2025-09-17 11:00:20,902 - INFO - Successfully processed 24 jobs
+2025-09-17 11:00:42,280 - INFO - Starting job scrape request: {'search_term': 'product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 11:00:42,281 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 11:01:15,460 - INFO - Found 50 jobs
+2025-09-17 11:01:15,464 - INFO - Successfully processed 50 jobs
+2025-09-17 11:06:02,391 - INFO - Starting job scrape request: {'search_term': 'ux product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 11:06:02,392 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 11:06:06,885 - INFO - Found 2 jobs
+2025-09-17 11:06:06,886 - INFO - Successfully processed 2 jobs
+2025-09-17 11:06:13,751 - INFO - Starting job scrape request: {'search_term': 'product designer', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 11:06:13,752 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 11:06:39,607 - INFO - Found 50 jobs
+2025-09-17 11:06:39,611 - INFO - Successfully processed 50 jobs
+2025-09-17 11:06:39,613 - INFO - Starting job scrape request: {'search_term': 'product design', 'location': 'london', 'site_name': ['linkedin'], 'results_wanted': 1000, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-17 11:06:39,614 - INFO - Scraping jobs with date filter: 2025-09-16
+2025-09-17 11:07:28,735 - INFO - Found 90 jobs
+2025-09-17 11:07:28,740 - INFO - Successfully processed 90 jobs

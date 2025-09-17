@@ -167,99 +167,17 @@
         
         /* Remove background from filter header and add dividers */
         #searchInfo.search-info.job-search-static {
-            background: #fafafa !important;
-            border: 1px solid #e9e8e6 !important;
-            border-radius: 8px !important;
-            padding: 20px !important;
-            margin-bottom: 15px !important;
+            background: none !important;
+            border: none !important;
+            padding: 15px 0 !important;
+            margin-bottom: 0 !important;
+            border-bottom: 1px solid #e9e8e6 !important;
         }
         
         #resultCountContainer {
-            display: none;
-        }
-        
-        /* Filter header styling */
-        .filter-header {
+            padding: 15px 0;
+            border-bottom: 1px solid #e9e8e6;
             margin-bottom: 15px;
-        }
-        
-        .filter-header p {
-            margin: 0;
-            font-weight: 600;
-            color: #37352f;
-        }
-        
-        /* Remove rounded corners and border from filter results div */
-        #searchInfo.search-info.job-search-static {
-            background: #fafafa !important;
-            border: none !important;
-            border-radius: 0 !important;
-            padding: 20px !important;
-            margin-bottom: 15px !important;
-        }
-        
-        /* Left align Job Title column */
-        .jobs-table th:nth-child(1),
-        .jobs-table td:nth-child(1) {
-            text-align: left !important;
-        }
-        
-        /* Make Filter button black */
-        #filterBtn {
-            background: #37352f !important;
-            color: #ffffff !important;
-            border: 1px solid #37352f !important;
-        }
-        
-        #filterBtn:hover {
-            background: #2f2e2a !important;
-            border-color: #2f2e2a !important;
-        }
-        
-        /* Style View Job button same as Clear button */
-        .job-link {
-            background: #ffffff !important;
-            color: #37352f !important;
-            border: 1px solid #e9e8e6 !important;
-            padding: 6px 12px !important;
-            border-radius: 6px !important;
-            text-decoration: none !important;
-            font-size: 14px !important;
-            font-weight: 500 !important;
-            display: inline-block !important;
-            transition: all 0.2s ease !important;
-        }
-        
-        .job-link:hover {
-            background: #f7f6f3 !important;
-            border-color: #d9d8d6 !important;
-            color: #37352f !important;
-            text-decoration: none !important;
-        }
-        
-        /* Loading counter styles */
-        .loading-counter {
-            text-align: center;
-        }
-        
-        .counter-display {
-            display: inline-block;
-            background: #37352f;
-            color: #ffffff;
-            border-radius: 50px;
-            width: 80px;
-            height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            font-weight: 600;
-            margin: 0 auto 20px auto;
-            box-shadow: 0 4px 12px rgba(55, 53, 47, 0.15);
-        }
-        
-        .counter-display span {
-            color: #ffffff;
         }
         
         /* Responsive grid layout */
@@ -390,18 +308,14 @@
                     </div>
                     
                     <!-- Hidden input for max results -->
-                    <input type="hidden" id="resultsWanted" name="resultsWanted" value="1000">
+                    <input type="hidden" id="resultsWanted" name="resultsWanted" value="100">
                 </form>
             </div>
 
             <div id="loadingMessage" class="loading-message" style="display: none;">
-                <div class="loading-counter">
-                    <div class="counter-display">
-                        <span id="loadingSeconds">0</span>s
-                    </div>
-                    <p>Scraping job sites for the latest postings...</p>
-                    <p><small>This may take a few seconds</small></p>
-                </div>
+                <div class="spinner-large"></div>
+                <p>Scraping job sites for the latest postings...</p>
+                <p><small>This may take a few seconds</small></p>
             </div>
 
             <div id="errorContainer" class="error-container" style="display: none;">
@@ -414,15 +328,17 @@
 
             <div id="resultsContainer" class="results-container" style="display: none;">
                 <div id="searchInfo" class="search-info job-search-static">
-                    <div class="filter-header">
-                        <p id="resultsCount"></p>
-                    </div>
+                    <h2>Filter Results</h2>
                     <div class="inline-search-controls">
                         <input type="text" id="titleKeywords" class="inline-input" 
                                placeholder="Filter by title keywords (comma separated) - e.g. senior, lead, manager">
                         <button id="filterBtn" class="refresh-btn">Filter</button>
                         <button id="clearFilters" class="refresh-btn">Clear</button>
                     </div>
+                </div>
+                
+                <div id="resultCountContainer" class="result-count-container">
+                    <p id="resultsCount"></p>
                 </div>
 
                 <div class="table-container">
@@ -456,6 +372,6 @@
         </footer>
     </div>
     
-    <script src="app.js"></script>
+    <script src="results-fastapi.js"></script>
 </body>
 </html>

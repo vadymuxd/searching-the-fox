@@ -81,21 +81,14 @@ document.addEventListener('DOMContentLoaded', function() {
         showLoading();
 
         try {
-            // Create AbortController for timeout handling
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout
-            
             // Call FastAPI through Node.js proxy to avoid CORS issues
             const response = await fetch('/api/fastapi-scrape', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(requestData),
-                signal: controller.signal
+                body: JSON.stringify(requestData)
             });
-
-            clearTimeout(timeoutId); // Clear timeout if request completes
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
@@ -110,27 +103,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } catch (error) {
             console.error('Search error:', error);
-            
-            // Handle specific error types
-            let errorMessage = 'Failed to search for jobs. Please try again.';
-            
-            if (error.name === 'AbortError') {
-                errorMessage = 'Search request timed out after 5 minutes. Try reducing the search scope or searching for fewer results.';
-            } else if (error.message.includes('timeout')) {
-                errorMessage = 'Search request timed out. The job sites may be slow or unavailable. Please try again.';
-            } else if (error.message.includes('Network Error') || error.message.includes('fetch')) {
-                errorMessage = 'Network error occurred. Please check your connection and try again.';
-            } else if (error.message && error.message !== 'Unknown error') {
-                errorMessage = error.message;
-            }
-            
-            showError(errorMessage);
+            showError(error.message || 'Failed to search for jobs. Please try again.');
         }
     }
-
-    // Loading counter variables
-    let loadingCounter = 0;
-    let loadingInterval = null;
 
     function showLoading() {
         searchBtn.disabled = true;
@@ -139,29 +114,12 @@ document.addEventListener('DOMContentLoaded', function() {
         errorContainer.style.display = 'none';
         resultsContainer.style.display = 'none';
         noResultsContainer.style.display = 'none';
-        
-        // Start counter
-        loadingCounter = 0;
-        const loadingSecondsElement = document.getElementById('loadingSeconds');
-        loadingSecondsElement.textContent = loadingCounter;
-        
-        loadingInterval = setInterval(() => {
-            loadingCounter++;
-            loadingSecondsElement.textContent = loadingCounter;
-        }, 1000);
     }
 
     function hideLoading() {
         searchBtn.disabled = false;
-        searchBtn.textContent = 'Search';
+        searchBtn.textContent = 'Search Jobs';
         loadingMessage.style.display = 'none';
-        
-        // Clear counter
-        if (loadingInterval) {
-            clearInterval(loadingInterval);
-            loadingInterval = null;
-        }
-        loadingCounter = 0;
     }
 
     function showError(message) {
@@ -338,5 +296,5 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set default country to UK
     document.getElementById('countryIndeed').value = 'UK';
     
-    console.log('TrueList Job Search loaded');
+    console.log('FastAPI Results page loaded');
 });

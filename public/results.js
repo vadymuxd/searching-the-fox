@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (savedResults) {
         const results = JSON.parse(savedResults);
         displayResults(results);
-        localStorage.removeItem('jobResults'); // Clean up
+        // Don't remove jobResults - keep them for page refreshes
         return;
     }
 
