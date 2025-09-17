@@ -261,17 +261,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Format date
-        let dateText = 'Unknown';
-        if (job.date_posted) {
+        let dateText = 'Today';
+        if (job.date_posted && job.date_posted !== null) {
             try {
                 const date = new Date(job.date_posted);
                 if (!isNaN(date.getTime())) {
-                    dateText = date.toLocaleDateString();
+                    // Check if the date is today
+                    const today = new Date();
+                    const isToday = date.toDateString() === today.toDateString();
+                    
+                    if (isToday) {
+                        dateText = 'Today';
+                    } else {
+                        // Format as a nice readable date
+                        dateText = date.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                    }
                 } else {
-                    dateText = job.date_posted;
+                    // If date parsing fails, use the original string
+                    dateText = String(job.date_posted);
                 }
             } catch (e) {
-                dateText = job.date_posted;
+                console.warn('Date parsing error for:', job.date_posted, e);
+                dateText = String(job.date_posted);
             }
         }
 
