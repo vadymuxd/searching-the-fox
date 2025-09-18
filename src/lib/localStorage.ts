@@ -3,6 +3,7 @@ import { SearchFormData, Job } from '@/types/job';
 const SEARCH_DATA_KEY = 'searchingTheFox_searchData';
 const SEARCH_RESULTS_KEY = 'searchingTheFox_searchResults';
 const PAGE_FILTER_KEY = 'searchingTheFox_pageFilter';
+const SELECTED_JOBS_KEY = 'searchingTheFox_selectedJobs';
 
 export const searchStorage = {
   // Save search criteria
@@ -67,6 +68,8 @@ export const searchStorage = {
       if (typeof window !== 'undefined') {
         localStorage.removeItem(SEARCH_DATA_KEY);
         localStorage.removeItem(SEARCH_RESULTS_KEY);
+        // Clear selected jobs when clearing search data
+        localStorage.removeItem(SELECTED_JOBS_KEY);
       }
     } catch (error) {
       console.warn('Failed to clear search data from localStorage:', error);
@@ -106,5 +109,40 @@ export const searchStorage = {
       console.warn('Failed to check page filter in localStorage:', error);
     }
     return false;
+  },
+
+  // Save selected job IDs
+  saveSelectedJobs: (selectedJobIds: string[]): void => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(SELECTED_JOBS_KEY, JSON.stringify(selectedJobIds));
+      }
+    } catch (error) {
+      console.warn('Failed to save selected jobs to localStorage:', error);
+    }
+  },
+
+  // Load selected job IDs
+  loadSelectedJobs: (): string[] => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem(SELECTED_JOBS_KEY);
+        return saved ? JSON.parse(saved) : [];
+      }
+    } catch (error) {
+      console.warn('Failed to load selected jobs from localStorage:', error);
+    }
+    return [];
+  },
+
+  // Clear selected jobs
+  clearSelectedJobs: (): void => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(SELECTED_JOBS_KEY);
+      }
+    } catch (error) {
+      console.warn('Failed to clear selected jobs from localStorage:', error);
+    }
   },
 };

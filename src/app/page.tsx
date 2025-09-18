@@ -29,6 +29,8 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [searchStarted, setSearchStarted] = useState(false);
   const [currentSearch, setCurrentSearch] = useState<SearchFormData | null>(null);
+  const [selectedJobsCount, setSelectedJobsCount] = useState(0);
+  const [totalSelectedJobs, setTotalSelectedJobs] = useState(0);
 
   // Load saved data on component mount
   useEffect(() => {
@@ -39,6 +41,10 @@ export default function HomePage() {
       setSearchStarted(savedResults.searchStarted);
       setCurrentSearch(savedResults.searchData);
     }
+    
+    // Load saved selected jobs count
+    const savedSelectedJobs = searchStorage.loadSelectedJobs();
+    setTotalSelectedJobs(savedSelectedJobs.length);
   }, []);
 
   const handleReset = () => {
@@ -52,6 +58,15 @@ export default function HomePage() {
     setCurrentSearch(null);
     setError(null);
     setLoading(false);
+    setSelectedJobsCount(0);
+    setTotalSelectedJobs(0);
+  };
+
+  const handleSelectionChange = (selectedCount: number) => {
+    setSelectedJobsCount(selectedCount);
+    // Load total selected jobs from localStorage to show complete count
+    const allSelected = searchStorage.loadSelectedJobs();
+    setTotalSelectedJobs(allSelected.length);
   };
 
   const handleSearch = async (searchData: SearchFormData) => {
@@ -64,6 +79,8 @@ export default function HomePage() {
     setCurrentSearch(searchData); // Store the current search data
     setJobs([]);
     setFilteredJobs([]);
+    setSelectedJobsCount(0); // Reset selected jobs count
+    setTotalSelectedJobs(0); // Reset total selected jobs count
 
     // Save search data to localStorage
     searchStorage.saveSearchData(searchData);
@@ -257,6 +274,14 @@ export default function HomePage() {
                     <Text fw={600} size="sm">
                       {filteredJobs.length} of {jobs.length} jobs shown
                     </Text>
+                    {totalSelectedJobs > 0 && (
+                      <Text fw={500} size="sm" c="blue">
+                        {selectedJobsCount > 0 && selectedJobsCount !== totalSelectedJobs
+                          ? `${selectedJobsCount} of ${totalSelectedJobs} selected job${totalSelectedJobs !== 1 ? 's' : ''} visible`
+                          : `${totalSelectedJobs} job${totalSelectedJobs !== 1 ? 's' : ''} selected`
+                        }
+                      </Text>
+                    )}
                   </Group>
 
                   {/* Page Filter */}
@@ -279,7 +304,10 @@ export default function HomePage() {
                       No jobs match your filter criteria. Try different job title keywords or clear the filter.
                     </Alert>
                   ) : (
-                    <JobTable jobs={filteredJobs} />
+                    <JobTable 
+                      jobs={filteredJobs} 
+                      onSelectionChange={handleSelectionChange}
+                    />
                   )}
                 </Stack>
               )}

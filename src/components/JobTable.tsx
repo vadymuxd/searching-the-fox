@@ -17,6 +17,7 @@ import { IconChevronUp, IconChevronDown, IconSelector } from '@tabler/icons-reac
 import { Job } from '@/types/job';
 import { SecondaryButton } from './SecondaryButton';
 import { CompanyLogo } from './CompanyLogo';
+import { searchStorage } from '@/lib/localStorage';
 
 interface JobTableProps {
   jobs: Job[];
@@ -84,9 +85,10 @@ function FormTh({ children, width, style }: { children: React.ReactNode; width?:
 
 interface JobTableProps {
   jobs: Job[];
+  onSelectionChange?: (selectedCount: number) => void;
 }
 
-export function JobTable({ jobs }: JobTableProps) {
+export function JobTable({ jobs, onSelectionChange }: JobTableProps) {
   const [sortState, setSortState] = useState<SortState>({ column: null, direction: null });
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
 
@@ -104,20 +106,25 @@ export function JobTable({ jobs }: JobTableProps) {
     return Math.abs(hash).toString();
   };
 
-  // Clear selections when jobs array changes (new search or filter)
-  // but keep selections that still exist in the new jobs array
+  // Load selected jobs from localStorage on component mount
   useEffect(() => {
-    const currentJobIds = new Set(jobs.map(job => getJobId(job)));
-    const validSelections = new Set(
-      Array.from(selectedJobs).filter(jobId => currentJobIds.has(jobId))
-    );
-    
-    // Only update if selections changed
-    if (validSelections.size !== selectedJobs.size || 
-        !Array.from(validSelections).every(id => selectedJobs.has(id))) {
-      setSelectedJobs(validSelections);
+    const savedSelectedJobs = searchStorage.loadSelectedJobs();
+    if (savedSelectedJobs.length > 0) {
+      setSelectedJobs(new Set(savedSelectedJobs));
     }
-  }, [jobs, selectedJobs]);
+  }, []);
+
+  // Save selected jobs to localStorage whenever selection changes
+  useEffect(() => {
+    const selectedJobsArray = Array.from(selectedJobs);
+    searchStorage.saveSelectedJobs(selectedJobsArray);
+    
+    // Count only selected jobs that are currently visible (in the filtered jobs list)
+    const visibleSelectedCount = jobs.filter(job => selectedJobs.has(getJobId(job))).length;
+    
+    // Notify parent component about selection change
+    onSelectionChange?.(visibleSelectedCount);
+  }, [selectedJobs, jobs, onSelectionChange]);
 
   const toggleJobSelection = (jobId: string) => {
     const newSelected = new Set(selectedJobs);
@@ -130,11 +137,19 @@ export function JobTable({ jobs }: JobTableProps) {
   };
 
   const toggleAllJobs = () => {
-    if (selectedJobs.size === sortedJobs.length) {
-      setSelectedJobs(new Set());
+    const visibleJobIds = sortedJobs.map(job => getJobId(job));
+    const allVisibleSelected = visibleJobIds.every(jobId => selectedJobs.has(jobId));
+    
+    if (allVisibleSelected) {
+      // Deselect all visible jobs but keep other selections
+      const newSelected = new Set(selectedJobs);
+      visibleJobIds.forEach(jobId => newSelected.delete(jobId));
+      setSelectedJobs(newSelected);
     } else {
-      const allJobIds = new Set(sortedJobs.map(job => getJobId(job)));
-      setSelectedJobs(allJobIds);
+      // Select all visible jobs while keeping existing selections
+      const newSelected = new Set(selectedJobs);
+      visibleJobIds.forEach(jobId => newSelected.add(jobId));
+      setSelectedJobs(newSelected);
     }
   };
 
@@ -362,8 +377,8 @@ export function JobTable({ jobs }: JobTableProps) {
           <Table.Tr>
             <FormTh width={50}>
               <Checkbox
-                checked={selectedJobs.size === sortedJobs.length && sortedJobs.length > 0}
-                indeterminate={selectedJobs.size > 0 && selectedJobs.size < sortedJobs.length}
+                checked={sortedJobs.length > 0 && sortedJobs.every(job => selectedJobs.has(getJobId(job)))}
+                indeterminate={sortedJobs.some(job => selectedJobs.has(getJobId(job))) && !sortedJobs.every(job => selectedJobs.has(getJobId(job)))}
                 onChange={toggleAllJobs}
                 aria-label="Select all jobs"
               />
