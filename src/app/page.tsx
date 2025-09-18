@@ -85,16 +85,25 @@ export default function HomePage() {
               <Box style={{ width: '100%', maxWidth: '1200px' }}>
                 <Stack gap="0" align="center">
                   {/* Fox Logo */}
-                  <Box style={{ width: '200px', height: '150px', marginBottom: '24px' }}>
+                  <Box style={{ width: '100px', height: '75px', marginBottom: '12px' }}>
                     <img 
-                      src="/fox_logo.svg"
-                      alt="Fox logo"
+                      src="/Searching-The-Fox.svg"
+                      alt="Searching The Fox logo"
                       style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                     />
                   </Box>
                   {/* Headline */}
-                  <Title order={1} ta="center" mb="lg" style={{ color: '#37352f', fontWeight: 600 }}>
-                    Searching The Fox
+                  <Title 
+                    order={1} 
+                    ta="center" 
+                    mb="lg" 
+                    style={{ 
+                      color: '#37352f',
+                      fontFamily: 'var(--font-horas), Arial Black, sans-serif',
+                      fontWeight: 900
+                    }}
+                  >
+                    searching the fox
                   </Title>
                   {/* Job Site Icons */}
                   <Box style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>

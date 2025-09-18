@@ -1,3 +1,15 @@
+# Searching The Fox
+
+Searching The Fox is a comprehensive job search platform that allows users to lookup job postings from different job boards including LinkedIn, Indeed, and Glassdoor all in one place. Built with Next.js and featuring advanced search and filtering capabilities.
+
+## Features
+
+- 🦊 Search jobs across multiple platforms (LinkedIn, Indeed, Glassdoor)
+- 🔍 Advanced filtering and search capabilities
+- 📊 View all results in one unified interface
+- ⚡ Fast and responsive design
+- 🎯 Real-time job posting updates
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

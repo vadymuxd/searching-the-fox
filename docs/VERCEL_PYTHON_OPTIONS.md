@@ -26,7 +26,7 @@ Next.js Frontend (Vercel)
 
 ### File Structure:
 ```
-truelist-nextjs/
+searching-the-fox/
 ├── app/
 │   └── page.tsx              # Next.js frontend
 ├── api/

@@ -1,4 +1,4 @@
-# Next.js + Vercel Architecture for TrueList
+# Next.js + Vercel Architecture for Searching The Fox
 
 ## Recommended Setup
 
@@ -45,7 +45,7 @@ Next.js Frontend (Vercel) → Python FastAPI (Railway/Render)
 
 ## File Structure
 ```
-truelist-nextjs/
+searching-the-fox/
 ├── app/
 │   ├── page.tsx                 # Home page
 │   ├── search/
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
 4. **Future-proof**: Modern stack with great community
 5. **Deployment**: Incredibly simple and fast
 
-Would you like me to start setting up the Next.js version of your app? I can either:
+Would you like me to start setting up the Next.js version of Searching The Fox? I can either:
 1. **Create a new Next.js app** alongside your current code
 2. **Show you exactly** how to migrate your existing functionality
 3. **Keep your Python API** and just build Next.js frontend
