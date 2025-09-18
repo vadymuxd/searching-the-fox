@@ -4,10 +4,8 @@ import React, { useState, useMemo } from 'react';
 import {
   Table,
   Text,
-  Badge,
   rem,
   ScrollArea,
-  Stack,
   Paper,
   UnstyledButton,
   Group,

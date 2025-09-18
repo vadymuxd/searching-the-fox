@@ -7,7 +7,7 @@ import {
   Button,
   rem,
 } from '@mantine/core';
-import { IconFilter, IconX } from '@tabler/icons-react';
+import { IconFilter } from '@tabler/icons-react';
 import { SecondaryButton } from './SecondaryButton';
 import { Job } from '@/types/job';
 

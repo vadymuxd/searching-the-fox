@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import Image from 'next/image';
 import {
   Box,
   TextInput,
@@ -48,7 +49,7 @@ export function SearchForm({ onSearch, onReset, loading = false, initialValues }
         hoursOld: initialValues.hoursOld || form.values.hoursOld,
       });
     }
-  }, [initialValues]);
+  }, [initialValues, form]);
 
   const handleSubmit = (values: SearchFormData) => {
     onSearch(values);
@@ -77,14 +78,12 @@ export function SearchForm({ onSearch, onReset, loading = false, initialValues }
                   onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
                   onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
                 >
-                  <img 
+                  <Image 
                     src="/Searching-The-Fox.svg"
                     alt="Searching The Fox - Home"
-                    style={{ 
-                      width: '40px', 
-                      height: '40px',
-                      objectFit: 'contain'
-                    }}
+                    width={40}
+                    height={40}
+                    style={{ objectFit: 'contain' }}
                   />
                 </Box>
               )}

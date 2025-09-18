@@ -1,4 +1,4 @@
-import { SearchFormData } from '@/types/job';
+import { SearchFormData, Job } from '@/types/job';
 
 const SEARCH_DATA_KEY = 'searchingTheFox_searchData';
 const SEARCH_RESULTS_KEY = 'searchingTheFox_searchResults';
@@ -30,7 +30,7 @@ export const searchStorage = {
 
   // Save search results and state
   saveSearchResults: (data: {
-    jobs: any[];
+    jobs: Job[];
     searchStarted: boolean;
     searchData: SearchFormData;
   }): void => {
@@ -45,7 +45,7 @@ export const searchStorage = {
 
   // Load search results and state
   loadSearchResults: (): {
-    jobs: any[];
+    jobs: Job[];
     searchStarted: boolean;
     searchData: SearchFormData;
   } | null => {

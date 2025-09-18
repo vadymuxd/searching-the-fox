@@ -6,7 +6,6 @@ import {
   Badge,
   Group,
   Stack,
-  Anchor,
   Image,
   Avatar,
   Box,

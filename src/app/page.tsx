@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import {
   Container,
   Stack,
@@ -126,9 +127,11 @@ export default function HomePage() {
                 <Stack gap="0" align="center">
                   {/* Fox Logo */}
                   <Box style={{ width: '100px', height: '75px', marginBottom: '12px' }}>
-                    <img 
+                    <Image 
                       src="/Searching-The-Fox.svg"
                       alt="Searching The Fox logo"
+                      width={100}
+                      height={75}
                       style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                     />
                   </Box>
@@ -147,20 +150,26 @@ export default function HomePage() {
                   </Title>
                   {/* Job Site Icons */}
                   <Box style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                    <img 
+                    <Image 
                       src="/indeed.svg" 
                       alt="Indeed" 
-                      style={{ width: '24px', height: '24px', opacity: 0.2 }}
+                      width={24}
+                      height={24}
+                      style={{ opacity: 0.2 }}
                     />
-                    <img 
+                    <Image 
                       src="/Linkedin.svg" 
                       alt="LinkedIn" 
-                      style={{ width: '24px', height: '24px', opacity: 0.2 }}
+                      width={24}
+                      height={24}
+                      style={{ opacity: 0.2 }}
                     />
-                    <img 
+                    <Image 
                       src="/Glassdoor.svg" 
                       alt="Glassdoor" 
-                      style={{ width: '24px', height: '24px', opacity: 0.2 }}
+                      width={24}
+                      height={24}
+                      style={{ opacity: 0.2 }}
                     />
                   </Box>
                   {/* Search Form */}
