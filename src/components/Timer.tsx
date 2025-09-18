@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Text, Stack, Progress, Box, Group } from '@mantine/core';
+import { Text, Stack, Progress, Box } from '@mantine/core';
 
 interface TimerProps {
   isRunning: boolean;

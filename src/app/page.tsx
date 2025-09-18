@@ -20,7 +20,7 @@ import { PageFilter } from '@/components/PageFilter';
 import { Timer } from '@/components/Timer';
 import { JobService } from '@/lib/api';
 import { searchStorage } from '@/lib/localStorage';
-import { Job, SearchFormData } from '@/types/job';
+import { Job, SearchFormData, JobSearchResponse } from '@/types/job';
 
 export default function HomePage() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -93,7 +93,7 @@ export default function HomePage() {
     searchStorage.saveSearchData(searchData);
 
     try {
-      let response: any;
+      let response: JobSearchResponse;
       
       if (searchData.site === 'all') {
         // Handle "All Job Boards" selection

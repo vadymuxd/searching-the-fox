@@ -50,6 +50,8 @@ export function SearchForm({ onSearch, onReset, loading = false, initialValues }
       });
     }
   }, [
+    form,
+    initialValues,
     initialValues?.jobTitle,
     initialValues?.location,
     initialValues?.site,

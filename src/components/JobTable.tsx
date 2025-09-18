@@ -312,7 +312,7 @@ export function JobTable({ jobs, onSelectionChange }: JobTableProps) {
     );
   }
 
-  const rows = sortedJobs.map((job, index) => {
+  const rows = sortedJobs.map((job) => {
     const jobId = getJobId(job);
     const isSelected = selectedJobs.has(jobId);
     
