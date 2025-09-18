@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   Text,
@@ -11,6 +11,7 @@ import {
   Group,
   Center,
   Checkbox,
+  Box,
 } from '@mantine/core';
 import { IconChevronUp, IconChevronDown, IconSelector } from '@tabler/icons-react';
 import { Job } from '@/types/job';
@@ -70,20 +71,60 @@ function Th({ children, reversed, sorted, onSort, width, style }: ThProps) {
   );
 }
 
+// Special header component for form elements like checkboxes
+function FormTh({ children, width, style }: { children: React.ReactNode; width?: number | string; style?: React.CSSProperties }) {
+  return (
+    <Table.Th style={{ ...style, width }}>
+      <Box style={{ fontWeight: 500, fontSize: rem(14), display: 'flex', alignItems: 'center' }}>
+        {children}
+      </Box>
+    </Table.Th>
+  );
+}
+
 interface JobTableProps {
   jobs: Job[];
 }
 
 export function JobTable({ jobs }: JobTableProps) {
   const [sortState, setSortState] = useState<SortState>({ column: null, direction: null });
-  const [selectedJobs, setSelectedJobs] = useState<Set<number>>(new Set());
+  const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
 
-  const toggleJobSelection = (index: number) => {
+  // Create a unique identifier for each job based on its properties
+  const getJobId = (job: Job): string => {
+    // Use a combination of properties that should be unique for each job
+    const baseId = `${job.company}-${job.title}-${job.location}-${job.job_url || ''}`;
+    // Create a simple hash to make it shorter but still unique
+    let hash = 0;
+    for (let i = 0; i < baseId.length; i++) {
+      const char = baseId.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString();
+  };
+
+  // Clear selections when jobs array changes (new search or filter)
+  // but keep selections that still exist in the new jobs array
+  useEffect(() => {
+    const currentJobIds = new Set(jobs.map(job => getJobId(job)));
+    const validSelections = new Set(
+      Array.from(selectedJobs).filter(jobId => currentJobIds.has(jobId))
+    );
+    
+    // Only update if selections changed
+    if (validSelections.size !== selectedJobs.size || 
+        !Array.from(validSelections).every(id => selectedJobs.has(id))) {
+      setSelectedJobs(validSelections);
+    }
+  }, [jobs, selectedJobs]);
+
+  const toggleJobSelection = (jobId: string) => {
     const newSelected = new Set(selectedJobs);
-    if (newSelected.has(index)) {
-      newSelected.delete(index);
+    if (newSelected.has(jobId)) {
+      newSelected.delete(jobId);
     } else {
-      newSelected.add(index);
+      newSelected.add(jobId);
     }
     setSelectedJobs(newSelected);
   };
@@ -92,7 +133,8 @@ export function JobTable({ jobs }: JobTableProps) {
     if (selectedJobs.size === sortedJobs.length) {
       setSelectedJobs(new Set());
     } else {
-      setSelectedJobs(new Set(sortedJobs.map((_, index) => index)));
+      const allJobIds = new Set(sortedJobs.map(job => getJobId(job)));
+      setSelectedJobs(allJobIds);
     }
   };
 
@@ -229,23 +271,24 @@ export function JobTable({ jobs }: JobTableProps) {
   }
 
   const rows = sortedJobs.map((job, index) => {
-    const isSelected = selectedJobs.has(index);
+    const jobId = getJobId(job);
+    const isSelected = selectedJobs.has(jobId);
     
     return (
       <Table.Tr 
-        key={index}
+        key={jobId} // Use jobId as key instead of index
         style={{ 
           cursor: 'pointer',
           backgroundColor: isSelected ? 'var(--mantine-color-blue-light)' : undefined,
         }}
         data-selected={isSelected || undefined}
-        onClick={() => toggleJobSelection(index)}
+        onClick={() => toggleJobSelection(jobId)}
       >
         {/* Checkbox */}
         <Table.Td>
           <Checkbox
             checked={isSelected}
-            onChange={() => toggleJobSelection(index)}
+            onChange={() => toggleJobSelection(jobId)}
             onClick={(e) => e.stopPropagation()}
             aria-label={`Select ${job.title} at ${job.company}`}
           />
@@ -317,14 +360,14 @@ export function JobTable({ jobs }: JobTableProps) {
       <Table highlightOnHover>
         <Table.Thead>
           <Table.Tr>
-            <Th width={50}>
+            <FormTh width={50}>
               <Checkbox
                 checked={selectedJobs.size === sortedJobs.length && sortedJobs.length > 0}
                 indeterminate={selectedJobs.size > 0 && selectedJobs.size < sortedJobs.length}
                 onChange={toggleAllJobs}
                 aria-label="Select all jobs"
               />
-            </Th>
+            </FormTh>
             <Th width={60}>Logo</Th>
             <Th 
               style={{ minWidth: 200 }}

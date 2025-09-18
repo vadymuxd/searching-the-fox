@@ -42,14 +42,20 @@ export function SearchForm({ onSearch, onReset, loading = false, initialValues }
   useEffect(() => {
     if (initialValues) {
       form.setValues({
-        jobTitle: initialValues.jobTitle || form.values.jobTitle,
-        location: initialValues.location || form.values.location,
-        site: initialValues.site || form.values.site,
-        resultsWanted: initialValues.resultsWanted || form.values.resultsWanted,
-        hoursOld: initialValues.hoursOld || form.values.hoursOld,
+        jobTitle: initialValues.jobTitle || '',
+        location: initialValues.location || 'London',
+        site: initialValues.site || 'linkedin',
+        resultsWanted: initialValues.resultsWanted || 1000,
+        hoursOld: initialValues.hoursOld || '24',
       });
     }
-  }, [initialValues, form]);
+  }, [
+    initialValues?.jobTitle,
+    initialValues?.location,
+    initialValues?.site,
+    initialValues?.resultsWanted,
+    initialValues?.hoursOld,
+  ]);
 
   const handleSubmit = (values: SearchFormData) => {
     onSearch(values);

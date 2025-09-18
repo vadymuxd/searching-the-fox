@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Group,
   TextInput,
   Button,
   rem,
 } from '@mantine/core';
-import { IconFilter } from '@tabler/icons-react';
+import { IconFilter, IconDeviceFloppy, IconClipboard } from '@tabler/icons-react';
 import { SecondaryButton } from './SecondaryButton';
+import { IconButton } from './IconButton';
 import { Job } from '@/types/job';
+import { searchStorage } from '@/lib/localStorage';
 
 interface PageFilterProps {
   jobs: Job[];
@@ -18,6 +20,12 @@ interface PageFilterProps {
 
 export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
   const [filterValue, setFilterValue] = useState('');
+  const [hasSavedFilter, setHasSavedFilter] = useState(false);
+
+  // Check if there are saved filters on component mount
+  useEffect(() => {
+    setHasSavedFilter(searchStorage.hasPageFilter());
+  }, []);
 
   const handleFilter = () => {
     if (!filterValue.trim()) {
@@ -50,6 +58,20 @@ export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
     onFilteredJobsChange(jobs);
   };
 
+  const handleSave = () => {
+    if (filterValue.trim()) {
+      searchStorage.savePageFilter(filterValue);
+      setHasSavedFilter(true);
+    }
+  };
+
+  const handlePaste = () => {
+    const savedFilter = searchStorage.loadPageFilter();
+    if (savedFilter) {
+      setFilterValue(savedFilter);
+    }
+  };
+
   const handleKeyPress = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter') {
       handleFilter();
@@ -67,6 +89,19 @@ export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
         style={{ flex: 1, minWidth: '200px' }}
         size="sm"
       />
+      
+      {/* Save button - always visible */}
+      <IconButton onClick={handleSave} title="Save filter preferences">
+        <IconDeviceFloppy style={{ width: rem(16), height: rem(16) }} />
+      </IconButton>
+      
+      {/* Paste button - only visible when there are saved filters */}
+      {hasSavedFilter && (
+        <IconButton onClick={handlePaste} title="Paste saved filter preferences">
+          <IconClipboard style={{ width: rem(16), height: rem(16) }} />
+        </IconButton>
+      )}
+      
       <SecondaryButton onClick={handleClear}>
         Clear
       </SecondaryButton>

@@ -2,6 +2,7 @@ import { SearchFormData, Job } from '@/types/job';
 
 const SEARCH_DATA_KEY = 'searchingTheFox_searchData';
 const SEARCH_RESULTS_KEY = 'searchingTheFox_searchResults';
+const PAGE_FILTER_KEY = 'searchingTheFox_pageFilter';
 
 export const searchStorage = {
   // Save search criteria
@@ -70,5 +71,40 @@ export const searchStorage = {
     } catch (error) {
       console.warn('Failed to clear search data from localStorage:', error);
     }
+  },
+
+  // Save page filter preferences
+  savePageFilter: (filterValue: string): void => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(PAGE_FILTER_KEY, filterValue);
+      }
+    } catch (error) {
+      console.warn('Failed to save page filter to localStorage:', error);
+    }
+  },
+
+  // Load page filter preferences
+  loadPageFilter: (): string | null => {
+    try {
+      if (typeof window !== 'undefined') {
+        return localStorage.getItem(PAGE_FILTER_KEY);
+      }
+    } catch (error) {
+      console.warn('Failed to load page filter from localStorage:', error);
+    }
+    return null;
+  },
+
+  // Check if page filter preferences exist
+  hasPageFilter: (): boolean => {
+    try {
+      if (typeof window !== 'undefined') {
+        return localStorage.getItem(PAGE_FILTER_KEY) !== null;
+      }
+    } catch (error) {
+      console.warn('Failed to check page filter in localStorage:', error);
+    }
+    return false;
   },
 };
