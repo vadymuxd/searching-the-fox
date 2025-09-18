@@ -1,34 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Image, Avatar, rem } from '@mantine/core';
 import { IconBuilding } from '@tabler/icons-react';
+import { LogoService } from '@/lib/logoService';
 
 interface CompanyLogoProps {
   companyName: string;
   logoUrl?: string;
   size?: number;
+  sourceSite?: string; // Add source site to determine logo handling strategy
 }
 
-export function CompanyLogo({ companyName, logoUrl, size = 40 }: CompanyLogoProps) {
-  const [currentSrc, setCurrentSrc] = useState(logoUrl);
+export function CompanyLogo({ companyName, logoUrl, size = 40, sourceSite }: CompanyLogoProps) {
+  const [currentSrc, setCurrentSrc] = useState<string | undefined>(logoUrl);
   const [fallbackIndex, setFallbackIndex] = useState(0);
+  const [fallbackUrls, setFallbackUrls] = useState<string[]>([]);
 
-  // Generate fallback URLs in order of preference
-  const generateFallbackUrls = (company: string) => {
-    const cleanCompany = company.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const companyDomain = company.toLowerCase().replace(/\s+/g, '');
-    
-    return [
-      logoUrl, // Original URL first
-      `https://logo.clearbit.com/${companyDomain}.com`, // Clearbit API
-      `https://logo.clearbit.com/${cleanCompany}.com`,
-      `https://logo.clearbit.com/${company.toLowerCase().replace(/\s+/g, '-')}.com`,
-      `https://img.logo.dev/${companyDomain}.com?token=pk_X-1ZO13hT3iEkUUylGIShw`, // Logo.dev
-    ].filter(Boolean);
-  };
-
-  const fallbackUrls = generateFallbackUrls(companyName);
+  // Initialize fallback URLs when component mounts or company changes
+  useEffect(() => {
+    const urls = LogoService.generateLogoUrls(companyName, logoUrl, sourceSite);
+    setFallbackUrls(urls);
+    setCurrentSrc(urls[0]);
+    setFallbackIndex(0);
+  }, [companyName, logoUrl, sourceSite]);
 
   const handleError = () => {
     const nextIndex = fallbackIndex + 1;
@@ -36,10 +31,24 @@ export function CompanyLogo({ companyName, logoUrl, size = 40 }: CompanyLogoProp
       setCurrentSrc(fallbackUrls[nextIndex]);
       setFallbackIndex(nextIndex);
     } else {
-      // All fallbacks failed, show avatar
-      setCurrentSrc(undefined);
+      // All fallbacks failed, try alternative sources asynchronously
+      LogoService.fetchFromAlternativeSources(companyName).then((alternativeUrl) => {
+        if (alternativeUrl) {
+          setCurrentSrc(alternativeUrl);
+        } else {
+          // Truly no logo available, show avatar
+          setCurrentSrc(undefined);
+        }
+      });
     }
   };
+
+  // Cache successful logo URL
+  useEffect(() => {
+    if (currentSrc && fallbackIndex > 0) {
+      LogoService.cacheLogoUrl(companyName, currentSrc);
+    }
+  }, [currentSrc, companyName, fallbackIndex]);
 
   if (!currentSrc) {
     return (

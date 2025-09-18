@@ -1845,3 +1845,8 @@
 2025-09-17 17:52:27,880 - INFO - Logo fetch completed in 3.25 seconds
 2025-09-17 17:52:27,881 - INFO - Successfully fetched logos for 28 jobs
 2025-09-17 17:52:27,881 - INFO - Successfully processed 28 jobs
+2025-09-18 16:35:35,818 - INFO - Starting JobSpy API server on port 8001
+2025-09-18 16:35:55,984 - INFO - Starting JobSpy API server on port 8001
+2025-09-18 16:36:05,788 - INFO - Starting job scrape request: {'search_term': 'product design lead', 'location': 'London, UK', 'site_name': ['glassdoor'], 'results_wanted': 5, 'hours_old': 72, 'country_indeed': 'UK'}
+2025-09-18 16:36:06,808 - INFO - Scraping jobs with date filter: 2025-09-15
+2025-09-18 16:36:06,885 - WARNING - No jobs found

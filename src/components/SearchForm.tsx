@@ -28,7 +28,7 @@ export function SearchForm({ onSearch, onReset, loading = false, initialValues }
     initialValues: {
       jobTitle: initialValues?.jobTitle || '',
       location: initialValues?.location || 'London',
-      site: initialValues?.site || 'linkedin',
+      site: initialValues?.site || 'all',
       resultsWanted: initialValues?.resultsWanted || 1000,
       hoursOld: initialValues?.hoursOld || '24',
     },
@@ -44,7 +44,7 @@ export function SearchForm({ onSearch, onReset, loading = false, initialValues }
       form.setValues({
         jobTitle: initialValues.jobTitle || '',
         location: initialValues.location || 'London',
-        site: initialValues.site || 'linkedin',
+        site: initialValues.site || 'all',
         resultsWanted: initialValues.resultsWanted || 1000,
         hoursOld: initialValues.hoursOld || '24',
       });

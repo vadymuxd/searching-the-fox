@@ -23,6 +23,7 @@ export interface Job {
   company_url?: string;
   job_function?: string;
   benefits?: string;
+  source_site?: string; // For tracking which job board the job came from
 }
 
 export interface JobSearchParams {

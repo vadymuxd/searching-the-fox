@@ -31,6 +31,11 @@ export default function HomePage() {
   const [currentSearch, setCurrentSearch] = useState<SearchFormData | null>(null);
   const [selectedJobsCount, setSelectedJobsCount] = useState(0);
   const [totalSelectedJobs, setTotalSelectedJobs] = useState(0);
+  const [progressInfo, setProgressInfo] = useState<{
+    currentSite: string;
+    completed: number;
+    total: number;
+  } | undefined>(undefined);
 
   // Load saved data on component mount
   useEffect(() => {
@@ -60,6 +65,7 @@ export default function HomePage() {
     setLoading(false);
     setSelectedJobsCount(0);
     setTotalSelectedJobs(0);
+    setProgressInfo(undefined);
   };
 
   const handleSelectionChange = (selectedCount: number) => {
@@ -81,18 +87,41 @@ export default function HomePage() {
     setFilteredJobs([]);
     setSelectedJobsCount(0); // Reset selected jobs count
     setTotalSelectedJobs(0); // Reset total selected jobs count
+    setProgressInfo(undefined); // Reset progress info
 
     // Save search data to localStorage
     searchStorage.saveSearchData(searchData);
 
     try {
-      const response = await JobService.searchJobs({
-        site: searchData.site,
-        location: searchData.location,
-        job_title: searchData.jobTitle,
-        results_wanted: searchData.resultsWanted,
-        hours_old: searchData.hoursOld,
-      });
+      let response: any;
+      
+      if (searchData.site === 'all') {
+        // Handle "All Job Boards" selection
+        response = await JobService.searchAllJobBoards(
+          {
+            location: searchData.location,
+            job_title: searchData.jobTitle,
+            results_wanted: searchData.resultsWanted,
+            hours_old: searchData.hoursOld,
+          },
+          (currentSite: string, completed: number, total: number) => {
+            setProgressInfo({
+              currentSite,
+              completed,
+              total,
+            });
+          }
+        );
+      } else {
+        // Handle single job board selection
+        response = await JobService.searchJobs({
+          site: searchData.site,
+          location: searchData.location,
+          job_title: searchData.jobTitle,
+          results_wanted: searchData.resultsWanted,
+          hours_old: searchData.hoursOld,
+        });
+      }
 
       if (response.success) {
         setJobs(response.jobs);
@@ -108,7 +137,7 @@ export default function HomePage() {
         // Show success notification only after completion
         notifications.show({
           title: 'Search completed!',
-          message: `Found ${response.jobs.length} jobs`,
+          message: `Found ${response.jobs.length} jobs${searchData.site === 'all' ? ' across all job boards' : ''}`,
           icon: <IconCheck size={16} />,
           color: 'green',
           autoClose: 3000,
@@ -130,6 +159,7 @@ export default function HomePage() {
       });
     } finally {
       setLoading(false);
+      setProgressInfo(undefined); // Clear progress info when done
     }
   };
 
@@ -228,11 +258,15 @@ export default function HomePage() {
               {loading && (
                 <Paper p="md" radius="md">
                   <Stack gap="md" align="center">
-                    <Timer isRunning={loading} />
-                    <Text fw={500} size="sm">Searching for jobs...</Text>
-                    <Text size="sm" c="dimmed" ta="center">
-                      This may take up to 2 minutes depending on the job board and number of results
-                    </Text>
+                    <Timer 
+                      isRunning={loading} 
+                      progressInfo={progressInfo}
+                    />
+                    {!progressInfo && (
+                      <Text size="sm" c="dimmed" ta="center">
+                        This may take up to 2 minutes depending on the job board and number of results
+                      </Text>
+                    )}
                   </Stack>
                 </Paper>
               )}

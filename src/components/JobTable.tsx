@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
+import Image from 'next/image';
 import {
   Table,
   Text,
@@ -21,6 +22,7 @@ import { searchStorage } from '@/lib/localStorage';
 
 interface JobTableProps {
   jobs: Job[];
+  onSelectionChange?: (selectedCount: number) => void;
 }
 
 type SortableColumn = 'title' | 'company' | 'location' | 'salary' | 'date_posted';
@@ -89,8 +91,33 @@ interface JobTableProps {
 }
 
 export function JobTable({ jobs, onSelectionChange }: JobTableProps) {
-  const [sortState, setSortState] = useState<SortState>({ column: null, direction: null });
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
+  const [sortState, setSortState] = useState<SortState>({ column: null, direction: null });
+
+  // Helper function to get job board logo
+  const getJobBoardLogo = (sourceSite: string | undefined) => {
+    if (!sourceSite) return null;
+    
+    const logoMap: Record<string, string> = {
+      'LinkedIn': '/Linkedin.svg',
+      'Indeed': '/indeed.svg',
+      'Glassdoor': '/Glassdoor.svg',
+      'ZipRecruiter': '/zip_recruiter.svg', // This will be a broken link for now as requested
+    };
+
+    const logoPath = logoMap[sourceSite];
+    if (!logoPath) return null;
+
+    return (
+      <Image
+        src={logoPath}
+        alt={sourceSite}
+        width={16}
+        height={16}
+        style={{ objectFit: 'contain' }}
+      />
+    );
+  };
 
   // Create a unique identifier for each job based on its properties
   const getJobId = (job: Job): string => {
@@ -314,6 +341,7 @@ export function JobTable({ jobs, onSelectionChange }: JobTableProps) {
           <CompanyLogo 
             companyName={job.company}
             logoUrl={job.company_logo_url}
+            sourceSite={job.source_site}
             size={40}
           />
         </Table.Td>
@@ -361,8 +389,9 @@ export function JobTable({ jobs, onSelectionChange }: JobTableProps) {
               href={job.job_url}
               target="_blank"
               rel="noopener noreferrer"
+              leftSection={getJobBoardLogo(job.source_site)}
             >
-              View Job
+              View
             </SecondaryButton>
           </div>
         </Table.Td>

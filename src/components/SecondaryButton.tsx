@@ -11,10 +11,11 @@ interface SecondaryButtonProps extends Omit<ButtonProps, 'variant' | 'color'> {
   target?: string;
   rel?: string;
   onClick?: () => void;
+  leftSection?: React.ReactNode;
 }
 
 export const SecondaryButton = forwardRef<HTMLButtonElement, SecondaryButtonProps>(
-  ({ children, component, href, target, rel, onClick, ...props }, ref) => {
+  ({ children, component, href, target, rel, onClick, leftSection, ...props }, ref) => {
     return (
       <Button
         ref={ref}
@@ -23,6 +24,7 @@ export const SecondaryButton = forwardRef<HTMLButtonElement, SecondaryButtonProp
         target={target}
         rel={rel}
         onClick={onClick}
+        leftSection={leftSection}
         {...props}
         variant="default"
         size="sm"
@@ -34,6 +36,7 @@ export const SecondaryButton = forwardRef<HTMLButtonElement, SecondaryButtonProp
             fontSize: rem(14), // Match main button label size
             fontWeight: 500,
             height: rem(36), // Match main button height
+            minWidth: rem(88), // Increased width to accommodate icon + "View" text + padding
             paddingLeft: rem(12), // Match main button padding
             paddingRight: rem(12),
             '&:hover': {

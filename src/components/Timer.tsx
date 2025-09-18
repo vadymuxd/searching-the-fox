@@ -1,14 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Text } from '@mantine/core';
+import { Text, Stack, Progress, Box, Group } from '@mantine/core';
 
 interface TimerProps {
   isRunning: boolean;
   onReset?: () => void;
+  progressInfo?: {
+    currentSite: string;
+    completed: number;
+    total: number;
+  };
 }
 
-export function Timer({ isRunning, onReset }: TimerProps) {
+export function Timer({ isRunning, onReset, progressInfo }: TimerProps) {
   const [seconds, setSeconds] = useState(0);
 
   useEffect(() => {
@@ -43,8 +48,42 @@ export function Timer({ isRunning, onReset }: TimerProps) {
   };
 
   return (
-    <Text fw={600} size="lg" ta="center">
-      {formatTime(seconds)}
-    </Text>
+    <Stack gap="md" align="center">
+      {/* Main status text at top */}
+      {progressInfo ? (
+        <Text fw={500} size="md" ta="center" c="dark">
+          Searching {progressInfo.currentSite}...
+        </Text>
+      ) : (
+        <Text fw={500} size="md" ta="center" c="dark">
+          Searching for jobs...
+        </Text>
+      )}
+      
+      <Text fw={600} size="lg" ta="center">
+        {formatTime(seconds)}
+      </Text>
+      
+      {progressInfo && (
+        <Box style={{ width: '100%', maxWidth: '400px' }}>
+          <Stack gap="sm">
+            <Progress 
+              value={(progressInfo.completed / progressInfo.total) * 100} 
+              size="md"
+              radius="md"
+              color="blue"
+              striped
+              animated
+            />
+            <Text size="xs" c="dimmed" ta="center">
+              {progressInfo.completed} of {progressInfo.total} job boards completed
+            </Text>
+            <Text size="xs" c="dimmed" ta="center">
+              Searching multiple job boards will take several minutes (Usually between 1 and 5). This is because we are collecting and reorganized data from each site, which involves multiple requests and processing time. Do not close or refresh the page during this time.
+            </Text>
+          </Stack>
+        </Box>
+      )}
+    </Stack>
   );
 }
