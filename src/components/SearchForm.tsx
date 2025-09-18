@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   TextInput,
@@ -17,23 +17,38 @@ import { SITE_OPTIONS } from '@/lib/api';
 
 interface SearchFormProps {
   onSearch: (data: SearchFormData) => void;
+  onReset?: () => void;
   loading?: boolean;
+  initialValues?: Partial<SearchFormData>;
 }
 
-export function SearchForm({ onSearch, loading = false }: SearchFormProps) {
+export function SearchForm({ onSearch, onReset, loading = false, initialValues }: SearchFormProps) {
   const form = useForm<SearchFormData>({
     initialValues: {
-      jobTitle: 'lead product designer',
-      location: 'London',
-      site: 'linkedin',
-      resultsWanted: 1000,
-      hoursOld: '24',
+      jobTitle: initialValues?.jobTitle || '',
+      location: initialValues?.location || 'London',
+      site: initialValues?.site || 'linkedin',
+      resultsWanted: initialValues?.resultsWanted || 1000,
+      hoursOld: initialValues?.hoursOld || '24',
     },
     validate: {
-      jobTitle: (value) => (value.length < 2 ? 'Job title must be at least 2 characters' : null),
+      jobTitle: (value) => (value.length < 1 ? 'Job title is required' : null),
       location: (value) => (value.length < 2 ? 'Location must be at least 2 characters' : null),
     },
   });
+
+  // Update form values when initialValues change
+  useEffect(() => {
+    if (initialValues) {
+      form.setValues({
+        jobTitle: initialValues.jobTitle || form.values.jobTitle,
+        location: initialValues.location || form.values.location,
+        site: initialValues.site || form.values.site,
+        resultsWanted: initialValues.resultsWanted || form.values.resultsWanted,
+        hoursOld: initialValues.hoursOld || form.values.hoursOld,
+      });
+    }
+  }, [initialValues]);
 
   const handleSubmit = (values: SearchFormData) => {
     onSearch(values);
@@ -44,11 +59,39 @@ export function SearchForm({ onSearch, loading = false }: SearchFormProps) {
       <Stack gap="lg">
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack gap="md">
-            {/* Single row with all search criteria */}
+            {/* Single row with logo and search criteria */}
             <Group gap="md" align="end" wrap="wrap">
+              {/* Fox Logo - Home Button */}
+              {onReset && (
+                <Box 
+                  onClick={onReset}
+                  style={{ 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    height: '36px',
+                    paddingBottom: '0px',
+                    opacity: 0.8,
+                    transition: 'opacity 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
+                >
+                  <img 
+                    src="/Searching-The-Fox.svg"
+                    alt="Searching The Fox - Home"
+                    style={{ 
+                      width: '40px', 
+                      height: '40px',
+                      objectFit: 'contain'
+                    }}
+                  />
+                </Box>
+              )}
+              
               <TextInput
                 label="Job Title"
-                placeholder="e.g. Senior Frontend Developer"
+                placeholder="e.g. Marketing Manager, Software Engineer"
                 leftSection={<IconSearch style={{ width: rem(16), height: rem(16) }} />}
                 {...form.getInputProps('jobTitle')}
                 style={{ flex: '4 1 200px', minWidth: '200px' }}

@@ -1,0 +1,26 @@
+{
+  "name": "Searching The Fox - Job Search Platform",
+  "short_name": "Searching The Fox",
+  "description": "Find your perfect job with Searching The Fox - a comprehensive platform to lookup job postings from different job boards all in one place.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#37352f",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

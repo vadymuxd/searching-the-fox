@@ -12,6 +12,7 @@ import {
   UnstyledButton,
   Group,
   Center,
+  Checkbox,
 } from '@mantine/core';
 import { IconChevronUp, IconChevronDown, IconSelector } from '@tabler/icons-react';
 import { Job } from '@/types/job';
@@ -77,6 +78,25 @@ interface JobTableProps {
 
 export function JobTable({ jobs }: JobTableProps) {
   const [sortState, setSortState] = useState<SortState>({ column: null, direction: null });
+  const [selectedJobs, setSelectedJobs] = useState<Set<number>>(new Set());
+
+  const toggleJobSelection = (index: number) => {
+    const newSelected = new Set(selectedJobs);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedJobs(newSelected);
+  };
+
+  const toggleAllJobs = () => {
+    if (selectedJobs.size === sortedJobs.length) {
+      setSelectedJobs(new Set());
+    } else {
+      setSelectedJobs(new Set(sortedJobs.map((_, index) => index)));
+    }
+  };
 
   const setSorting = (field: SortableColumn) => {
     const reversed = sortState.column === field ? sortState.direction === 'desc' : false;
@@ -210,77 +230,103 @@ export function JobTable({ jobs }: JobTableProps) {
     );
   }
 
-  const rows = sortedJobs.map((job, index) => (
-    <Table.Tr 
-      key={index}
-      style={{ cursor: 'pointer' }}
-      onClick={() => window.open(job.job_url, '_blank', 'noopener,noreferrer')}
-    >
-      {/* Company Logo */}
-      <Table.Td>
-        <CompanyLogo 
-          companyName={job.company}
-          logoUrl={job.company_logo_url}
-          size={40}
-        />
-      </Table.Td>
+  const rows = sortedJobs.map((job, index) => {
+    const isSelected = selectedJobs.has(index);
+    
+    return (
+      <Table.Tr 
+        key={index}
+        style={{ 
+          cursor: 'pointer',
+          backgroundColor: isSelected ? 'var(--mantine-color-blue-light)' : undefined,
+        }}
+        data-selected={isSelected || undefined}
+        onClick={() => toggleJobSelection(index)}
+      >
+        {/* Checkbox */}
+        <Table.Td>
+          <Checkbox
+            checked={isSelected}
+            onChange={() => toggleJobSelection(index)}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Select ${job.title} at ${job.company}`}
+          />
+        </Table.Td>
 
-      {/* Job Title */}
-      <Table.Td style={{ minWidth: 200 }}>
-        <Text fw={600} size="sm" lineClamp={2}>
-          {job.title}
-        </Text>
-      </Table.Td>
+        {/* Company Logo */}
+        <Table.Td>
+          <CompanyLogo 
+            companyName={job.company}
+            logoUrl={job.company_logo_url}
+            size={40}
+          />
+        </Table.Td>
 
-      {/* Company */}
-      <Table.Td style={{ minWidth: 150 }}>
-        <Text size="sm">
-          {job.company}
-        </Text>
-      </Table.Td>
+        {/* Job Title */}
+        <Table.Td style={{ minWidth: 200 }}>
+          <Text fw={600} size="sm" lineClamp={2}>
+            {job.title}
+          </Text>
+        </Table.Td>
 
-      {/* Location */}
-      <Table.Td>
-        <Text size="sm" lineClamp={1}>
-          {job.location}
-        </Text>
-      </Table.Td>
+        {/* Company */}
+        <Table.Td style={{ minWidth: 150 }}>
+          <Text size="sm">
+            {job.company}
+          </Text>
+        </Table.Td>
 
-      {/* Salary */}
-      <Table.Td>
-        <Text size="sm" lineClamp={1}>
-          {formatSalary(job)}
-        </Text>
-      </Table.Td>
+        {/* Location */}
+        <Table.Td>
+          <Text size="sm" lineClamp={1}>
+            {job.location}
+          </Text>
+        </Table.Td>
 
-      {/* Date Posted */}
-      <Table.Td>
-        <Text size="sm">
-          {formatDate(job.date_posted)}
-        </Text>
-      </Table.Td>
+        {/* Salary */}
+        <Table.Td>
+          <Text size="sm" lineClamp={1}>
+            {formatSalary(job)}
+          </Text>
+        </Table.Td>
 
-      {/* Link Button */}
-      <Table.Td>
-        <div onClick={(e) => e.stopPropagation()}>
-          <SecondaryButton
-            component="a"
-            href={job.job_url}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            View Job
-          </SecondaryButton>
-        </div>
-      </Table.Td>
-    </Table.Tr>
-  ));
+        {/* Date Posted */}
+        <Table.Td>
+          <Text size="sm">
+            {formatDate(job.date_posted)}
+          </Text>
+        </Table.Td>
+
+        {/* Link Button */}
+        <Table.Td>
+          <div onClick={(e) => e.stopPropagation()}>
+            <SecondaryButton
+              component="a"
+              href={job.job_url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View Job
+            </SecondaryButton>
+          </div>
+        </Table.Td>
+      </Table.Tr>
+    );
+  });
 
   return (
     <ScrollArea>
       <Table highlightOnHover>
         <Table.Thead>
           <Table.Tr>
+            <Th width={50}>
+              <Checkbox
+                checked={selectedJobs.size === sortedJobs.length && sortedJobs.length > 0}
+                indeterminate={selectedJobs.size > 0 && selectedJobs.size < sortedJobs.length}
+                onChange={toggleAllJobs}
+                aria-label="Select all jobs"
+              />
+            </Th>
             <Th width={60}>Logo</Th>
             <Th 
               style={{ minWidth: 200 }}

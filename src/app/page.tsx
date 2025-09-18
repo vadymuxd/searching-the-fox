@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Container,
   Stack,
@@ -18,6 +18,7 @@ import { JobTable } from '@/components/JobTable';
 import { PageFilter } from '@/components/PageFilter';
 import { Timer } from '@/components/Timer';
 import { JobService } from '@/lib/api';
+import { searchStorage } from '@/lib/localStorage';
 import { Job, SearchFormData } from '@/types/job';
 
 export default function HomePage() {
@@ -26,13 +27,45 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchStarted, setSearchStarted] = useState(false);
+  const [currentSearch, setCurrentSearch] = useState<SearchFormData | null>(null);
+
+  // Load saved data on component mount
+  useEffect(() => {
+    const savedResults = searchStorage.loadSearchResults();
+    if (savedResults) {
+      setJobs(savedResults.jobs);
+      setFilteredJobs(savedResults.jobs);
+      setSearchStarted(savedResults.searchStarted);
+      setCurrentSearch(savedResults.searchData);
+    }
+  }, []);
+
+  const handleReset = () => {
+    // Clear localStorage
+    searchStorage.clearSearchData();
+    
+    // Reset all state to initial values
+    setJobs([]);
+    setFilteredJobs([]);
+    setSearchStarted(false);
+    setCurrentSearch(null);
+    setError(null);
+    setLoading(false);
+  };
 
   const handleSearch = async (searchData: SearchFormData) => {
+    // Clear previous search data when starting a new search
+    searchStorage.clearSearchData();
+    
     setLoading(true);
     setError(null);
     setSearchStarted(true);
+    setCurrentSearch(searchData); // Store the current search data
     setJobs([]);
     setFilteredJobs([]);
+
+    // Save search data to localStorage
+    searchStorage.saveSearchData(searchData);
 
     try {
       const response = await JobService.searchJobs({
@@ -46,6 +79,13 @@ export default function HomePage() {
       if (response.success) {
         setJobs(response.jobs);
         setFilteredJobs(response.jobs); // Initialize filtered jobs with all jobs
+        
+        // Save search results to localStorage
+        searchStorage.saveSearchResults({
+          jobs: response.jobs,
+          searchStarted: true,
+          searchData: searchData,
+        });
         
         // Show success notification only after completion
         notifications.show({
@@ -124,7 +164,11 @@ export default function HomePage() {
                     />
                   </Box>
                   {/* Search Form */}
-                  <SearchForm onSearch={handleSearch} loading={loading} />
+                  <SearchForm 
+                    onSearch={handleSearch} 
+                    loading={loading} 
+                    initialValues={currentSearch || undefined}
+                  />
                 </Stack>
               </Box>
             </Box>
@@ -142,7 +186,12 @@ export default function HomePage() {
             }}
           >
             <Container size="xl">
-              <SearchForm onSearch={handleSearch} loading={loading} />
+              <SearchForm 
+                onSearch={handleSearch} 
+                onReset={handleReset}
+                loading={loading}
+                initialValues={currentSearch || undefined}
+              />
             </Container>
           </Box>
 
