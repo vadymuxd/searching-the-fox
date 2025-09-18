@@ -31,6 +31,7 @@ export default function HomePage() {
   const [currentSearch, setCurrentSearch] = useState<SearchFormData | null>(null);
   const [selectedJobsCount, setSelectedJobsCount] = useState(0);
   const [totalSelectedJobs, setTotalSelectedJobs] = useState(0);
+  const [mounted, setMounted] = useState(false);
   const [progressInfo, setProgressInfo] = useState<{
     currentSite: string;
     completed: number;
@@ -39,6 +40,8 @@ export default function HomePage() {
 
   // Load saved data on component mount
   useEffect(() => {
+    setMounted(true);
+    
     const savedResults = searchStorage.loadSearchResults();
     if (savedResults) {
       setJobs(savedResults.jobs);
@@ -165,7 +168,42 @@ export default function HomePage() {
 
   return (
     <>
-      {!searchStarted ? (
+      {!mounted ? (
+        // Show loading skeleton during hydration
+        <Box style={{ backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
+          <Container size="xl" style={{ minHeight: '100vh' }}>
+            <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+              <Box style={{ width: '100%', maxWidth: '1200px' }}>
+                <Stack gap="0" align="center">
+                  {/* Fox Logo */}
+                  <Box style={{ width: '100px', height: '75px', marginBottom: '12px' }}>
+                    <Image 
+                      src="/Searching-The-Fox.svg"
+                      alt="Searching The Fox logo"
+                      width={100}
+                      height={75}
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                  </Box>
+                  {/* Headline */}
+                  <Title 
+                    order={1} 
+                    ta="center" 
+                    mb="lg" 
+                    style={{ 
+                      color: '#37352f',
+                      fontFamily: 'var(--font-horas), Arial Black, sans-serif',
+                      fontWeight: 900
+                    }}
+                  >
+                    searching the fox
+                  </Title>
+                </Stack>
+              </Box>
+            </Box>
+          </Container>
+        </Box>
+      ) : !searchStarted ? (
         // Centered layout for initial state
         <Box style={{ backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
           <Container size="xl" style={{ minHeight: '100vh' }}>

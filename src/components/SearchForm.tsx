@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import {
   Box,
@@ -24,13 +24,22 @@ interface SearchFormProps {
 }
 
 export function SearchForm({ onSearch, onReset, loading = false, initialValues }: SearchFormProps) {
+  // Memoize initialValues to prevent unnecessary re-renders
+  const memoizedInitialValues = useMemo(() => initialValues, [
+    initialValues?.jobTitle,
+    initialValues?.location,
+    initialValues?.site,
+    initialValues?.resultsWanted,
+    initialValues?.hoursOld,
+  ]);
+
   const form = useForm<SearchFormData>({
     initialValues: {
-      jobTitle: initialValues?.jobTitle || '',
-      location: initialValues?.location || 'London',
-      site: initialValues?.site || 'all',
-      resultsWanted: initialValues?.resultsWanted || 1000,
-      hoursOld: initialValues?.hoursOld || '24',
+      jobTitle: memoizedInitialValues?.jobTitle || '',
+      location: memoizedInitialValues?.location || 'London',
+      site: memoizedInitialValues?.site || 'all',
+      resultsWanted: memoizedInitialValues?.resultsWanted || 1000,
+      hoursOld: memoizedInitialValues?.hoursOld || '24',
     },
     validate: {
       jobTitle: (value) => (value.length < 1 ? 'Job title is required' : null),
@@ -38,26 +47,19 @@ export function SearchForm({ onSearch, onReset, loading = false, initialValues }
     },
   });
 
-  // Update form values when initialValues change
+  // Update form values when memoized initialValues change
   useEffect(() => {
-    if (initialValues) {
+    if (memoizedInitialValues) {
       form.setValues({
-        jobTitle: initialValues.jobTitle || '',
-        location: initialValues.location || 'London',
-        site: initialValues.site || 'all',
-        resultsWanted: initialValues.resultsWanted || 1000,
-        hoursOld: initialValues.hoursOld || '24',
+        jobTitle: memoizedInitialValues.jobTitle || '',
+        location: memoizedInitialValues.location || 'London',
+        site: memoizedInitialValues.site || 'all',
+        resultsWanted: memoizedInitialValues.resultsWanted || 1000,
+        hoursOld: memoizedInitialValues.hoursOld || '24',
       });
     }
-  }, [
-    form,
-    initialValues,
-    initialValues?.jobTitle,
-    initialValues?.location,
-    initialValues?.site,
-    initialValues?.resultsWanted,
-    initialValues?.hoursOld,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memoizedInitialValues]);
 
   const handleSubmit = (values: SearchFormData) => {
     onSearch(values);

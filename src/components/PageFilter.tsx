@@ -21,9 +21,11 @@ interface PageFilterProps {
 export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
   const [filterValue, setFilterValue] = useState('');
   const [hasSavedFilter, setHasSavedFilter] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // Check if there are saved filters on component mount
   useEffect(() => {
+    setMounted(true);
     setHasSavedFilter(searchStorage.hasPageFilter());
   }, []);
 
@@ -96,7 +98,7 @@ export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
       </IconButton>
       
       {/* Paste button - only visible when there are saved filters */}
-      {hasSavedFilter && (
+      {mounted && hasSavedFilter && (
         <IconButton onClick={handlePaste} title="Paste saved filter preferences">
           <IconClipboard style={{ width: rem(16), height: rem(16) }} />
         </IconButton>
