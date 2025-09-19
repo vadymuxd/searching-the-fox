@@ -60,14 +60,18 @@ export function Timer({ isRunning, onReset, progressInfo }: TimerProps) {
               animated
             />
             <Text fw={500} size="md" ta="center" c="dark">
-              Searching {progressInfo.currentSite} ({progressInfo.completed}/{progressInfo.total})
+              {progressInfo.total === 1
+                ? `Searching ${progressInfo.currentSite}`
+                : `Searching ${progressInfo.currentSite} (${progressInfo.completed}/${progressInfo.total})`}
             </Text>
             <Text fw={600} size="lg" ta="center">
               {formatTime(seconds)}
             </Text>
-            <Text size="xs" c="dimmed" ta="center">
-              Searching multiple job boards might take between 1 and 5 minutes. Do not close or refresh the page during this time.
-            </Text>
+            {progressInfo.total > 1 && (
+              <Text size="xs" c="dimmed" ta="center">
+                Searching multiple job boards might take between 1 and 5 minutes. Do not close or refresh the page during this time.
+              </Text>
+            )}
           </Stack>
         </Box>
       )}
