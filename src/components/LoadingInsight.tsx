@@ -16,7 +16,7 @@ export function LoadingInsightWithIcon(props: LoadingInsightProps) {
         w={32}
         h={32}
         fit="contain"
-        style={{ display: 'block', marginLeft: 'auto', marginRight: 'auto', marginBottom: 0 }}
+        style={{ display: 'block', marginLeft: 'auto', marginRight: 'auto', marginBottom: 4 }}
       />
       <LoadingInsight {...props} />
     </>
@@ -71,7 +71,7 @@ function LoadingInsight({ isActive }: LoadingInsightProps) {
       style={{
         minHeight: '120px', // Fixed height for smooth transitions
         display: 'flex',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         justifyContent: 'center',
         marginBottom: '1rem'
       }}

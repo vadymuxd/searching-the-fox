@@ -47,13 +47,13 @@ export function Timer({ isRunning, onReset, progressInfo }: TimerProps) {
   };
 
   return (
-    <Stack gap={12} align="center">
+    <Stack gap="md" align="center">
       {progressInfo && (
         <Box style={{ width: '100%', maxWidth: '400px' }}>
-          <Stack gap={12}>
+          <Stack gap="sm">
             <Progress 
               value={(progressInfo.completed / progressInfo.total) * 100} 
-              size="xs"
+              size={6} // 50% thicker than default 'xs' (4px)
               radius="md"
               color="blue"
               striped
