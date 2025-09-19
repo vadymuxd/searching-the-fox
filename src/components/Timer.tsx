@@ -66,7 +66,7 @@ export function Timer({ isRunning, onReset, progressInfo }: TimerProps) {
               {formatTime(seconds)}
             </Text>
             <Text size="xs" c="dimmed" ta="center">
-              Searching multiple job boards will take several minutes (Usually between 1 and 5). This is because we are collecting and reorganized data from each site, which involves multiple requests and processing time. Do not close or refresh the page during this time.
+              Searching multiple job boards might take between 1 and 5 minutes. Do not close or refresh the page during this time.
             </Text>
           </Stack>
         </Box>
