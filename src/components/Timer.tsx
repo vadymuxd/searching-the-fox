@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Text, Stack, Progress, Box } from '@mantine/core';
+import { Text, Stack, Progress, Box, Image } from '@mantine/core';
 
 interface TimerProps {
   isRunning: boolean;
@@ -49,6 +49,13 @@ export function Timer({ isRunning, onReset, progressInfo }: TimerProps) {
 
   return (
     <Stack gap="md" align="center">
+      <Image
+        src="/bot.png"
+        alt="AI Bot"
+        w={32}
+        h={32}
+        fit="contain"
+      />
       {/* Main status text at top */}
       {progressInfo ? (
         <Text fw={500} size="md" ta="center" c="dark">
@@ -59,11 +66,9 @@ export function Timer({ isRunning, onReset, progressInfo }: TimerProps) {
           Searching for jobs...
         </Text>
       )}
-      
       <Text fw={600} size="lg" ta="center">
         {formatTime(seconds)}
       </Text>
-      
       {progressInfo && (
         <Box style={{ width: '100%', maxWidth: '400px' }}>
           <Stack gap="sm">
