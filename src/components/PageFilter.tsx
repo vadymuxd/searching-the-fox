@@ -32,7 +32,24 @@ export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
   useEffect(() => {
     setMounted(true);
     setHasSavedFilter(searchStorage.hasPageFilter());
-  }, []);
+    // Restore and auto-apply saved filter on mount
+    const saved = searchStorage.loadPageFilter();
+    if (saved && saved.trim()) {
+      setFilterValue(saved);
+      // Apply filter to jobs list
+      const searchTerms = saved
+        .split(',')
+        .map(term => term.trim().toLowerCase())
+        .filter(term => term.length > 0);
+      if (searchTerms.length > 0) {
+        const filteredJobs = jobs.filter(job => {
+          const jobTitle = job.title.toLowerCase();
+          return searchTerms.some(term => jobTitle.includes(term));
+        });
+        onFilteredJobsChange(filteredJobs);
+      }
+    }
+  }, [jobs, onFilteredJobsChange]);
 
   const handleFilter = () => {
     if (!filterValue.trim()) {

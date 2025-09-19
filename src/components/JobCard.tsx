@@ -13,15 +13,18 @@ import {
 } from '@mantine/core';
 import { SecondaryButton } from './SecondaryButton';
 import { CompanyLogo } from './CompanyLogo';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { IconMapPin, IconCalendar, IconCurrency, IconExternalLink, IconBuilding } from '@tabler/icons-react';
 import { Job } from '@/types/job';
 
 interface JobCardProps {
   job: Job;
+  jobId: string;
+  isSelected: boolean;
+  onSelectionChange: (jobId: string, selected: boolean) => void;
 }
 
-export function JobCard({ job }: JobCardProps) {
+export function JobCard({ job, jobId, isSelected, onSelectionChange }: JobCardProps) {
   // Use the same date formatting logic as JobTable
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString || dateString === 'Not specified' || dateString === 'null' || dateString === 'undefined' || dateString === 'None') {
@@ -110,8 +113,27 @@ export function JobCard({ job }: JobCardProps) {
     return map[job.source_site] || undefined;
   }, [job.source_site]);
 
+  // Mantine blue selection color
+  const selectedBg = 'var(--mantine-color-blue-light)';
+  const selectedBorder = 'var(--mantine-color-blue-filled)';
+
+  // Card click handler
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Prevent toggling when clicking the button
+    const target = e.target as HTMLElement;
+    if (target.closest('a,button')) return;
+    onSelectionChange(jobId, !isSelected);
+  };
+
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
+    <Card
+      shadow="sm"
+      padding="lg"
+      radius="md"
+      withBorder
+      style={isSelected ? { background: selectedBg, borderColor: selectedBorder, cursor: 'pointer' } : { cursor: 'pointer' }}
+      onClick={handleCardClick}
+    >
       <Stack gap="md">
         {/* Header with logo and company */}
         <Group justify="space-between" align="flex-start">
