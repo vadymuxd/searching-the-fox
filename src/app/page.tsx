@@ -11,12 +11,17 @@ import {
   Alert,
   Box,
   Group,
+  SimpleGrid,  
 } from '@mantine/core';
+import { useMantineTheme } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconInfoCircle, IconAlertCircle, IconCheck } from '@tabler/icons-react';
 import { SearchForm } from '@/components/SearchForm';
 import { JobTable } from '@/components/JobTable';
+import { JobCard } from '@/components/JobCard';
 import { PageFilter } from '@/components/PageFilter';
+import { SortDropdown, SortOption } from '@/components/SortDropdown';
 import { Timer } from '@/components/Timer';
 import { LoadingInsight } from '@/components/LoadingInsight';
 import { JobService } from '@/lib/api';
@@ -24,6 +29,9 @@ import { searchStorage } from '@/lib/localStorage';
 import { Job, SearchFormData, JobSearchResponse } from '@/types/job';
 
 export default function HomePage() {
+  const theme = useMantineTheme();
+  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
+  
   const [jobs, setJobs] = useState<Job[]>([]);
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
@@ -33,6 +41,8 @@ export default function HomePage() {
   const [selectedJobsCount, setSelectedJobsCount] = useState(0);
   const [totalSelectedJobs, setTotalSelectedJobs] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>('posted-recent');
+  const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
   const [progressInfo, setProgressInfo] = useState<{
     currentSite: string;
     completed: number;
@@ -57,10 +67,66 @@ export default function HomePage() {
       }
     }
     
-    // Load saved selected jobs count
+    // Load saved selected jobs count and individual selections
     const savedSelectedJobs = searchStorage.loadSelectedJobs();
     setTotalSelectedJobs(savedSelectedJobs.length);
+    setSelectedJobs(new Set(savedSelectedJobs));
   }, []);
+
+  // Helper function to get job ID (same as JobTable)
+  const getJobId = (job: Job) => {
+    return job.id || `${job.title}-${job.company}-${job.location}`;
+  };
+
+  // Sort jobs based on selected option
+  const sortJobs = (jobsToSort: Job[], option: SortOption): Job[] => {
+    const sorted = [...jobsToSort];
+    
+    switch (option) {
+      case 'posted-recent':
+        // Now: sort oldest first (ascending)
+        return sorted.sort((a, b) => {
+          const dateA = new Date(a.date_posted || '').getTime() || 0;
+          const dateB = new Date(b.date_posted || '').getTime() || 0;
+          return dateA - dateB;
+        });
+      case 'posted-old':
+        // Now: sort newest first (descending)
+        return sorted.sort((a, b) => {
+          const dateA = new Date(a.date_posted || '').getTime() || 0;
+          const dateB = new Date(b.date_posted || '').getTime() || 0;
+          return dateB - dateA;
+        });
+      case 'company-asc':
+        return sorted.sort((a, b) => a.company.localeCompare(b.company));
+      case 'company-desc':
+        return sorted.sort((a, b) => b.company.localeCompare(a.company));
+      case 'title-asc':
+        return sorted.sort((a, b) => a.title.localeCompare(b.title));
+      case 'title-desc':
+        return sorted.sort((a, b) => b.title.localeCompare(a.title));
+      default:
+        return sorted;
+    }
+  };
+
+  // Mobile-specific selection handler
+  const handleMobileSelectionChange = (jobId: string, selected: boolean) => {
+    const newSelected = new Set(selectedJobs);
+    if (selected) {
+      newSelected.add(jobId);
+    } else {
+      newSelected.delete(jobId);
+    }
+    setSelectedJobs(newSelected);
+    
+    // Save to localStorage
+    searchStorage.saveSelectedJobs(Array.from(newSelected));
+    
+    // Update counts
+    setSelectedJobsCount(newSelected.size);
+    setTotalSelectedJobs(newSelected.size);
+  };
 
   const handleReset = () => {
     // Clear only results but preserve search form data
@@ -391,10 +457,38 @@ export default function HomePage() {
                       No jobs match your filter criteria. Try different job title keywords or clear the filter.
                     </Alert>
                   ) : (
-                    <JobTable 
-                      jobs={filteredJobs} 
-                      onSelectionChange={handleSelectionChange}
-                    />
+                    <>
+                      {isMobile ? (
+                        <Stack gap="md">
+                          {/* Mobile Sort Dropdown */}
+                          <SortDropdown 
+                            value={sortOption}
+                            onChange={setSortOption}
+                          />
+                          
+                          {/* Mobile Job Cards */}
+                          <SimpleGrid cols={1} spacing="md">
+                            {sortJobs(filteredJobs, sortOption).map((job) => {
+                              const jobId = getJobId(job);
+                              return (
+                                <JobCard
+                                  key={jobId}
+                                  job={job}
+                                  jobId={jobId}
+                                  isSelected={selectedJobs.has(jobId)}
+                                  onSelectionChange={handleMobileSelectionChange}
+                                />
+                              );
+                            })}
+                          </SimpleGrid>
+                        </Stack>
+                      ) : (
+                        <JobTable 
+                          jobs={filteredJobs} 
+                          onSelectionChange={handleSelectionChange}
+                        />
+                      )}
+                    </>
                   )}
                 </Stack>
               )}

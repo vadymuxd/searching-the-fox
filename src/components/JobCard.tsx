@@ -9,10 +9,11 @@ import {
   Image,
   Avatar,
   Box,
-  ActionIcon,
-  Tooltip,
   rem,
 } from '@mantine/core';
+import { SecondaryButton } from './SecondaryButton';
+import { CompanyLogo } from './CompanyLogo';
+import { useMemo } from 'react';
 import { IconMapPin, IconCalendar, IconCurrency, IconExternalLink, IconBuilding } from '@tabler/icons-react';
 import { Job } from '@/types/job';
 
@@ -21,30 +22,93 @@ interface JobCardProps {
 }
 
 export function JobCard({ job }: JobCardProps) {
-  const formatDate = (dateString: string) => {
+  // Use the same date formatting logic as JobTable
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString || dateString === 'Not specified' || dateString === 'null' || dateString === 'undefined' || dateString === 'None') {
+      return 'Today';
+    }
+    
     try {
       const date = new Date(dateString);
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        return 'Today';
+      }
+      
       const today = new Date();
+      // Reset time to compare only dates
+      today.setHours(0, 0, 0, 0);
+      date.setHours(0, 0, 0, 0);
+      
       const diffTime = today.getTime() - date.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       
       if (diffDays === 0) return 'Today';
       if (diffDays === 1) return 'Yesterday';
       if (diffDays < 7) return `${diffDays} days ago`;
+      if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
       
-      return date.toLocaleDateString();
-    } catch {
+      return date.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+      });
+    } catch (error) {
+      console.error('Date parsing error:', error, 'for date:', dateString);
       return 'Today';
     }
   };
 
-  const formatSalary = () => {
-    if (job.salary) return job.salary;
-    if (job.min_amount && job.max_amount) {
-      return `${job.currency || '$'}${job.min_amount?.toLocaleString()} - ${job.currency || '$'}${job.max_amount?.toLocaleString()}${job.interval ? ` ${job.interval}` : ''}`;
+  // Use the same salary formatting logic as JobTable
+  const formatSalary = (job: Job) => {
+    // First, check if there's a direct salary string
+    if (job.salary && job.salary !== 'Not specified' && job.salary !== 'null' && job.salary !== 'undefined' && job.salary !== 'None') {
+      return job.salary;
     }
-    return null;
+    
+    // Then check for API salary fields (salary_min, salary_max, salary_currency)
+    if (job.salary_min || job.salary_max) {
+      const currency = job.salary_currency || '$';
+      const interval = job.interval ? ` ${job.interval}` : '';
+      
+      if (job.salary_min && job.salary_max) {
+        return `${currency}${job.salary_min.toLocaleString()} - ${currency}${job.salary_max.toLocaleString()}${interval}`;
+      } else if (job.salary_min) {
+        return `${currency}${job.salary_min.toLocaleString()}+${interval}`;
+      } else if (job.salary_max) {
+        return `Up to ${currency}${job.salary_max.toLocaleString()}${interval}`;
+      }
+    }
+    
+    // Fallback to legacy fields (min_amount, max_amount, currency)
+    if (job.min_amount || job.max_amount) {
+      const currency = job.currency || '$';
+      const interval = job.interval ? ` ${job.interval}` : '';
+      
+      if (job.min_amount && job.max_amount) {
+        return `${currency}${job.min_amount.toLocaleString()} - ${currency}${job.max_amount.toLocaleString()}${interval}`;
+      } else if (job.min_amount) {
+        return `${currency}${job.min_amount.toLocaleString()}+${interval}`;
+      } else if (job.max_amount) {
+        return `Up to ${currency}${job.max_amount.toLocaleString()}${interval}`;
+      }
+    }
+    
+    return 'Not specified';
   };
+
+  // Smart icon PNG for job source
+  const jobSourceIcon = useMemo(() => {
+    if (!job.source_site) return undefined;
+    const map: Record<string, string> = {
+      'LinkedIn': '/Linkedin.svg',
+      'Indeed': '/indeed.svg',
+      'Glassdoor': '/Glassdoor.svg',
+      'ZipRecruiter': '/zip_recruiter.svg',
+    };
+    return map[job.source_site] || undefined;
+  }, [job.source_site]);
 
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
@@ -52,20 +116,12 @@ export function JobCard({ job }: JobCardProps) {
         {/* Header with logo and company */}
         <Group justify="space-between" align="flex-start">
           <Group gap="md" align="flex-start">
-            {job.company_logo_url ? (
-              <Image
-                src={job.company_logo_url}
-                alt={`${job.company} logo`}
-                w={48}
-                h={48}
-                radius="md"
-                fallbackSrc="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='3' width='20' height='14' rx='2' ry='2'/%3E%3Cline x1='8' y1='21' x2='16' y2='21'/%3E%3Cline x1='12' y1='17' x2='12' y2='21'/%3E%3C/svg%3E"
-              />
-            ) : (
-              <Avatar size={48} radius="md">
-                <IconBuilding style={{ width: rem(24), height: rem(24) }} />
-              </Avatar>
-            )}
+            <CompanyLogo 
+              companyName={job.company}
+              logoUrl={job.company_logo_url}
+              sourceSite={job.source_site}
+              size={48}
+            />
             
             <Box style={{ flex: 1 }}>
               <Text fw={600} size="lg" lineClamp={2}>
@@ -76,19 +132,6 @@ export function JobCard({ job }: JobCardProps) {
               </Text>
             </Box>
           </Group>
-
-          <Tooltip label="View Job">
-            <ActionIcon
-              component="a"
-              href={job.job_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="light"
-              size="lg"
-            >
-              <IconExternalLink style={{ width: rem(16), height: rem(16) }} />
-            </ActionIcon>
-          </Tooltip>
         </Group>
 
         {/* Job details */}
@@ -107,11 +150,11 @@ export function JobCard({ job }: JobCardProps) {
             </Text>
           </Group>
 
-          {formatSalary() && (
+          {formatSalary(job) !== 'Not specified' && (
             <Group gap="xs">
               <IconCurrency style={{ width: rem(16), height: rem(16) }} color="gray" />
               <Text size="sm" c="dimmed">
-                {formatSalary()}
+                {formatSalary(job)}
               </Text>
             </Group>
           )}
@@ -124,24 +167,29 @@ export function JobCard({ job }: JobCardProps) {
               Remote
             </Badge>
           )}
-          {job.job_type && (
+          {job.job_type && job.job_type !== 'None' && (
             <Badge color="blue" variant="light" size="sm">
               {job.job_type}
             </Badge>
           )}
-          {job.job_level && (
+          {job.job_level && job.job_level !== 'None' && (
             <Badge color="gray" variant="light" size="sm">
               {job.job_level}
             </Badge>
           )}
         </Group>
 
-        {/* Description preview */}
-        {job.description && (
-          <Text size="sm" c="dimmed" lineClamp={3}>
-            {job.description.replace(/<[^>]*>/g, '')} {/* Remove HTML tags */}
-          </Text>
-        )}
+        {/* View Button at the bottom, full width */}
+        <SecondaryButton
+          component="a"
+          href={job.job_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          leftSection={jobSourceIcon ? <Image src={jobSourceIcon} alt="source" w={20} h={20} /> : undefined}
+          fullWidth
+        >
+          View
+        </SecondaryButton>
       </Stack>
     </Card>
   );

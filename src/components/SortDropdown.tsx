@@ -54,7 +54,7 @@ export function SortDropdown({ value, onChange }: SortDropdownProps) {
         },
       }}
       size="sm"
-      w={200}
+      w="100%"
       allowDeselect={false}
     />
   );
