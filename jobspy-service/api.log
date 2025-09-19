@@ -1850,3 +1850,51 @@
 2025-09-18 16:36:05,788 - INFO - Starting job scrape request: {'search_term': 'product design lead', 'location': 'London, UK', 'site_name': ['glassdoor'], 'results_wanted': 5, 'hours_old': 72, 'country_indeed': 'UK'}
 2025-09-18 16:36:06,808 - INFO - Scraping jobs with date filter: 2025-09-15
 2025-09-18 16:36:06,885 - WARNING - No jobs found
+2025-09-18 18:37:21,046 - INFO - Starting JobSpy API server on port 8001
+2025-09-18 18:37:43,798 - INFO - Starting JobSpy API server on port 8001
+2025-09-18 18:37:56,592 - INFO - Starting job scrape request: {'search_term': 'software engineer', 'location': 'London', 'site_name': ['zip_recruiter'], 'results_wanted': 5, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-18 18:37:57,420 - INFO - Scraping jobs with date filter: 2025-09-17
+2025-09-18 18:37:57,997 - WARNING - No jobs found
+2025-09-18 18:38:13,872 - INFO - Starting job scrape request: {'search_term': 'software engineer', 'location': 'London', 'site_name': ['zip_recruiter'], 'results_wanted': 5, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-18 18:38:13,872 - INFO - Scraping jobs with date filter: 2025-09-17
+2025-09-18 18:38:14,640 - WARNING - No jobs found
+2025-09-18 18:38:33,954 - INFO - Starting job scrape request: {'search_term': 'software engineer', 'location': 'London', 'site_name': ['linkedin'], 'results_wanted': 5, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-18 18:38:33,954 - INFO - Scraping jobs with date filter: 2025-09-17
+2025-09-18 18:38:34,481 - INFO - Found 5 jobs
+2025-09-18 18:38:34,482 - INFO - Successfully processed 5 jobs, starting logo fetch...
+2025-09-18 18:38:34,482 - INFO - Starting logo fetch for 5 jobs with 10 workers
+2025-09-18 18:38:35,388 - INFO - Found LinkedIn logo for Paragon Alpha - Hedge Fund Talent Business: https://media.licdn.com/dms/image/v2/C4D0BAQGqxSuKpm6n_g/company-logo_100_100/company-logo_100_100/0/1648038787126/paragonalpha_logo?e=2147483647&v=beta&t=qa5fClPMCK0l9-cqCpWvUdUl2dJuZEBVRw1T44kFqxo
+2025-09-18 18:38:35,388 - INFO - Found LinkedIn logo for Neural Alpha: https://media.licdn.com/dms/image/v2/C510BAQEhHGomR92tmA/company-logo_100_100/company-logo_100_100/0/1631358315290?e=2147483647&v=beta&t=s5p76i2z6RGrj9IE3qshawM7w7xG1pO2QA-7_fakMmU
+2025-09-18 18:38:35,420 - INFO - Found LinkedIn logo for Qodea: https://media.licdn.com/dms/image/v2/D4E0BAQHiC46HGi4pqg/company-logo_100_100/B4EZVCwovBGgAQ-/0/1740581801432/qodea_logo?e=2147483647&v=beta&t=jOUh9adgT3rOURqqcoSs-YjZrD4WpBNZuxaUDG9SNTU
+2025-09-18 18:38:35,560 - INFO - Found LinkedIn logo for Bending Spoons: https://media.licdn.com/dms/image/v2/D4D0BAQGftUJaAnPIxg/company-logo_100_100/company-logo_100_100/0/1688654635337/bendingspoons_logo?e=2147483647&v=beta&t=Gabm76nmJkOQoKsqx_GPsqOVSFVhGDVVx--Pk6Y7LVk
+2025-09-18 18:38:35,565 - INFO - Found LinkedIn logo for Dataiku: https://media.licdn.com/dms/image/v2/D4E0BAQF79J2ze0Dr_Q/company-logo_100_100/B4EZeifTFHHcAY-/0/1750777803580/dataiku_logo?e=2147483647&v=beta&t=r8C8V2uyoiwCaf_TGFArMWdqvI82qV-yig2MmhwEz0k
+2025-09-18 18:38:35,566 - INFO - Logo fetch completed in 1.08 seconds
+2025-09-18 18:38:35,566 - INFO - Successfully fetched logos for 5 jobs
+2025-09-18 18:38:35,566 - INFO - Successfully processed 5 jobs
+2025-09-18 18:47:57,369 - INFO - Starting JobSpy API server on port 8001
+2025-09-18 18:48:10,742 - INFO - Starting job scrape request: {'search_term': 'software engineer', 'location': 'London', 'site_name': ['linkedin'], 'results_wanted': 5, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-18 18:48:10,742 - INFO - Scraping jobs with date filter: 2025-09-17
+2025-09-18 18:48:11,270 - INFO - Found 5 jobs
+2025-09-18 18:48:11,271 - INFO - Successfully processed 5 jobs, starting logo fetch...
+2025-09-18 18:48:11,271 - INFO - Starting logo fetch for 5 jobs with 10 workers
+2025-09-18 18:48:12,222 - INFO - Found LinkedIn logo for Paragon Alpha - Hedge Fund Talent Business: https://media.licdn.com/dms/image/v2/C4D0BAQGqxSuKpm6n_g/company-logo_100_100/company-logo_100_100/0/1648038787126/paragonalpha_logo?e=2147483647&v=beta&t=qa5fClPMCK0l9-cqCpWvUdUl2dJuZEBVRw1T44kFqxo
+2025-09-18 18:48:12,223 - INFO - Found LinkedIn logo for Neural Alpha: https://media.licdn.com/dms/image/v2/C510BAQEhHGomR92tmA/company-logo_100_100/company-logo_100_100/0/1631358315290?e=2147483647&v=beta&t=s5p76i2z6RGrj9IE3qshawM7w7xG1pO2QA-7_fakMmU
+2025-09-18 18:48:12,298 - INFO - Found LinkedIn logo for Bending Spoons: https://media.licdn.com/dms/image/v2/D4D0BAQGftUJaAnPIxg/company-logo_100_100/company-logo_100_100/0/1688654635337/bendingspoons_logo?e=2147483647&v=beta&t=Gabm76nmJkOQoKsqx_GPsqOVSFVhGDVVx--Pk6Y7LVk
+2025-09-18 18:48:12,335 - INFO - Found LinkedIn logo for Qodea: https://media.licdn.com/dms/image/v2/D4E0BAQHiC46HGi4pqg/company-logo_100_100/B4EZVCwovBGgAQ-/0/1740581801432/qodea_logo?e=2147483647&v=beta&t=jOUh9adgT3rOURqqcoSs-YjZrD4WpBNZuxaUDG9SNTU
+2025-09-18 18:48:12,359 - INFO - Found LinkedIn logo for Dataiku: https://media.licdn.com/dms/image/v2/D4E0BAQF79J2ze0Dr_Q/company-logo_100_100/B4EZeifTFHHcAY-/0/1750777803580/dataiku_logo?e=2147483647&v=beta&t=r8C8V2uyoiwCaf_TGFArMWdqvI82qV-yig2MmhwEz0k
+2025-09-18 18:48:12,360 - INFO - Logo fetch completed in 1.09 seconds
+2025-09-18 18:48:12,360 - INFO - Successfully fetched logos for 5 jobs
+2025-09-18 18:48:12,360 - INFO - Successfully processed 5 jobs
+2025-09-18 18:48:15,537 - INFO - Starting job scrape request: {'search_term': 'software engineer', 'location': 'London', 'site_name': ['linkedin'], 'results_wanted': 5, 'hours_old': 24, 'country_indeed': 'UK'}
+2025-09-18 18:48:15,537 - INFO - Scraping jobs with date filter: 2025-09-17
+2025-09-18 18:48:16,088 - INFO - Found 5 jobs
+2025-09-18 18:48:16,089 - INFO - Successfully processed 5 jobs, starting logo fetch...
+2025-09-18 18:48:16,089 - INFO - Starting logo fetch for 5 jobs with 10 workers
+2025-09-18 18:48:16,918 - INFO - Found LinkedIn logo for Neural Alpha: https://media.licdn.com/dms/image/v2/C510BAQEhHGomR92tmA/company-logo_100_100/company-logo_100_100/0/1631358315290?e=2147483647&v=beta&t=s5p76i2z6RGrj9IE3qshawM7w7xG1pO2QA-7_fakMmU
+2025-09-18 18:48:16,926 - INFO - Found LinkedIn logo for Dataiku: https://media.licdn.com/dms/image/v2/D4E0BAQF79J2ze0Dr_Q/company-logo_100_100/B4EZeifTFHHcAY-/0/1750777803580/dataiku_logo?e=2147483647&v=beta&t=r8C8V2uyoiwCaf_TGFArMWdqvI82qV-yig2MmhwEz0k
+2025-09-18 18:48:17,037 - INFO - Found LinkedIn logo for Qodea: https://media.licdn.com/dms/image/v2/D4E0BAQHiC46HGi4pqg/company-logo_100_100/B4EZVCwovBGgAQ-/0/1740581801432/qodea_logo?e=2147483647&v=beta&t=jOUh9adgT3rOURqqcoSs-YjZrD4WpBNZuxaUDG9SNTU
+2025-09-18 18:48:17,102 - INFO - Found LinkedIn logo for Paragon Alpha - Hedge Fund Talent Business: https://media.licdn.com/dms/image/v2/C4D0BAQGqxSuKpm6n_g/company-logo_100_100/company-logo_100_100/0/1648038787126/paragonalpha_logo?e=2147483647&v=beta&t=qa5fClPMCK0l9-cqCpWvUdUl2dJuZEBVRw1T44kFqxo
+2025-09-18 18:48:17,362 - INFO - Found LinkedIn logo for Bending Spoons: https://media.licdn.com/dms/image/v2/D4D0BAQGftUJaAnPIxg/company-logo_100_100/company-logo_100_100/0/1688654635337/bendingspoons_logo?e=2147483647&v=beta&t=Gabm76nmJkOQoKsqx_GPsqOVSFVhGDVVx--Pk6Y7LVk
+2025-09-18 18:48:17,362 - INFO - Logo fetch completed in 1.27 seconds
+2025-09-18 18:48:17,363 - INFO - Successfully fetched logos for 5 jobs
+2025-09-18 18:48:17,363 - INFO - Successfully processed 5 jobs

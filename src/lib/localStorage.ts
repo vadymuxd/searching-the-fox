@@ -76,6 +76,19 @@ export const searchStorage = {
     }
   },
 
+  // Clear only results and selected jobs but preserve search form data
+  clearResultsOnly: (): void => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(SEARCH_RESULTS_KEY);
+        localStorage.removeItem(SELECTED_JOBS_KEY);
+        // Keep SEARCH_DATA_KEY intact
+      }
+    } catch (error) {
+      console.warn('Failed to clear results from localStorage:', error);
+    }
+  },
+
   // Save page filter preferences
   savePageFilter: (filterValue: string): void => {
     try {

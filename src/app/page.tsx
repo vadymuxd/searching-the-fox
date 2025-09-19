@@ -18,6 +18,7 @@ import { SearchForm } from '@/components/SearchForm';
 import { JobTable } from '@/components/JobTable';
 import { PageFilter } from '@/components/PageFilter';
 import { Timer } from '@/components/Timer';
+import { LoadingInsight } from '@/components/LoadingInsight';
 import { JobService } from '@/lib/api';
 import { searchStorage } from '@/lib/localStorage';
 import { Job, SearchFormData, JobSearchResponse } from '@/types/job';
@@ -48,6 +49,12 @@ export default function HomePage() {
       setFilteredJobs(savedResults.jobs);
       setSearchStarted(savedResults.searchStarted);
       setCurrentSearch(savedResults.searchData);
+    } else {
+      // If no results, still try to load just the search form data
+      const savedSearchData = searchStorage.loadSearchData();
+      if (savedSearchData) {
+        setCurrentSearch(savedSearchData);
+      }
     }
     
     // Load saved selected jobs count
@@ -56,19 +63,26 @@ export default function HomePage() {
   }, []);
 
   const handleReset = () => {
-    // Clear localStorage
-    searchStorage.clearSearchData();
+    // Clear only results but preserve search form data
+    searchStorage.clearResultsOnly();
     
-    // Reset all state to initial values
+    // Reset only state related to results, keep search form data
     setJobs([]);
     setFilteredJobs([]);
     setSearchStarted(false);
-    setCurrentSearch(null);
     setError(null);
     setLoading(false);
     setSelectedJobsCount(0);
     setTotalSelectedJobs(0);
     setProgressInfo(undefined);
+    
+    // Reload search form data from localStorage to ensure it's preserved
+    const savedSearchData = searchStorage.loadSearchData();
+    if (savedSearchData) {
+      setCurrentSearch(savedSearchData);
+    } else {
+      setCurrentSearch(null);
+    }
   };
 
   const handleSelectionChange = (selectedCount: number) => {
@@ -296,6 +310,7 @@ export default function HomePage() {
               {loading && (
                 <Paper p="md" radius="md">
                   <Stack gap="md" align="center">
+                    <LoadingInsight isActive={loading} />
                     <Timer 
                       isRunning={loading} 
                       progressInfo={progressInfo}
