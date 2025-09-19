@@ -253,7 +253,7 @@ export default function HomePage() {
         <Box style={{ backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
           <Container size="xl" style={{ minHeight: '100vh' }}>
             <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-              <Box style={{ width: '100%', maxWidth: '1200px' }}>
+              <Box style={{ width: '100%' }}>
                 <Stack gap="0" align="center">
                   {/* Fox Logo */}
                   <Box style={{ width: '100px', height: '75px', marginBottom: '12px' }}>
@@ -265,19 +265,19 @@ export default function HomePage() {
                       style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                     />
                   </Box>
-                  {/* Headline */}
-                  <Title 
-                    order={1} 
+                  {/* Headline as body text, grey */}
+                  <Text 
                     ta="center" 
                     mb="lg" 
                     style={{ 
-                      color: '#37352f',
-                      fontFamily: 'var(--font-horas), Arial Black, sans-serif',
-                      fontWeight: 900
+                      color: '#888',
+                      fontSize: '1rem',
+                      fontWeight: 400,
+                      fontFamily: 'inherit',
                     }}
                   >
                     searching the fox
-                  </Title>
+                  </Text>
                 </Stack>
               </Box>
             </Box>
@@ -285,68 +285,66 @@ export default function HomePage() {
         </Box>
       ) : !searchStarted ? (
         // Centered layout for initial state
-        <Box style={{ backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
-          <Container size="xl" style={{ minHeight: '100vh' }}>
-            <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-              <Box style={{ width: '100%', maxWidth: '1200px' }}>
-                <Stack gap="0" align="center">
-                  {/* Fox Logo */}
-                  <Box style={{ width: '100px', height: '75px', marginBottom: '12px' }}>
-                    <Image 
-                      src="/Searching-The-Fox.svg"
-                      alt="Searching The Fox logo"
-                      width={100}
-                      height={75}
-                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                    />
-                  </Box>
-                  {/* Headline */}
-                  <Title 
-                    order={1} 
-                    ta="center" 
-                    mb="lg" 
-                    style={{ 
-                      color: '#37352f',
-                      fontFamily: 'var(--font-horas), Arial Black, sans-serif',
-                      fontWeight: 900
-                    }}
-                  >
-                    searching the fox
-                  </Title>
-                  {/* Job Site Icons */}
-                  <Box style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                    <Image 
-                      src="/indeed.svg" 
-                      alt="Indeed" 
-                      width={24}
-                      height={24}
-                      style={{ opacity: 0.2 }}
-                    />
-                    <Image 
-                      src="/Linkedin.svg" 
-                      alt="LinkedIn" 
-                      width={24}
-                      height={24}
-                      style={{ opacity: 0.2 }}
-                    />
-                    <Image 
-                      src="/Glassdoor.svg" 
-                      alt="Glassdoor" 
-                      width={24}
-                      height={24}
-                      style={{ opacity: 0.2 }}
-                    />
-                  </Box>
-                  {/* Search Form */}
-                  <SearchForm 
-                    onSearch={handleSearch} 
-                    loading={loading} 
-                    initialValues={currentSearch || undefined}
-                  />
-                </Stack>
+        <Box style={{ backgroundColor: '#f8f9fa', minHeight: '100vh', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Box style={{ width: '100%' }}>
+            <Stack gap="0" align="center">
+              {/* Fox Logo */}
+              <Box style={{ width: '100px', height: '75px', marginBottom: '12px' }}>
+                <Image 
+                  src="/Searching-The-Fox.svg"
+                  alt="Searching The Fox logo"
+                  width={100}
+                  height={75}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
               </Box>
-            </Box>
-          </Container>
+              {/* Headline as body text, grey */}
+              <Text 
+                ta="center" 
+                mb="lg" 
+                style={{ 
+                  color: '#888',
+                  fontSize: '1rem',
+                  fontWeight: 400,
+                  fontFamily: 'inherit',
+                }}
+              >
+                searching the fox
+              </Text>
+              {/* Job Site Icons */}
+              <Box style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                <Image 
+                  src="/indeed.svg" 
+                  alt="Indeed" 
+                  width={24}
+                  height={24}
+                  style={{ opacity: 0.2 }}
+                />
+                <Image 
+                  src="/Linkedin.svg" 
+                  alt="LinkedIn" 
+                  width={24}
+                  height={24}
+                  style={{ opacity: 0.2 }}
+                />
+                <Image 
+                  src="/Glassdoor.svg" 
+                  alt="Glassdoor" 
+                  width={24}
+                  height={24}
+                  style={{ opacity: 0.2 }}
+                />
+              </Box>
+              {/* Search Form */}
+              <Box style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
+                <SearchForm
+                  onSearch={handleSearch}
+                  loading={loading}
+                  initialValues={currentSearch || undefined}
+                />
+              </Box>
+            </Stack>
+          </Box>
         </Box>
       ) : (
         // Split layout after search is started
