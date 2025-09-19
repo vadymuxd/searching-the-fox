@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Text, Stack, Progress, Box, Image } from '@mantine/core';
+import { Text, Stack, Progress, Box } from '@mantine/core';
 
 interface TimerProps {
   isRunning: boolean;
@@ -40,7 +40,6 @@ export function Timer({ isRunning, onReset, progressInfo }: TimerProps) {
   const formatTime = (totalSeconds: number) => {
     const minutes = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
-    
     if (minutes > 0) {
       return `${minutes}:${secs.toString().padStart(2, '0')}`;
     }
@@ -49,26 +48,6 @@ export function Timer({ isRunning, onReset, progressInfo }: TimerProps) {
 
   return (
     <Stack gap="md" align="center">
-      <Image
-        src="/bot.png"
-        alt="AI Bot"
-        w={32}
-        h={32}
-        fit="contain"
-      />
-      {/* Main status text at top */}
-      {progressInfo ? (
-        <Text fw={500} size="md" ta="center" c="dark">
-          Searching {progressInfo.currentSite}...
-        </Text>
-      ) : (
-        <Text fw={500} size="md" ta="center" c="dark">
-          Searching for jobs...
-        </Text>
-      )}
-      <Text fw={600} size="lg" ta="center">
-        {formatTime(seconds)}
-      </Text>
       {progressInfo && (
         <Box style={{ width: '100%', maxWidth: '400px' }}>
           <Stack gap="sm">
@@ -80,14 +59,27 @@ export function Timer({ isRunning, onReset, progressInfo }: TimerProps) {
               striped
               animated
             />
-            <Text size="xs" c="dimmed" ta="center">
-              {progressInfo.completed} of {progressInfo.total} job boards completed
+            <Text fw={500} size="md" ta="center" c="dark">
+              Searching {progressInfo.currentSite} ({progressInfo.completed}/{progressInfo.total})
+            </Text>
+            <Text fw={600} size="lg" ta="center">
+              {formatTime(seconds)}
             </Text>
             <Text size="xs" c="dimmed" ta="center">
               Searching multiple job boards will take several minutes (Usually between 1 and 5). This is because we are collecting and reorganized data from each site, which involves multiple requests and processing time. Do not close or refresh the page during this time.
             </Text>
           </Stack>
         </Box>
+      )}
+      {!progressInfo && (
+        <>
+          <Text fw={500} size="md" ta="center" c="dark">
+            Searching for jobs...
+          </Text>
+          <Text fw={600} size="lg" ta="center">
+            {formatTime(seconds)}
+          </Text>
+        </>
       )}
     </Stack>
   );

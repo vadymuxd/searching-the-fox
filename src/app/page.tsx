@@ -23,7 +23,7 @@ import { JobCard } from '@/components/JobCard';
 import { PageFilter } from '@/components/PageFilter';
 import { SortDropdown, SortOption } from '@/components/SortDropdown';
 import { Timer } from '@/components/Timer';
-import { LoadingInsight } from '@/components/LoadingInsight';
+import { LoadingInsightWithIcon as LoadingInsight } from '@/components/LoadingInsight';
 import { JobService } from '@/lib/api';
 import { searchStorage } from '@/lib/localStorage';
 import { Job, SearchFormData, JobSearchResponse } from '@/types/job';
@@ -373,7 +373,7 @@ export default function HomePage() {
               {/* Loading Progress */}
               {loading && (
                 <Paper p="md" radius="md">
-                  <Stack gap="md" align="center">
+                  <Stack gap={8} align="center">
                     <LoadingInsight isActive={loading} />
                     <Timer 
                       isRunning={loading} 
