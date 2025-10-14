@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button, Menu, Text, Group, Avatar } from '@mantine/core';
+import { Button, Menu, Text, Avatar } from '@mantine/core';
 import { IconLogout, IconUser } from '@tabler/icons-react';
 import { createClient } from '@/lib/supabase/client';
 import { signOut } from '@/lib/auth/actions';

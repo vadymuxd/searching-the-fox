@@ -7,14 +7,13 @@ import {
   Group,
   Stack,
   Image,
-  Avatar,
   Box,
   rem,
 } from '@mantine/core';
 import { SecondaryButton } from './SecondaryButton';
 import { CompanyLogo } from './CompanyLogo';
-import { useMemo, useState, useEffect } from 'react';
-import { IconMapPin, IconCalendar, IconCurrency, IconExternalLink, IconBuilding } from '@tabler/icons-react';
+import { useMemo } from 'react';
+import { IconMapPin, IconCalendar, IconCurrency } from '@tabler/icons-react';
 import { Job } from '@/types/job';
 
 interface JobCardProps {

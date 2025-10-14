@@ -32,8 +32,6 @@ export function SortDropdown({ value, onChange }: SortDropdownProps) {
     }
   };
 
-  const currentLabel = SORT_OPTIONS.find(option => option.value === value)?.label || 'Posted recently';
-
   return (
     <Select
       label="Sorted By:"

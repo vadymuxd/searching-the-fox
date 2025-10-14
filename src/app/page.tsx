@@ -5,7 +5,6 @@ import Image from 'next/image';
 import {
   Container,
   Stack,
-  Title,
   Text,
   Paper,
   Alert,

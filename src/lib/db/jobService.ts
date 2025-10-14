@@ -161,7 +161,7 @@ export async function saveJobsToDatabase(
 export async function getUserJobs(
   userId: string,
   status?: string
-): Promise<{ success: boolean; jobs: any[]; error?: string }> {
+): Promise<{ success: boolean; jobs: Job[]; error?: string }> {
   try {
     const supabase = await createClient();
 
@@ -211,14 +211,14 @@ export async function getUserJobs(
     }
 
     // Transform the data to match Job type with additional user_jobs fields
-    const jobs = data?.map(item => ({
-      ...item.jobs,
+    const jobs = (data?.map(item => ({
+      ...(Array.isArray(item.jobs) ? item.jobs[0] : item.jobs),
       user_job_id: item.id,
       status: item.status,
       notes: item.notes,
       user_created_at: item.created_at,
       user_updated_at: item.updated_at,
-    })) || [];
+    })) || []) as Job[];
 
     return {
       success: true,
@@ -245,7 +245,7 @@ export async function updateJobStatus(
   try {
     const supabase = await createClient();
 
-    const updateData: any = {
+    const updateData: Record<string, string> = {
       status,
       updated_at: new Date().toISOString(),
     };

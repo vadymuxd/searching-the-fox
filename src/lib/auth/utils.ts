@@ -47,7 +47,7 @@ export async function getUserProfile(userId: string) {
 /**
  * Update user preferences
  */
-export async function updateUserPreferences(userId: string, preferences: Record<string, any>) {
+export async function updateUserPreferences(userId: string, preferences: Record<string, unknown>) {
   const supabase = await createClient()
   const { error } = await supabase
     .from('users')
@@ -64,7 +64,7 @@ export async function updateUserPreferences(userId: string, preferences: Record<
 /**
  * Update user metadata
  */
-export async function updateUserMetadata(userId: string, metadata: Record<string, any>) {
+export async function updateUserMetadata(userId: string, metadata: Record<string, unknown>) {
   const supabase = await createClient()
   const { error } = await supabase
     .from('users')

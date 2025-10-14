@@ -79,7 +79,7 @@ export function AuthModal({ opened, onClose, hasSearchResults = false }: AuthMod
           icon: <IconX size={16} />,
         });
       }
-    } catch (error) {
+    } catch (err) {
       notifications.show({
         title: 'Error',
         message: 'Something went wrong. Please try again.',
@@ -208,7 +208,7 @@ export function AuthModal({ opened, onClose, hasSearchResults = false }: AuthMod
             <>
               <Group justify="center" gap="xs">
                 <Text size="sm" c="dimmed">
-                  Don't have an account?
+                  Don&apos;t have an account?
                 </Text>
                 <Anchor
                   size="sm"

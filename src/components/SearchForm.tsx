@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import {
   Box,
@@ -32,11 +32,7 @@ export function SearchForm({ onSearch, onReset, loading = false, initialValues }
   
   // Memoize initialValues to prevent unnecessary re-renders
   const memoizedInitialValues = useMemo(() => initialValues, [
-    initialValues?.jobTitle,
-    initialValues?.location,
-    initialValues?.site,
-    initialValues?.resultsWanted,
-    initialValues?.hoursOld,
+    initialValues,
   ]);
 
   const form = useForm<SearchFormData>({
