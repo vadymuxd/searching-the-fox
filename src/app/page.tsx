@@ -24,9 +24,15 @@ import { PageFilter } from '@/components/PageFilter';
 import { SortDropdown, SortOption } from '@/components/SortDropdown';
 import { Timer } from '@/components/Timer';
 import { LoadingInsightWithIcon as LoadingInsight } from '@/components/LoadingInsight';
+import { AuthModal } from '@/components/AuthModal';
+import { AuthButton } from '@/components/AuthButton';
+import { MoveToDbButton } from '@/components/MoveToDbButton';
 import { JobService } from '@/lib/api';
 import { searchStorage } from '@/lib/localStorage';
+import { saveJobsToDatabase, getUserJobs } from '@/lib/db/jobService';
+import { createClient } from '@/lib/supabase/client';
 import { Job, SearchFormData, JobSearchResponse } from '@/types/job';
+import type { User } from '@supabase/supabase-js';
 
 export default function HomePage() {
   const theme = useMantineTheme();
@@ -48,30 +54,95 @@ export default function HomePage() {
     completed: number;
     total: number;
   } | undefined>(undefined);
+  const [authModalOpened, setAuthModalOpened] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [loadingUserJobs, setLoadingUserJobs] = useState(false);
+
+  // Listen for auth state changes
+  useEffect(() => {
+    const supabase = createClient();
+
+    // Get initial session
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      // If user is signed in, load their jobs from DB
+      if (user) {
+        loadUserJobsFromDb(user.id);
+      }
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      // If user just signed in, load their jobs from DB
+      if (session?.user) {
+        loadUserJobsFromDb(session.user.id);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Load user jobs from database
+  const loadUserJobsFromDb = async (userId: string) => {
+    setLoadingUserJobs(true);
+    try {
+      const result = await getUserJobs(userId);
+      if (result.success && result.jobs.length > 0) {
+        setJobs(result.jobs);
+        setFilteredJobs(result.jobs);
+        setSearchStarted(true);
+        // Don't set currentSearch as we're loading from DB, not a new search
+      }
+    } catch (error) {
+      console.error('Error loading user jobs:', error);
+    } finally {
+      setLoadingUserJobs(false);
+    }
+  };
+
+  // Auto-save to DB after successful search for authenticated users
+  const autoSaveToDb = async (newJobs: Job[], userId: string) => {
+    try {
+      const result = await saveJobsToDatabase(newJobs, userId);
+      if (result.success) {
+        console.log(`Auto-saved ${result.jobsSaved} jobs to database`);
+        // Reload jobs from DB to get the updated list with user_jobs metadata
+        await loadUserJobsFromDb(userId);
+      }
+    } catch (error) {
+      console.error('Error auto-saving to database:', error);
+    }
+  };
 
   // Load saved data on component mount
   useEffect(() => {
     setMounted(true);
     
-    const savedResults = searchStorage.loadSearchResults();
-    if (savedResults) {
-      setJobs(savedResults.jobs);
-      setFilteredJobs(savedResults.jobs);
-      setSearchStarted(savedResults.searchStarted);
-      setCurrentSearch(savedResults.searchData);
-    } else {
-      // If no results, still try to load just the search form data
-      const savedSearchData = searchStorage.loadSearchData();
-      if (savedSearchData) {
-        setCurrentSearch(savedSearchData);
+    // Only load from localStorage if user is NOT signed in
+    if (!user) {
+      const savedResults = searchStorage.loadSearchResults();
+      if (savedResults) {
+        setJobs(savedResults.jobs);
+        setFilteredJobs(savedResults.jobs);
+        setSearchStarted(savedResults.searchStarted);
+        setCurrentSearch(savedResults.searchData);
+      } else {
+        // If no results, still try to load just the search form data
+        const savedSearchData = searchStorage.loadSearchData();
+        if (savedSearchData) {
+          setCurrentSearch(savedSearchData);
+        }
       }
+      
+      // Load saved selected jobs count and individual selections
+      const savedSelectedJobs = searchStorage.loadSelectedJobs();
+      setTotalSelectedJobs(savedSelectedJobs.length);
+      setSelectedJobs(new Set(savedSelectedJobs));
     }
-    
-    // Load saved selected jobs count and individual selections
-    const savedSelectedJobs = searchStorage.loadSelectedJobs();
-    setTotalSelectedJobs(savedSelectedJobs.length);
-    setSelectedJobs(new Set(savedSelectedJobs));
-  }, []);
+  }, [user]);
 
   // Helper function to get job ID (same as JobTable)
   const getJobId = (job: Job) => {
@@ -210,17 +281,22 @@ export default function HomePage() {
         setJobs(response.jobs);
         setFilteredJobs(response.jobs); // Initialize filtered jobs with all jobs
         
-        // Save search results to localStorage
+        // Save to localStorage for non-authenticated users or as backup
         searchStorage.saveSearchResults({
           jobs: response.jobs,
           searchStarted: true,
           searchData: searchData,
         });
         
+        // Auto-save to database if user is authenticated
+        if (user) {
+          await autoSaveToDb(response.jobs, user.id);
+        }
+        
         // Show success notification only after completion
         notifications.show({
           title: 'Search completed!',
-          message: `Found ${response.jobs.length} jobs${searchData.site === 'all' ? ' across all job boards' : ''}`,
+          message: `Found ${response.jobs.length} jobs${searchData.site === 'all' ? ' across all job boards' : ''}${user ? ' and saved to your account' : ''}`,
           icon: <IconCheck size={16} />,
           color: 'green',
           autoClose: 3000,
@@ -301,7 +377,7 @@ export default function HomePage() {
               {/* Headline as body text, grey */}
               <Text 
                 ta="center" 
-                mb="lg" 
+                mb="sm" 
                 style={{ 
                   color: '#888',
                   fontSize: '1rem',
@@ -311,6 +387,10 @@ export default function HomePage() {
               >
                 searching the fox
               </Text>
+              {/* Auth Button */}
+              <Box mb="lg">
+                <AuthButton onSignInClick={() => setAuthModalOpened(true)} />
+              </Box>
               {/* Job Site Icons */}
               <Box style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
                 <Image 
@@ -490,10 +570,37 @@ export default function HomePage() {
                   )}
                 </Stack>
               )}
+
+              {/* Auth Button and Move to DB Button at Bottom of Results */}
+              {jobs.length > 0 && (
+                <Box mt="xl">
+                  <Stack align="center" gap="md">
+                    {/* Show "Move to DB" button only for signed-in users with localStorage data */}
+                    {user && !loadingUserJobs && (
+                      <MoveToDbButton 
+                        jobs={jobs}
+                        userId={user.id}
+                        onComplete={() => {
+                          // Reload jobs from DB after moving
+                          loadUserJobsFromDb(user.id);
+                        }}
+                      />
+                    )}
+                    <AuthButton onSignInClick={() => setAuthModalOpened(true)} />
+                  </Stack>
+                </Box>
+              )}
             </Stack>
           </Container>
         </>
       )}
+      
+      {/* Auth Modal */}
+      <AuthModal 
+        opened={authModalOpened} 
+        onClose={() => setAuthModalOpened(false)}
+        hasSearchResults={searchStarted && jobs.length > 0}
+      />
     </>
   );
 }

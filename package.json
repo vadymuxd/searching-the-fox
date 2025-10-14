@@ -15,6 +15,8 @@
     "@mantine/form": "^8.3.1",
     "@mantine/hooks": "^8.3.1",
     "@mantine/notifications": "^8.3.1",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.75.0",
     "@tabler/icons-react": "^3.35.0",
     "dayjs": "^1.11.18",
     "next": "15.5.3",
