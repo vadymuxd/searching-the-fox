@@ -15,7 +15,7 @@ import {
 import { useMantineTheme } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconInfoCircle, IconAlertCircle, IconCheck, IconMail } from '@tabler/icons-react';
+import { IconInfoCircle, IconAlertCircle, IconCheck } from '@tabler/icons-react';
 import { SearchForm } from '@/components/SearchForm';
 import { JobTable } from '@/components/JobTable';
 import { JobCard } from '@/components/JobCard';
@@ -24,16 +24,13 @@ import { SortDropdown, SortOption } from '@/components/SortDropdown';
 import { Timer } from '@/components/Timer';
 import { LoadingInsightWithIcon as LoadingInsight } from '@/components/LoadingInsight';
 import { AuthModal } from '@/components/AuthModal';
-import { AuthButton } from '@/components/AuthButton';
 import { Header } from '@/components/Header';
 import { JobService } from '@/lib/api';
 import { searchStorage } from '@/lib/localStorage';
 import { saveJobsToDatabase, getUserJobs } from '@/lib/db/jobService';
 import { getUserPreferences, saveLastSearch } from '@/lib/db/userPreferences';
-import { createClient } from '@/lib/supabase/client';
 import { Job, SearchFormData, JobSearchResponse } from '@/types/job';
 import { useAuth } from '@/lib/auth/AuthContext';
-import type { User } from '@supabase/supabase-js';
 
 export default function HomePage() {
   const theme = useMantineTheme();
@@ -56,7 +53,6 @@ export default function HomePage() {
     total: number;
   } | undefined>(undefined);
   const [authModalOpened, setAuthModalOpened] = useState(false);
-  const [loadingUserJobs, setLoadingUserJobs] = useState(false);
   const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   
@@ -158,24 +154,8 @@ export default function HomePage() {
     }
   };
 
-  // Reset application to pre-search state
-  const resetToPreSearchState = () => {
-    setJobs([]);
-    setFilteredJobs([]);
-    setSearchStarted(false);
-    setCurrentSearch(null);
-    setSelectedJobs(new Set());
-    setSelectedJobsCount(0);
-    setTotalSelectedJobs(0);
-    setError(null);
-    setSortOption('posted-recent');
-    // Clear localStorage as well
-    searchStorage.clearSearchData();
-  };
-
   // Load user jobs from database
   const loadUserJobsFromDb = async (userId: string) => {
-    setLoadingUserJobs(true);
     try {
       // First, clear any existing data to ensure clean state for authenticated users
       setJobs([]);
@@ -199,8 +179,6 @@ export default function HomePage() {
       setJobs([]);
       setFilteredJobs([]);
       setSearchStarted(true);
-    } finally {
-      setLoadingUserJobs(false);
     }
   };
 
@@ -476,10 +454,10 @@ export default function HomePage() {
                   Please Confirm Your Email
                 </Text>
                 <Text size="md" c="dimmed" maw={400}>
-                  We've sent a confirmation email to {unconfirmedEmail ? <strong>{unconfirmedEmail}</strong> : 'your inbox'}. Please check your email and click the confirmation link to activate your account.
+                  We&apos;ve sent a confirmation email to {unconfirmedEmail ? <strong>{unconfirmedEmail}</strong> : 'your inbox'}. Please check your email and click the confirmation link to activate your account.
                 </Text>
                 <Text size="sm" c="dimmed">
-                  Don't see the email? Check your spam folder or contact support if you need help.
+                  Don&apos;t see the email? Check your spam folder or contact support if you need help.
                 </Text>
               </Stack>
             </Stack>

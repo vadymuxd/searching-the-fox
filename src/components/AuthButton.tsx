@@ -30,9 +30,13 @@ export function AuthButton({ onSignInClick }: AuthButtonProps) {
         title: 'Signed out',
         message: 'You have been signed out successfully.',
         color: 'blue',
+        autoClose: 1000,
       });
 
-      // No need to force refresh - let the AuthContext handle state changes
+      // Force browser refresh after sign out to clear all state
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000);
     } catch (error) {
       console.error('Sign out error:', error);
       notifications.show({

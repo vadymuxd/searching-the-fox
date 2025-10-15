@@ -89,7 +89,7 @@ export function AuthModal({ opened, onClose, hasSearchResults = false }: AuthMod
           icon: <IconX size={16} />,
         });
       }
-    } catch (err) {
+    } catch {
       notifications.show({
         title: 'Error',
         message: 'Something went wrong. Please try again.',

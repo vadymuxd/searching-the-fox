@@ -15,7 +15,7 @@ import { SecondaryButton } from './SecondaryButton';
 import { IconButton } from './IconButton';
 import { Job } from '@/types/job';
 import { searchStorage } from '@/lib/localStorage';
-import { savePageFilter as savePageFilterToDb, getUserPreferences, getUserKeywords, saveUserKeywords } from '@/lib/db/userPreferences';
+import { getUserKeywords, saveUserKeywords } from '@/lib/db/userPreferences';
 import { useAuth } from '@/lib/auth/AuthContext';
 
 interface PageFilterProps {
@@ -128,8 +128,8 @@ export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
     // Only load if we have jobs to filter
     if (jobs.length > 0) {
       loadFilter();
-    } else if (!hasSavedFilter) {
-      // If no jobs and no saved filter, just show empty results
+    } else {
+      // If no jobs, just show empty results
       onFilteredJobsChange(jobs);
       initialLoadCompleteRef.current = true;
     }
