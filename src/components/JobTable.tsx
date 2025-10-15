@@ -183,9 +183,13 @@ export function JobTable({ jobs, onSelectionChange, onSelectedJobsChange }: JobT
       .filter(jobData => jobData.userJobId); // Only include jobs with user_job_id
     
     // Notify parent component about selection change
-    onSelectionChange?.(visibleSelectedCount);
-    onSelectedJobsChange?.(selectedJobsData);
-  }, [selectedJobs, jobs]); // Removed function dependencies to prevent infinite loop
+    if (onSelectionChange) {
+      onSelectionChange(visibleSelectedCount);
+    }
+    if (onSelectedJobsChange) {
+      onSelectedJobsChange(selectedJobsData);
+    }
+  }, [selectedJobs, jobs, onSelectionChange, onSelectedJobsChange]);
 
   const toggleJobSelection = (jobId: string) => {
     const newSelected = new Set(selectedJobs);

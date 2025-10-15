@@ -18,9 +18,7 @@ const JOB_TABS = [
   { value: 'archived', label: 'Archived', path: '/results/archived' },
 ];
 
-interface TabNavigationProps {}
-
-export function TabNavigation({}: TabNavigationProps) {
+export function TabNavigation() {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();

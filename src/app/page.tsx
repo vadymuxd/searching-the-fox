@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
@@ -12,7 +12,7 @@ import {
   Alert,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconAlertCircle, IconCheck, IconInfoCircle } from '@tabler/icons-react';
+import { IconAlertCircle } from '@tabler/icons-react';
 import { SearchForm } from '@/components/SearchForm';
 import { AuthModal } from '@/components/AuthModal';
 import { AuthButton } from '@/components/AuthButton';
@@ -119,7 +119,10 @@ export default function HomePage() {
         localStorage.removeItem('triggerSearch');
       }
     }
-  }, [mounted]);  const handleSearch = async (searchData: SearchFormData) => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted]);
+
+  const handleSearch = useCallback(async (searchData: SearchFormData) => {
     // Migrate localStorage data if user just signed in
     if (user) {
       const localJobs = searchStorage.loadSearchResults();
@@ -217,7 +220,7 @@ export default function HomePage() {
       setLoading(false);
       setProgressInfo(undefined);
     }
-  };
+  }, [user, router]);
 
   return (
     <>

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Modal, TextInput, PasswordInput, Button, Stack, Text, Divider, Group, Anchor } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconBrandGoogle, IconBrandGithub, IconBrandLinkedin, IconCheck, IconX } from '@tabler/icons-react';
@@ -17,7 +16,6 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ opened, onClose, hasSearchResults = false }: AuthModalProps) {
-  const router = useRouter();
   const [mode, setMode] = useState<AuthMode>('signin');
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');

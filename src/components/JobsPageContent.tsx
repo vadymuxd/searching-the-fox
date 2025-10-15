@@ -6,7 +6,6 @@ import {
   Container,
   Stack,
   Text,
-  Paper,
   Alert,
   Box,
   Group,
@@ -15,8 +14,7 @@ import {
 } from '@mantine/core';
 import { useMantineTheme } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { notifications } from '@mantine/notifications';
-import { IconInfoCircle, IconAlertCircle, IconCheck, IconRefresh, IconEdit } from '@tabler/icons-react';
+import { IconInfoCircle, IconAlertCircle, IconRefresh, IconEdit } from '@tabler/icons-react';
 import { JobTable } from '@/components/JobTable';
 import { JobCard } from '@/components/JobCard';
 import { PageFilter } from '@/components/PageFilter';
@@ -26,7 +24,7 @@ import { Header } from '@/components/Header';
 import { TabNavigation } from '@/components/TabNavigation';
 import { MoveToButton } from '@/components/MoveToButton';
 import { searchStorage } from '@/lib/localStorage';
-import { saveJobsToDatabase, getUserJobs } from '@/lib/db/jobService';
+import { getUserJobs } from '@/lib/db/jobService';
 import { getUserPreferences, saveLastSearch } from '@/lib/db/userPreferences';
 import { Job, SearchFormData } from '@/types/job';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -68,6 +66,28 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
     // Guest users will see localStorage data, authenticated users will see database data
   }, [user, authLoading, router]);
 
+  // Load user jobs from database
+  const loadUserJobsFromDb = useCallback(async (userId: string) => {
+    try {
+      // First, clear any existing data to ensure clean state for authenticated users
+      setJobs([]);
+      setFilteredJobs([]);
+      
+      const result = await getUserJobs(userId, status);
+      if (result.success) {
+        setJobs(result.jobs);
+        setFilteredJobs(result.jobs);
+      } else {
+        setJobs([]);
+        setFilteredJobs([]);
+      }
+    } catch (error) {
+      console.error('Error loading user jobs:', error);
+      setJobs([]);
+      setFilteredJobs([]);
+    }
+  }, [status]);
+
   // React to user changes from AuthContext
   useEffect(() => {
     // Skip if this is the initial mount and we haven't finished loading
@@ -108,7 +128,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
         loadGuestData();
       }
     }
-  }, [user, mounted, authLoading, router, status]);
+  }, [user, mounted, authLoading, router, status, loadUserJobsFromDb]);
 
   // Prevent unnecessary reloads when page regains focus/visibility
   useEffect(() => {
@@ -156,42 +176,6 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       }
     } catch (error) {
       console.error('Error loading user preferences:', error);
-    }
-  };
-
-  // Load user jobs from database
-  const loadUserJobsFromDb = async (userId: string) => {
-    try {
-      // First, clear any existing data to ensure clean state for authenticated users
-      setJobs([]);
-      setFilteredJobs([]);
-      
-      const result = await getUserJobs(userId, status);
-      if (result.success) {
-        setJobs(result.jobs);
-        setFilteredJobs(result.jobs);
-      } else {
-        setJobs([]);
-        setFilteredJobs([]);
-      }
-    } catch (error) {
-      console.error('Error loading user jobs:', error);
-      setJobs([]);
-      setFilteredJobs([]);
-    }
-  };
-
-  // Auto-save to DB after successful search for authenticated users
-  const autoSaveToDb = async (newJobs: Job[], userId: string) => {
-    try {
-      const result = await saveJobsToDatabase(newJobs, userId);
-      if (result.success) {
-        console.log(`Auto-saved ${result.jobsSaved} jobs to database`);
-        // Reload jobs from DB to get the updated list with user_jobs metadata
-        await loadUserJobsFromDb(userId);
-      }
-    } catch (error) {
-      console.error('Error auto-saving to database:', error);
     }
   };
 
@@ -273,35 +257,6 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
     setSelectedJobsData(selectedJobsData);
   };
 
-  const handleReset = () => {
-    if (user) {
-      // For authenticated users: Reset to pre-search state, data comes from database
-      setJobs([]);
-      setFilteredJobs([]);
-      setError(null);
-      setSelectedJobsCount(0);
-      setTotalSelectedJobs(0);
-    } else {
-      // For guest users: Clear localStorage and reset state
-      searchStorage.clearResultsOnly();
-      
-      // Reset only state related to results, keep search form data
-      setJobs([]);
-      setFilteredJobs([]);
-      setError(null);
-      setSelectedJobsCount(0);
-      setTotalSelectedJobs(0);
-      
-      // Reload search form data from localStorage to ensure it's preserved
-      const savedSearchData = searchStorage.loadSearchData();
-      if (savedSearchData) {
-        setCurrentSearch(savedSearchData);
-      } else {
-        setCurrentSearch(null);
-      }
-    }
-  };
-
   const handleEditSearch = async () => {
     // For authenticated users, save current search to user preferences before redirecting
     if (user && currentSearch) {
@@ -345,7 +300,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
     if (user) {
       loadUserJobsFromDb(user.id);
     }
-  }, [router, user]);
+  }, [router, user, loadUserJobsFromDb]);
 
   // Helper function to get readable job board name
   const getJobBoardName = (site: string) => {
@@ -365,12 +320,6 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
     const timeOption = timeOptions.find(option => option.value === hoursOld);
     return timeOption ? timeOption.label.toLowerCase() : `past ${hoursOld} hours`;
   };
-
-  // Get the page title based on status
-  const getPageTitle = () => {
-    return null; // No titles needed
-  };
-
   // Show loading state while auth is being checked
   if (authLoading || !mounted) {
     return (
@@ -391,7 +340,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
                 Please Confirm Your Email
               </Text>
               <Text size="md" c="dimmed" maw={400}>
-                We've sent a confirmation email to your inbox. Please check your email and click the confirmation link to activate your account.
+                We&apos;ve sent a confirmation email to your inbox. Please check your email and click the confirmation link to activate your account.
               </Text>
             </Stack>
           </Stack>
