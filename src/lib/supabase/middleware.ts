@@ -24,6 +24,11 @@ export async function updateSession(request: NextRequest) {
           )
         },
       },
+      auth: {
+        persistSession: true,
+        autoRefreshToken: false, // Disable auto-refresh in middleware to prevent excessive calls
+        detectSessionInUrl: false,
+      }
     }
   )
 
@@ -31,19 +36,24 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  // Protect routes that require authentication
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/signup') &&
-    !request.nextUrl.pathname.startsWith('/auth')
-  ) {
-    // User is not authenticated, but we allow access to the main page
-    // They just won't have access to authenticated features
+    // Protect routes that require authentication
+    if (
+      !user &&
+      !request.nextUrl.pathname.startsWith('/login') &&
+      !request.nextUrl.pathname.startsWith('/signup') &&
+      !request.nextUrl.pathname.startsWith('/auth')
+    ) {
+      // User is not authenticated, but we allow access to the main page
+      // They just won't have access to authenticated features
+    }
+  } catch (error) {
+    // Silently handle auth errors in middleware to prevent disruption
+    console.log('Middleware auth check failed:', error)
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're

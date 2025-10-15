@@ -35,15 +35,12 @@ export function AuthModal({ opened, onClose, hasSearchResults = false }: AuthMod
       if (mode === 'signup') {
         result = await signUp(formData);
         if (!result.error) {
-          notifications.show({
-            title: 'Account created!',
-            message: 'Welcome to Searching The Fox. You can now save and track jobs.',
-            color: 'green',
-            icon: <IconCheck size={16} />,
-          });
+          // Don't show toast - close modal and show email confirmation screen
           onClose();
-          // Reload to update auth state
-          window.location.reload();
+          // Trigger the email confirmation state in parent component
+          window.dispatchEvent(new CustomEvent('showEmailConfirmation', { 
+            detail: { email } 
+          }));
         }
       } else if (mode === 'signin') {
         result = await signIn(formData);
@@ -57,6 +54,19 @@ export function AuthModal({ opened, onClose, hasSearchResults = false }: AuthMod
           onClose();
           // Reload to update auth state
           window.location.reload();
+        } else if (result.error.includes('Email not confirmed')) {
+          // Handle unconfirmed email case - close modal and show confirmation screen
+          notifications.show({
+            title: 'Email not confirmed',
+            message: 'Please check your email and confirm your account to sign in.',
+            color: 'orange',
+            icon: <IconCheck size={16} />,
+          });
+          onClose();
+          // Trigger the email confirmation state in parent component
+          window.dispatchEvent(new CustomEvent('showEmailConfirmation', { 
+            detail: { email } 
+          }));
         }
       } else if (mode === 'reset') {
         result = await resetPassword(formData);

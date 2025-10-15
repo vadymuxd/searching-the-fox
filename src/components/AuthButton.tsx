@@ -1,40 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Button, Menu, Text, Avatar } from '@mantine/core';
 import { IconLogout, IconUser } from '@tabler/icons-react';
-import { createClient } from '@/lib/supabase/client';
 import { signOut } from '@/lib/auth/actions';
 import { notifications } from '@mantine/notifications';
-import type { User } from '@supabase/supabase-js';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 interface AuthButtonProps {
   onSignInClick: () => void;
 }
 
 export function AuthButton({ onSignInClick }: AuthButtonProps) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    // Get initial session
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const { user, loading } = useAuth(); // Use the centralized auth context
 
   const handleSignOut = async () => {
     try {
@@ -55,7 +32,7 @@ export function AuthButton({ onSignInClick }: AuthButtonProps) {
         color: 'blue',
       });
 
-      // No need to reload - auth state listener will handle cleanup
+      // No need to force refresh - let the AuthContext handle state changes
     } catch (error) {
       console.error('Sign out error:', error);
       notifications.show({

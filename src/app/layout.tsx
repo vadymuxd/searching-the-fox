@@ -7,6 +7,7 @@ import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { ColorSchemeScript, MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
+import { AuthProvider } from '@/lib/auth/AuthContext';
 import { theme } from './theme';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -94,8 +95,10 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} ${horas.variable}`} suppressHydrationWarning>
         <MantineProvider theme={theme} defaultColorScheme="light">
-          <Notifications />
-          {children}
+          <AuthProvider>
+            <Notifications />
+            {children}
+          </AuthProvider>
         </MantineProvider>
       </body>
     </html>

@@ -11,6 +11,7 @@ This document defines the database schema for Searching The Fox, integrating Sup
 
 Stores user preferences and metadata. Linked to Supabase `auth.users`.
 
+
 ```sql
 CREATE TABLE users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -18,12 +19,14 @@ CREATE TABLE users (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   preferences JSONB DEFAULT '{}',
-  metadata JSONB DEFAULT '{}'
+  metadata JSONB DEFAULT '{}',
+  keywords TEXT[] DEFAULT NULL
 );
 
 -- Index for faster lookups
 CREATE INDEX idx_users_email ON users(email);
 ```
+
 
 **Fields:**
 - `id` - UUID, foreign key to auth.users.id
@@ -47,6 +50,7 @@ CREATE INDEX idx_users_email ON users(email);
     "lastSearchDate": "2024-10-14T10:00:00Z"
   }
   ```
+- `keywords` - TEXT[] array of saved filter keywords for the user (used for frontend filters)
 
 ---
 

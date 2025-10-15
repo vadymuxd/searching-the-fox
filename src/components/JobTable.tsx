@@ -18,7 +18,6 @@ import { IconChevronUp, IconChevronDown, IconSelector } from '@tabler/icons-reac
 import { Job } from '@/types/job';
 import { SecondaryButton } from './SecondaryButton';
 import { CompanyLogo } from './CompanyLogo';
-import { searchStorage } from '@/lib/localStorage';
 
 interface JobTableProps {
   jobs: Job[];
@@ -133,19 +132,8 @@ export function JobTable({ jobs, onSelectionChange }: JobTableProps) {
     return Math.abs(hash).toString();
   };
 
-  // Load selected jobs from localStorage on component mount
+  // Selection state is only kept in memory during session (no localStorage)
   useEffect(() => {
-    const savedSelectedJobs = searchStorage.loadSelectedJobs();
-    if (savedSelectedJobs.length > 0) {
-      setSelectedJobs(new Set(savedSelectedJobs));
-    }
-  }, []);
-
-  // Save selected jobs to localStorage whenever selection changes
-  useEffect(() => {
-    const selectedJobsArray = Array.from(selectedJobs);
-    searchStorage.saveSelectedJobs(selectedJobsArray);
-    
     // Count only selected jobs that are currently visible (in the filtered jobs list)
     const visibleSelectedCount = jobs.filter(job => selectedJobs.has(getJobId(job))).length;
     

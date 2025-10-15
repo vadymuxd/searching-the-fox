@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import {
   Container,
@@ -15,7 +15,7 @@ import {
 import { useMantineTheme } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconInfoCircle, IconAlertCircle, IconCheck } from '@tabler/icons-react';
+import { IconInfoCircle, IconAlertCircle, IconCheck, IconMail } from '@tabler/icons-react';
 import { SearchForm } from '@/components/SearchForm';
 import { JobTable } from '@/components/JobTable';
 import { JobCard } from '@/components/JobCard';
@@ -32,12 +32,13 @@ import { saveJobsToDatabase, getUserJobs } from '@/lib/db/jobService';
 import { getUserPreferences, saveLastSearch } from '@/lib/db/userPreferences';
 import { createClient } from '@/lib/supabase/client';
 import { Job, SearchFormData, JobSearchResponse } from '@/types/job';
+import { useAuth } from '@/lib/auth/AuthContext';
 import type { User } from '@supabase/supabase-js';
 
 export default function HomePage() {
   const theme = useMantineTheme();
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
-  
+  const { user } = useAuth(); // Use the AuthContext instead of local user state
   const [jobs, setJobs] = useState<Job[]>([]);
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
@@ -55,42 +56,94 @@ export default function HomePage() {
     total: number;
   } | undefined>(undefined);
   const [authModalOpened, setAuthModalOpened] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
   const [loadingUserJobs, setLoadingUserJobs] = useState(false);
+  const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
+  
+  // Track if we've already loaded data for this user to prevent re-loading on tab focus
+  const userDataLoadedRef = useRef<string | null>(null);
 
-  // Listen for auth state changes
+  // Memoized callback for filtered jobs change to prevent PageFilter reloads
+  const handleFilteredJobsChange = useCallback((filteredJobs: Job[]) => {
+    setFilteredJobs(filteredJobs);
+  }, []);
+
+  // React to user changes from AuthContext
   useEffect(() => {
-    const supabase = createClient();
-
-    // Get initial session
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      // If user is signed in, load their jobs and preferences from DB
-      if (user) {
-        loadUserJobsFromDb(user.id);
-        loadUserPreferencesFromDb(user.id);
+    // Skip if this is the initial mount and we haven't finished loading
+    if (!mounted) return;
+    
+    console.log('User changed from AuthContext:', user);
+    console.log('Email confirmed:', user?.email_confirmed_at);
+    
+    // Check if user exists but email is not confirmed
+    if (user && !user.email_confirmed_at) {
+      console.log('User email not confirmed - showing confirmation screen');
+      setEmailNotConfirmed(true);
+      return;
+    }
+    
+    setEmailNotConfirmed(false);
+    setUnconfirmedEmail(null);
+    
+    // If user is signed in and email is confirmed, load their data
+    if (user && user.email_confirmed_at) {
+      // Check if we've already loaded data for this user
+      if (userDataLoadedRef.current === user.id) {
+        console.log('User data already loaded, skipping reload');
+        return;
       }
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
       
-      // If user just signed in, load their jobs and preferences from DB
-      if (session?.user) {
-        loadUserJobsFromDb(session.user.id);
-        loadUserPreferencesFromDb(session.user.id);
-      }
+      console.log('User email confirmed - loading user data');
+      userDataLoadedRef.current = user.id;
       
-      // If user signed out, reset to pre-search state
-      if (event === 'SIGNED_OUT') {
-        resetToPreSearchState();
-      }
-    });
+      // Clear any localStorage data immediately for authenticated users
+      setJobs([]);
+      setFilteredJobs([]);
+      setSearchStarted(false);
+      
+      loadUserJobsFromDb(user.id);
+      loadUserPreferencesFromDb(user.id);
+    } else {
+      // Reset the ref when user logs out
+      userDataLoadedRef.current = null;
+    }
+  }, [user, mounted]); // Add mounted as dependency
 
-    return () => subscription.unsubscribe();
+  // Listen for custom email confirmation events
+  useEffect(() => {
+    const handleShowEmailConfirmation = (event: CustomEvent) => {
+      console.log('Received showEmailConfirmation event:', event.detail);
+      setEmailNotConfirmed(true);
+      setUnconfirmedEmail(event.detail.email);
+    };
+
+    window.addEventListener('showEmailConfirmation', handleShowEmailConfirmation as EventListener);
+    
+    return () => {
+      window.removeEventListener('showEmailConfirmation', handleShowEmailConfirmation as EventListener);
+    };
+  }, []);
+
+  // Prevent unnecessary reloads when page regains focus/visibility
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      // Do nothing - just prevent default behavior that might trigger reloads
+      console.log('Page visibility changed, maintaining current state');
+    };
+
+    const handleFocus = () => {
+      // Do nothing - just prevent default behavior that might trigger reloads
+      console.log('Page focused, maintaining current state');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   // Load user preferences from database
@@ -124,15 +177,28 @@ export default function HomePage() {
   const loadUserJobsFromDb = async (userId: string) => {
     setLoadingUserJobs(true);
     try {
+      // First, clear any existing data to ensure clean state for authenticated users
+      setJobs([]);
+      setFilteredJobs([]);
+      
       const result = await getUserJobs(userId);
-      if (result.success && result.jobs.length > 0) {
+      if (result.success) {
+        // Always show search results view for authenticated users, even if no jobs
         setJobs(result.jobs);
         setFilteredJobs(result.jobs);
+        setSearchStarted(true); // Always true for authenticated users to show results view
+      } else {
+        // Even on error, show the results view (empty state) for authenticated users
+        setJobs([]);
+        setFilteredJobs([]);
         setSearchStarted(true);
-        // Don't set currentSearch as we're loading from DB, not a new search
       }
     } catch (error) {
       console.error('Error loading user jobs:', error);
+      // Even on error, show the results view (empty state) for authenticated users
+      setJobs([]);
+      setFilteredJobs([]);
+      setSearchStarted(true);
     } finally {
       setLoadingUserJobs(false);
     }
@@ -156,7 +222,8 @@ export default function HomePage() {
   useEffect(() => {
     setMounted(true);
     
-    // Only load from localStorage if user is NOT signed in
+    // ONLY load from localStorage if user is NOT signed in
+    // Authenticated users get their data EXCLUSIVELY from database via loadUserJobsFromDb()
     if (!user) {
       const savedResults = searchStorage.loadSearchResults();
       if (savedResults) {
@@ -171,11 +238,9 @@ export default function HomePage() {
           setCurrentSearch(savedSearchData);
         }
       }
-      
-      // Load saved selected jobs count and individual selections
-      const savedSelectedJobs = searchStorage.loadSelectedJobs();
-      setTotalSelectedJobs(savedSelectedJobs.length);
-      setSelectedJobs(new Set(savedSelectedJobs));
+    } else {
+      // For authenticated users: ensure clean state, data comes ONLY from database
+      console.log('User is authenticated - skipping localStorage, using database only');
     }
   }, [user]);
 
@@ -226,8 +291,7 @@ export default function HomePage() {
     }
     setSelectedJobs(newSelected);
     
-    // Save to localStorage
-    searchStorage.saveSelectedJobs(Array.from(newSelected));
+    // Selection state is only kept in memory during session (no localStorage)
     
     // Update counts
     setSelectedJobsCount(newSelected.size);
@@ -235,33 +299,44 @@ export default function HomePage() {
   };
 
   const handleReset = () => {
-    // Clear only results but preserve search form data
-    searchStorage.clearResultsOnly();
-    
-    // Reset only state related to results, keep search form data
-    setJobs([]);
-    setFilteredJobs([]);
-    setSearchStarted(false);
-    setError(null);
-    setLoading(false);
-    setSelectedJobsCount(0);
-    setTotalSelectedJobs(0);
-    setProgressInfo(undefined);
-    
-    // Reload search form data from localStorage to ensure it's preserved
-    const savedSearchData = searchStorage.loadSearchData();
-    if (savedSearchData) {
-      setCurrentSearch(savedSearchData);
+    if (user) {
+      // For authenticated users: Reset to pre-search state, data comes from database
+      setJobs([]);
+      setFilteredJobs([]);
+      setSearchStarted(false);
+      setError(null);
+      setLoading(false);
+      setSelectedJobsCount(0);
+      setTotalSelectedJobs(0);
+      setProgressInfo(undefined);
+      // Don't touch localStorage for authenticated users
     } else {
-      setCurrentSearch(null);
+      // For anonymous users: Clear localStorage and reset state
+      searchStorage.clearResultsOnly();
+      
+      // Reset only state related to results, keep search form data
+      setJobs([]);
+      setFilteredJobs([]);
+      setSearchStarted(false);
+      setError(null);
+      setLoading(false);
+      setSelectedJobsCount(0);
+      setTotalSelectedJobs(0);
+      setProgressInfo(undefined);
+      
+      // Reload search form data from localStorage to ensure it's preserved
+      const savedSearchData = searchStorage.loadSearchData();
+      if (savedSearchData) {
+        setCurrentSearch(savedSearchData);
+      } else {
+        setCurrentSearch(null);
+      }
     }
   };
 
   const handleSelectionChange = (selectedCount: number) => {
     setSelectedJobsCount(selectedCount);
-    // Load total selected jobs from localStorage to show complete count
-    const allSelected = searchStorage.loadSelectedJobs();
-    setTotalSelectedJobs(allSelected.length);
+    setTotalSelectedJobs(selectedCount);
   };
 
   const handleSearch = async (searchData: SearchFormData) => {
@@ -342,12 +417,14 @@ export default function HomePage() {
         setJobs(response.jobs);
         setFilteredJobs(response.jobs); // Initialize filtered jobs with all jobs
         
-        // Save to localStorage for non-authenticated users or as backup
-        searchStorage.saveSearchResults({
-          jobs: response.jobs,
-          searchStarted: true,
-          searchData: searchData,
-        });
+        // Save to localStorage ONLY for anonymous users
+        if (!user) {
+          searchStorage.saveSearchResults({
+            jobs: response.jobs,
+            searchStarted: true,
+            searchData: searchData,
+          });
+        }
         
         // Auto-save to database if user is authenticated
         if (user) {
@@ -388,7 +465,27 @@ export default function HomePage() {
       {/* Header with Logo and Auth Button */}
       <Header onSignInClick={() => setAuthModalOpened(true)} />
       
-      {!mounted ? (
+      {/* Email Confirmation Required State */}
+      {emailNotConfirmed ? (
+        <Box style={{ backgroundColor: '#f8f9fa', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Container size="sm">
+            <Stack gap="lg" align="center" ta="center">
+              {/* Email Confirmation Message */}
+              <Stack gap="md" align="center">
+                <Text size="xl" fw={600} c="blue">
+                  Please Confirm Your Email
+                </Text>
+                <Text size="md" c="dimmed" maw={400}>
+                  We've sent a confirmation email to {unconfirmedEmail ? <strong>{unconfirmedEmail}</strong> : 'your inbox'}. Please check your email and click the confirmation link to activate your account.
+                </Text>
+                <Text size="sm" c="dimmed">
+                  Don't see the email? Check your spam folder or contact support if you need help.
+                </Text>
+              </Stack>
+            </Stack>
+          </Container>
+        </Box>
+      ) : !mounted ? (
         // Show loading skeleton during hydration
         <Box style={{ backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
           <Container size="xl" style={{ minHeight: '100vh' }}>
@@ -579,7 +676,7 @@ export default function HomePage() {
                   {/* Page Filter */}
                   <PageFilter 
                     jobs={jobs} 
-                    onFilteredJobsChange={setFilteredJobs}
+                    onFilteredJobsChange={handleFilteredJobsChange}
                   />
 
                   {/* Filtered Results */}

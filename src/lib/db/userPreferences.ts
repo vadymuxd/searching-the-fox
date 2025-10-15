@@ -12,6 +12,57 @@ export interface UserPreferences {
   sortPreference?: string;
   displayMode?: string;
   pageFilter?: string; // Filter by job titles (comma separated)
+  keywords?: string[]; // Saved filter keywords
+}
+/**
+ * Get user keywords from database
+ */
+export async function getUserKeywords(
+  userId: string
+): Promise<{ success: boolean; keywords: string[] | null; error?: string }> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('keywords')
+      .eq('id', userId)
+      .single();
+    if (error) {
+      return { success: false, keywords: null, error: error.message };
+    }
+    return { success: true, keywords: data?.keywords || null };
+  } catch (error) {
+    return {
+      success: false,
+      keywords: null,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Save user keywords to database
+ */
+export async function saveUserKeywords(
+  userId: string,
+  keywords: string[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from('users')
+      .update({ keywords, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }
 
 /**

@@ -32,7 +32,8 @@ CREATE TABLE users (
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   preferences JSONB DEFAULT '{}' NOT NULL,
-  metadata JSONB DEFAULT '{}' NOT NULL
+  metadata JSONB DEFAULT '{}' NOT NULL,
+  keywords TEXT[] DEFAULT NULL
 );
 
 -- Index for faster email lookups
