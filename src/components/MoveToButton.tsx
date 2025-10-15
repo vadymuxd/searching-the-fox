@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button, Menu, rem } from '@mantine/core';
 import { IconChevronDown, IconCheck } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { updateJobStatus } from '@/lib/db/jobService';
+import { updateJobStatus, removeUserJob } from '@/lib/db/jobService';
 import { JobStatus } from '@/types/supabase';
 
 interface MoveToButtonProps {
@@ -21,6 +21,11 @@ const STATUS_OPTIONS: Array<{ value: JobStatus; label: string }> = [
   { value: 'rejected', label: 'Rejected' },
   { value: 'archived', label: 'Archived' },
 ];
+
+const MENU_OPTIONS = [
+  ...STATUS_OPTIONS,
+  { value: 'removed', label: 'Removed' }
+] as const;
 
 export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false }: MoveToButtonProps) {
   const [loading, setLoading] = useState(false);
@@ -75,6 +80,64 @@ export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false }:
     }
   };
 
+  const handleRemoveJobs = async () => {
+    if (selectedJobs.length === 0) return;
+
+    setLoading(true);
+    
+    try {
+      // Remove all selected jobs
+      const removePromises = selectedJobs.map(job => 
+        removeUserJob(job.userJobId)
+      );
+      
+      const results = await Promise.all(removePromises);
+      
+      // Check if all removals were successful
+      const failedRemovals = results.filter(result => !result.success);
+      
+      if (failedRemovals.length === 0) {
+        // All removals successful
+        notifications.show({
+          title: 'Jobs Removed',
+          message: `Successfully removed ${selectedJobs.length} job${selectedJobs.length > 1 ? 's' : ''} from your list`,
+          color: 'green',
+          icon: <IconCheck size={16} />,
+        });
+        
+        // Refresh the page to show updated list
+        onStatusUpdate();
+      } else {
+        // Some removals failed
+        notifications.show({
+          title: 'Partial Removal',
+          message: `${results.filter(r => r.success).length} jobs removed successfully, ${failedRemovals.length} failed`,
+          color: 'yellow',
+        });
+        
+        // Still refresh to show partial updates
+        onStatusUpdate();
+      }
+    } catch (error) {
+      console.error('Error removing jobs:', error);
+      notifications.show({
+        title: 'Removal Failed',
+        message: 'Failed to remove jobs. Please try again.',
+        color: 'red',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMenuAction = async (action: string) => {
+    if (action === 'removed') {
+      await handleRemoveJobs();
+    } else {
+      await handleStatusChange(action as JobStatus);
+    }
+  };
+
   if (selectedJobs.length === 0) {
     return null;
   }
@@ -95,12 +158,12 @@ export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false }:
       </Menu.Target>
 
       <Menu.Dropdown>
-        {STATUS_OPTIONS.map((status) => (
+        {MENU_OPTIONS.map((option) => (
           <Menu.Item
-            key={status.value}
-            onClick={() => handleStatusChange(status.value)}
+            key={option.value}
+            onClick={() => handleMenuAction(option.value)}
           >
-            {status.label}
+            {option.label}
           </Menu.Item>
         ))}
       </Menu.Dropdown>
