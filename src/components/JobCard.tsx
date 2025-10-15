@@ -12,7 +12,6 @@ import {
 } from '@mantine/core';
 import { SecondaryButton } from './SecondaryButton';
 import { CompanyLogo } from './CompanyLogo';
-import { useMemo } from 'react';
 import { IconMapPin, IconCalendar, IconCurrency } from '@tabler/icons-react';
 import { Job } from '@/types/job';
 
@@ -100,17 +99,63 @@ export function JobCard({ job, jobId, isSelected, onSelectionChange }: JobCardPr
     return 'Not specified';
   };
 
-  // Smart icon PNG for job source
-  const jobSourceIcon = useMemo(() => {
-    if (!job.source_site) return undefined;
-    const map: Record<string, string> = {
-      'LinkedIn': '/Linkedin.svg',
-      'Indeed': '/indeed.svg',
-      'Glassdoor': '/Glassdoor.svg',
-      'ZipRecruiter': '/zip_recruiter.svg',
-    };
-    return map[job.source_site] || undefined;
-  }, [job.source_site]);
+  // Smart icon for job board (same logic as JobTable)
+  const getJobBoardLogo = (sourceSite: string | undefined, jobUrl: string) => {
+    // First, try to determine from sourceSite
+    if (sourceSite) {
+      const logoMap: Record<string, string> = {
+        'LinkedIn': '/Linkedin.svg',
+        'Indeed': '/indeed.svg',
+      };
+
+      const logoPath = logoMap[sourceSite];
+      if (logoPath) {
+        return (
+          <Image
+            src={logoPath}
+            alt={sourceSite}
+            width={16}
+            height={16}
+            style={{ objectFit: 'contain' }}
+          />
+        );
+      }
+    }
+
+    // If sourceSite is not available or not in our map, try to determine from job URL
+    if (jobUrl) {
+      let detectedSite = '';
+      let logoPath = '';
+
+      if (jobUrl.includes('indeed.com')) {
+        detectedSite = 'Indeed';
+        logoPath = '/indeed.svg';
+      } else if (jobUrl.includes('linkedin.com')) {
+        detectedSite = 'LinkedIn';
+        logoPath = '/Linkedin.svg';
+      } else if (jobUrl.includes('glassdoor.com')) {
+        detectedSite = 'Glassdoor';
+        logoPath = '/Glassdoor.svg';
+      } else if (jobUrl.includes('ziprecruiter.com')) {
+        detectedSite = 'ZipRecruiter';
+        logoPath = '/zip_recruiter.svg';
+      }
+
+      if (logoPath) {
+        return (
+          <Image
+            src={logoPath}
+            alt={detectedSite}
+            width={16}
+            height={16}
+            style={{ objectFit: 'contain' }}
+          />
+        );
+      }
+    }
+
+    return null;
+  };
 
   // Mantine blue selection color
   const selectedBg = 'var(--mantine-color-blue-light)';
@@ -206,7 +251,7 @@ export function JobCard({ job, jobId, isSelected, onSelectionChange }: JobCardPr
           href={job.job_url}
           target="_blank"
           rel="noopener noreferrer"
-          leftSection={jobSourceIcon ? <Image src={jobSourceIcon} alt="source" w={20} h={20} /> : undefined}
+          leftSection={getJobBoardLogo(job.source_site, job.job_url)}
           fullWidth
         >
           View

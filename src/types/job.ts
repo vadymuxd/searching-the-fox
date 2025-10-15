@@ -24,6 +24,13 @@ export interface Job {
   job_function?: string;
   benefits?: string;
   source_site?: string; // For tracking which job board the job came from
+  
+  // user_jobs fields (only present for authenticated users)
+  user_job_id?: string;
+  status?: 'new' | 'interested' | 'applied' | 'progressed' | 'rejected' | 'archived';
+  notes?: string;
+  user_created_at?: string;
+  user_updated_at?: string;
 }
 
 export interface JobSearchParams {

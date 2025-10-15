@@ -16,6 +16,7 @@ export class LogoService {
     
     // For Indeed jobs, skip the provided logo and go straight to fallbacks
     // because Indeed always provides its own logo, not the company logo
+    // For LinkedIn jobs, the provided logo is usually good, so use it
     const shouldUseExistingLogo = existingLogoUrl && sourceSite !== 'Indeed';
     
     const fallbackUrls = [

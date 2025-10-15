@@ -4,6 +4,15 @@ import { LogoService } from './logoService';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
 
 export class JobService {
+  // Helper method to get site label from site value
+  static getSiteLabel(siteValue: string): string {
+    const siteMap: Record<string, string> = {
+      'linkedin': 'LinkedIn',
+      'indeed': 'Indeed',
+    };
+    return siteMap[siteValue] || siteValue;
+  }
+
   static async searchJobs(params: JobSearchParams): Promise<JobSearchResponse> {
     try {
       // Automatically set UK as default country for Indeed searches
@@ -33,8 +42,14 @@ export class JobService {
 
       const data = await response.json();
       
+      // Set source_site for all jobs based on the search parameters
+      const jobsWithSourceSite = data.jobs ? data.jobs.map((job: Job) => ({
+        ...job,
+        source_site: this.getSiteLabel(params.site),
+      })) : [];
+      
       // Enhance company logos
-      const enhancedJobs = data.jobs ? await this.enhanceCompanyLogos(data.jobs) : [];
+      const enhancedJobs = await this.enhanceCompanyLogos(jobsWithSourceSite);
       
       return {
         success: data.success,
@@ -121,12 +136,10 @@ export class JobService {
 
   // Helper method to remove duplicate jobs with priority order
   static removeDuplicateJobs(jobs: Job[]): Job[] {
-    // Priority order: LinkedIn > Indeed > Glassdoor > ZipRecruiter
+    // Priority order: LinkedIn > Indeed
     const sitePriority: Record<string, number> = {
       'LinkedIn': 1,
       'Indeed': 2,
-      'Glassdoor': 3,
-      'ZipRecruiter': 4,
     };
 
     // Create a map to track unique jobs by title + company combination
@@ -160,16 +173,19 @@ export class JobService {
   // Enhance company logos with better fallback URLs
   static async enhanceCompanyLogos(jobs: Job[]): Promise<Job[]> {
     return jobs.map(job => {
-      // For Indeed jobs, we intentionally don't set a logo URL here
-      // because the CompanyLogo component will skip Indeed's logo anyway
-      // and go straight to fallback sources
+      // For Indeed jobs, clear any existing company_logo_url because Indeed
+      // often sets it to Indeed's own logo instead of the company's logo
+      if (job.source_site === 'Indeed') {
+        job.company_logo_url = undefined;
+      }
       
-      // For other job boards, if there's no company logo URL, try to get one from our logo service
-      if (!job.company_logo_url && job.source_site !== 'Indeed') {
+      // For jobs without a company logo URL, try to get one from our logo service
+      if (!job.company_logo_url) {
         const logoUrls = LogoService.generateLogoUrls(job.company, undefined, job.source_site);
         // Use the first fallback URL as the primary URL
-        job.company_logo_url = logoUrls[0]; // The first URL should now be a good fallback
+        job.company_logo_url = logoUrls[0];
       }
+      
       return job;
     });
   }
@@ -192,14 +208,10 @@ export const SITE_OPTIONS = [
   { value: 'all', label: 'All' },
   { value: 'linkedin', label: 'LinkedIn' },
   { value: 'indeed', label: 'Indeed' },
-  { value: 'zip_recruiter', label: 'ZipRecruiter' },
-  { value: 'glassdoor', label: 'Glassdoor' },
 ] as const;
 
 // Individual site options for sequential scraping
 export const INDIVIDUAL_SITES = [
-  { value: 'zip_recruiter', label: 'ZipRecruiter' },
-  { value: 'glassdoor', label: 'Glassdoor' },
   { value: 'linkedin', label: 'LinkedIn' },
   { value: 'indeed', label: 'Indeed' },
 ] as const;

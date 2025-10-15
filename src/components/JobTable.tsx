@@ -87,35 +87,69 @@ function FormTh({ children, width, style }: { children: React.ReactNode; width?:
 interface JobTableProps {
   jobs: Job[];
   onSelectionChange?: (selectedCount: number) => void;
+  onSelectedJobsChange?: (selectedJobs: Array<{ userJobId: string; title: string; company: string; jobId: string }>) => void;
 }
 
-export function JobTable({ jobs, onSelectionChange }: JobTableProps) {
+export function JobTable({ jobs, onSelectionChange, onSelectedJobsChange }: JobTableProps) {
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
   const [sortState, setSortState] = useState<SortState>({ column: null, direction: null });
 
   // Helper function to get job board logo
-  const getJobBoardLogo = (sourceSite: string | undefined) => {
-    if (!sourceSite) return null;
-    
-    const logoMap: Record<string, string> = {
-      'LinkedIn': '/Linkedin.svg',
-      'Indeed': '/indeed.svg',
-      'Glassdoor': '/Glassdoor.svg',
-      'ZipRecruiter': '/zip_recruiter.svg', // This will be a broken link for now as requested
-    };
+  const getJobBoardLogo = (sourceSite: string | undefined, jobUrl: string) => {
+    // First, try to determine from sourceSite
+    if (sourceSite) {
+      const logoMap: Record<string, string> = {
+        'LinkedIn': '/Linkedin.svg',
+        'Indeed': '/indeed.svg',
+      };
 
-    const logoPath = logoMap[sourceSite];
-    if (!logoPath) return null;
+      const logoPath = logoMap[sourceSite];
+      if (logoPath) {
+        return (
+          <Image
+            src={logoPath}
+            alt={sourceSite}
+            width={16}
+            height={16}
+            style={{ objectFit: 'contain' }}
+          />
+        );
+      }
+    }
 
-    return (
-      <Image
-        src={logoPath}
-        alt={sourceSite}
-        width={16}
-        height={16}
-        style={{ objectFit: 'contain' }}
-      />
-    );
+    // If sourceSite is not available or not in our map, try to determine from job URL
+    if (jobUrl) {
+      let detectedSite = '';
+      let logoPath = '';
+
+      if (jobUrl.includes('indeed.com')) {
+        detectedSite = 'Indeed';
+        logoPath = '/indeed.svg';
+      } else if (jobUrl.includes('linkedin.com')) {
+        detectedSite = 'LinkedIn';
+        logoPath = '/Linkedin.svg';
+      } else if (jobUrl.includes('glassdoor.com')) {
+        detectedSite = 'Glassdoor';
+        logoPath = '/Glassdoor.svg';
+      } else if (jobUrl.includes('ziprecruiter.com')) {
+        detectedSite = 'ZipRecruiter';
+        logoPath = '/zip_recruiter.svg';
+      }
+
+      if (logoPath) {
+        return (
+          <Image
+            src={logoPath}
+            alt={detectedSite}
+            width={16}
+            height={16}
+            style={{ objectFit: 'contain' }}
+          />
+        );
+      }
+    }
+
+    return null;
   };
 
   // Create a unique identifier for each job based on its properties
@@ -137,9 +171,21 @@ export function JobTable({ jobs, onSelectionChange }: JobTableProps) {
     // Count only selected jobs that are currently visible (in the filtered jobs list)
     const visibleSelectedCount = jobs.filter(job => selectedJobs.has(getJobId(job))).length;
     
+    // Get the selected job data for the parent component
+    const selectedJobsData = jobs
+      .filter(job => selectedJobs.has(getJobId(job)))
+      .map(job => ({
+        userJobId: job.user_job_id || '',
+        title: job.title,
+        company: job.company,
+        jobId: getJobId(job),
+      }))
+      .filter(jobData => jobData.userJobId); // Only include jobs with user_job_id
+    
     // Notify parent component about selection change
     onSelectionChange?.(visibleSelectedCount);
-  }, [selectedJobs, jobs, onSelectionChange]);
+    onSelectedJobsChange?.(selectedJobsData);
+  }, [selectedJobs, jobs]); // Removed function dependencies to prevent infinite loop
 
   const toggleJobSelection = (jobId: string) => {
     const newSelected = new Set(selectedJobs);
@@ -377,7 +423,7 @@ export function JobTable({ jobs, onSelectionChange }: JobTableProps) {
               href={job.job_url}
               target="_blank"
               rel="noopener noreferrer"
-              leftSection={getJobBoardLogo(job.source_site)}
+              leftSection={getJobBoardLogo(job.source_site, job.job_url)}
             >
               View
             </SecondaryButton>

@@ -26,17 +26,8 @@ export function AuthButton({ onSignInClick }: AuthButtonProps) {
         return;
       }
 
-      notifications.show({
-        title: 'Signed out',
-        message: 'You have been signed out successfully.',
-        color: 'blue',
-        autoClose: 1000,
-      });
-
-      // Force browser refresh after sign out to clear all state
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 1000);
+      // Redirect immediately to homepage without toast
+      window.location.href = '/';
     } catch (error) {
       console.error('Sign out error:', error);
       notifications.show({

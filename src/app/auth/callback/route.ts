@@ -8,9 +8,14 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient()
-    await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    
+    if (!error && data.user) {
+      // Redirect authenticated users to results page
+      return NextResponse.redirect(`${origin}/results`)
+    }
   }
 
-  // URL to redirect to after sign in process completes
+  // URL to redirect to after sign in process completes (fallback to homepage)
   return NextResponse.redirect(`${origin}/`)
 }

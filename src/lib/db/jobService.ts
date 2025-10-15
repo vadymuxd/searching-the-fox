@@ -199,7 +199,7 @@ export async function getUserJobs(
       .order('created_at', { ascending: false });
 
     // Filter by status if provided
-    if (status && status !== 'all') {
+    if (status) {
       query = query.eq('status', status);
     }
 
@@ -299,6 +299,49 @@ export async function removeUserJob(
     console.error('Error in removeUserJob:', error);
     return {
       success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Get job counts by status for a user
+ */
+export async function getUserJobCounts(
+  userId: string
+): Promise<{ success: boolean; counts: Record<string, number>; error?: string }> {
+  try {
+    const supabase = await createClient();
+
+    // Get counts for each status
+    const { data, error } = await supabase
+      .from('user_jobs')
+      .select('status')
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error fetching user job counts:', error);
+      return { success: false, counts: {}, error: error.message };
+    }
+
+    // Count jobs by status
+    const counts = data?.reduce((acc: Record<string, number>, item) => {
+      acc[item.status] = (acc[item.status] || 0) + 1;
+      return acc;
+    }, {}) || {};
+
+    // Add total count for 'all'
+    counts.all = data?.length || 0;
+
+    return {
+      success: true,
+      counts,
+    };
+  } catch (error) {
+    console.error('Error in getUserJobCounts:', error);
+    return {
+      success: false,
+      counts: {},
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }

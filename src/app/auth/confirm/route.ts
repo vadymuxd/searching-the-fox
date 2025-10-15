@@ -9,7 +9,7 @@ export async function GET(request: Request) {
 
   if (token_hash && type) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.verifyOtp({
+    const { data, error } = await supabase.auth.verifyOtp({
       type,
       token_hash,
     })
@@ -18,8 +18,13 @@ export async function GET(request: Request) {
       console.error('Error confirming email:', error)
       return NextResponse.redirect(`${origin}/auth/error?message=${encodeURIComponent(error.message)}`)
     }
+
+    if (data.user) {
+      // Redirect confirmed users to results page
+      return NextResponse.redirect(`${origin}/results`)
+    }
   }
 
-  // URL to redirect to after email confirmation completes
+  // URL to redirect to after email confirmation completes (fallback to homepage)
   return NextResponse.redirect(`${origin}/`)
 }

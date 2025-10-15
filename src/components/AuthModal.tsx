@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Modal, TextInput, PasswordInput, Button, Stack, Text, Divider, Group, Anchor } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconBrandGoogle, IconBrandGithub, IconBrandLinkedin, IconCheck, IconX } from '@tabler/icons-react';
@@ -16,6 +17,7 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ opened, onClose, hasSearchResults = false }: AuthModalProps) {
+  const router = useRouter();
   const [mode, setMode] = useState<AuthMode>('signin');
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -45,15 +47,9 @@ export function AuthModal({ opened, onClose, hasSearchResults = false }: AuthMod
       } else if (mode === 'signin') {
         result = await signIn(formData);
         if (!result.error) {
-          notifications.show({
-            title: 'Welcome back!',
-            message: 'You have been signed in successfully.',
-            color: 'green',
-            icon: <IconCheck size={16} />,
-          });
           onClose();
-          // Reload to update auth state
-          window.location.reload();
+          // Hard redirect to results page to ensure fresh data load
+          window.location.href = '/results';
         } else if (result.error.includes('Email not confirmed')) {
           // Handle unconfirmed email case - close modal and show confirmation screen
           notifications.show({
