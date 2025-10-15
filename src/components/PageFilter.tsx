@@ -15,6 +15,8 @@ import { SecondaryButton } from './SecondaryButton';
 import { IconButton } from './IconButton';
 import { Job } from '@/types/job';
 import { searchStorage } from '@/lib/localStorage';
+import { savePageFilter as savePageFilterToDb, getUserPreferences } from '@/lib/db/userPreferences';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 interface PageFilterProps {
   jobs: Job[];
@@ -24,6 +26,7 @@ interface PageFilterProps {
 export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
   const theme = useMantineTheme();
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
+  const { user } = useAuth();
   const [filterValue, setFilterValue] = useState('');
   const [hasSavedFilter, setHasSavedFilter] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -31,25 +34,44 @@ export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
   // Check if there are saved filters on component mount
   useEffect(() => {
     setMounted(true);
-    setHasSavedFilter(searchStorage.hasPageFilter());
-    // Restore and auto-apply saved filter on mount
-    const saved = searchStorage.loadPageFilter();
-    if (saved && saved.trim()) {
-      setFilterValue(saved);
-      // Apply filter to jobs list
-      const searchTerms = saved
-        .split(',')
-        .map(term => term.trim().toLowerCase())
-        .filter(term => term.length > 0);
-      if (searchTerms.length > 0) {
-        const filteredJobs = jobs.filter(job => {
-          const jobTitle = job.title.toLowerCase();
-          return searchTerms.some(term => jobTitle.includes(term));
-        });
-        onFilteredJobsChange(filteredJobs);
+    
+    // Load filter from database for authenticated users, or localStorage for anonymous
+    const loadFilter = async () => {
+      let savedFilter: string | null = null;
+      
+      if (user) {
+        // Load from database for authenticated users
+        const { success, preferences } = await getUserPreferences(user.id);
+        if (success && preferences?.pageFilter) {
+          savedFilter = preferences.pageFilter;
+        }
+      } else {
+        // Load from localStorage for anonymous users
+        savedFilter = searchStorage.loadPageFilter();
       }
-    }
-  }, [jobs, onFilteredJobsChange]);
+
+      setHasSavedFilter(!!savedFilter);
+      
+      // Restore and auto-apply saved filter on mount
+      if (savedFilter && savedFilter.trim()) {
+        setFilterValue(savedFilter);
+        // Apply filter to jobs list
+        const searchTerms = savedFilter
+          .split(',')
+          .map(term => term.trim().toLowerCase())
+          .filter(term => term.length > 0);
+        if (searchTerms.length > 0) {
+          const filteredJobs = jobs.filter(job => {
+            const jobTitle = job.title.toLowerCase();
+            return searchTerms.some(term => jobTitle.includes(term));
+          });
+          onFilteredJobsChange(filteredJobs);
+        }
+      }
+    };
+
+    loadFilter();
+  }, [jobs, onFilteredJobsChange, user]);
 
   const handleFilter = () => {
     if (!filterValue.trim()) {
@@ -82,15 +104,33 @@ export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
     onFilteredJobsChange(jobs);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (filterValue.trim()) {
-      searchStorage.savePageFilter(filterValue);
+      if (user) {
+        // Save to database for authenticated users
+        await savePageFilterToDb(user.id, filterValue);
+      } else {
+        // Save to localStorage for anonymous users
+        searchStorage.savePageFilter(filterValue);
+      }
       setHasSavedFilter(true);
     }
   };
 
-  const handlePaste = () => {
-    const savedFilter = searchStorage.loadPageFilter();
+  const handlePaste = async () => {
+    let savedFilter: string | null = null;
+    
+    if (user) {
+      // Load from database for authenticated users
+      const { success, preferences } = await getUserPreferences(user.id);
+      if (success && preferences?.pageFilter) {
+        savedFilter = preferences.pageFilter;
+      }
+    } else {
+      // Load from localStorage for anonymous users
+      savedFilter = searchStorage.loadPageFilter();
+    }
+    
     if (savedFilter) {
       setFilterValue(savedFilter);
     }

@@ -24,9 +24,10 @@ interface SearchFormProps {
   onReset?: () => void;
   loading?: boolean;
   initialValues?: Partial<SearchFormData>;
+  showLogo?: boolean;
 }
 
-export function SearchForm({ onSearch, onReset, loading = false, initialValues }: SearchFormProps) {
+export function SearchForm({ onSearch, onReset, loading = false, initialValues, showLogo = true }: SearchFormProps) {
   const theme = useMantineTheme();
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
   
@@ -76,7 +77,7 @@ export function SearchForm({ onSearch, onReset, loading = false, initialValues }
               // Mobile layout: Single column, full width inputs
               <Stack gap="md">
                 {/* Fox Logo - Home Button */}
-                {onReset && (
+                {onReset && showLogo && (
                   <Flex justify="center">
                     <Box 
                       onClick={onReset}
@@ -145,7 +146,7 @@ export function SearchForm({ onSearch, onReset, loading = false, initialValues }
               // Desktop layout: Single row with logo and search criteria
               <Group gap="md" align="end" wrap="wrap">
                 {/* Fox Logo - Home Button */}
-                {onReset && (
+                {onReset && showLogo && (
                   <Box 
                     onClick={onReset}
                     style={{ 

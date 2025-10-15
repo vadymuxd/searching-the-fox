@@ -25,10 +25,11 @@ import { Timer } from '@/components/Timer';
 import { LoadingInsightWithIcon as LoadingInsight } from '@/components/LoadingInsight';
 import { AuthModal } from '@/components/AuthModal';
 import { AuthButton } from '@/components/AuthButton';
-import { MoveToDbButton } from '@/components/MoveToDbButton';
+import { Header } from '@/components/Header';
 import { JobService } from '@/lib/api';
 import { searchStorage } from '@/lib/localStorage';
 import { saveJobsToDatabase, getUserJobs } from '@/lib/db/jobService';
+import { getUserPreferences, saveLastSearch } from '@/lib/db/userPreferences';
 import { createClient } from '@/lib/supabase/client';
 import { Job, SearchFormData, JobSearchResponse } from '@/types/job';
 import type { User } from '@supabase/supabase-js';
@@ -64,25 +65,60 @@ export default function HomePage() {
     // Get initial session
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
-      // If user is signed in, load their jobs from DB
+      // If user is signed in, load their jobs and preferences from DB
       if (user) {
         loadUserJobsFromDb(user.id);
+        loadUserPreferencesFromDb(user.id);
       }
     });
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
-      // If user just signed in, load their jobs from DB
+      
+      // If user just signed in, load their jobs and preferences from DB
       if (session?.user) {
         loadUserJobsFromDb(session.user.id);
+        loadUserPreferencesFromDb(session.user.id);
+      }
+      
+      // If user signed out, reset to pre-search state
+      if (event === 'SIGNED_OUT') {
+        resetToPreSearchState();
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Load user preferences from database
+  const loadUserPreferencesFromDb = async (userId: string) => {
+    try {
+      const result = await getUserPreferences(userId);
+      if (result.success && result.preferences?.lastSearch) {
+        setCurrentSearch(result.preferences.lastSearch);
+      }
+    } catch (error) {
+      console.error('Error loading user preferences:', error);
+    }
+  };
+
+  // Reset application to pre-search state
+  const resetToPreSearchState = () => {
+    setJobs([]);
+    setFilteredJobs([]);
+    setSearchStarted(false);
+    setCurrentSearch(null);
+    setSelectedJobs(new Set());
+    setSelectedJobsCount(0);
+    setTotalSelectedJobs(0);
+    setError(null);
+    setSortOption('posted-recent');
+    // Clear localStorage as well
+    searchStorage.clearSearchData();
+  };
 
   // Load user jobs from database
   const loadUserJobsFromDb = async (userId: string) => {
@@ -229,6 +265,21 @@ export default function HomePage() {
   };
 
   const handleSearch = async (searchData: SearchFormData) => {
+    // If user is authenticated and has localStorage data, migrate it first
+    if (user) {
+      const localJobs = searchStorage.loadSearchResults();
+      if (localJobs && localJobs.jobs.length > 0) {
+        try {
+          await saveJobsToDatabase(localJobs.jobs, user.id);
+          console.log('Migrated localStorage jobs to database');
+          // Clear localStorage after successful migration
+          searchStorage.clearSearchData();
+        } catch (error) {
+          console.error('Error migrating localStorage jobs:', error);
+        }
+      }
+    }
+    
     // Clear previous search data when starting a new search
     searchStorage.clearSearchData();
     
@@ -242,8 +293,19 @@ export default function HomePage() {
     setTotalSelectedJobs(0); // Reset total selected jobs count
     setProgressInfo(undefined); // Reset progress info
 
-    // Save search data to localStorage
-    searchStorage.saveSearchData(searchData);
+    // Save search data to localStorage (for non-authenticated users)
+    if (!user) {
+      searchStorage.saveSearchData(searchData);
+    }
+
+    // Save search parameters to database if user is authenticated
+    if (user) {
+      try {
+        await saveLastSearch(user.id, searchData);
+      } catch (error) {
+        console.error('Error saving search to database:', error);
+      }
+    }
 
     try {
       let response: JobSearchResponse;
@@ -323,6 +385,9 @@ export default function HomePage() {
 
   return (
     <>
+      {/* Header with Logo and Auth Button */}
+      <Header onSignInClick={() => setAuthModalOpened(true)} />
+      
       {!mounted ? (
         // Show loading skeleton during hydration
         <Box style={{ backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
@@ -386,10 +451,6 @@ export default function HomePage() {
               >
                 searching the fox
               </Text>
-              {/* Auth Button */}
-              <Box mb="lg">
-                <AuthButton onSignInClick={() => setAuthModalOpened(true)} />
-              </Box>
               {/* Job Site Icons */}
               <Box style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
                 <Image 
@@ -442,6 +503,7 @@ export default function HomePage() {
                 onReset={handleReset}
                 loading={loading}
                 initialValues={currentSearch || undefined}
+                showLogo={false}
               />
             </Container>
           </Box>
@@ -568,26 +630,6 @@ export default function HomePage() {
                     </>
                   )}
                 </Stack>
-              )}
-
-              {/* Auth Button and Move to DB Button at Bottom of Results */}
-              {jobs.length > 0 && (
-                <Box mt="xl">
-                  <Stack align="center" gap="md">
-                    {/* Show "Move to DB" button only for signed-in users with localStorage data */}
-                    {user && !loadingUserJobs && (
-                      <MoveToDbButton 
-                        jobs={jobs}
-                        userId={user.id}
-                        onComplete={() => {
-                          // Reload jobs from DB after moving
-                          loadUserJobsFromDb(user.id);
-                        }}
-                      />
-                    )}
-                    <AuthButton onSignInClick={() => setAuthModalOpened(true)} />
-                  </Stack>
-                </Box>
               )}
             </Stack>
           </Container>

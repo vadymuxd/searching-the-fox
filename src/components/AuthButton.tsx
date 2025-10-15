@@ -55,8 +55,7 @@ export function AuthButton({ onSignInClick }: AuthButtonProps) {
         color: 'blue',
       });
 
-      // Refresh the page to update UI
-      window.location.reload();
+      // No need to reload - auth state listener will handle cleanup
     } catch (error) {
       console.error('Sign out error:', error);
       notifications.show({
