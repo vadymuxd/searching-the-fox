@@ -179,8 +179,8 @@ export function JobTable({ jobs, onSelectionChange, onSelectedJobsChange }: JobT
         title: job.title,
         company: job.company,
         jobId: getJobId(job),
-      }))
-      .filter(jobData => jobData.userJobId); // Only include jobs with user_job_id
+      }));
+      // Don't filter out jobs without user_job_id to support non-authenticated users
     
     // Notify parent component about selection change
     if (onSelectionChange) {

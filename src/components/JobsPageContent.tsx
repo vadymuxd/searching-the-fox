@@ -51,6 +51,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
   const [selectedJobsData, setSelectedJobsData] = useState<Array<{ userJobId: string; title: string; company: string; jobId: string }>>([]);
   const [authModalOpened, setAuthModalOpened] = useState(false);
+  const [authModalForAction, setAuthModalForAction] = useState(false); // New state for action-triggered auth modal
   
   // Track if we've already loaded data for this user to prevent re-loading on tab focus
   const userDataLoadedRef = useRef<string | null>(null);
@@ -251,8 +252,8 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
         title: job.title,
         company: job.company,
         jobId: getJobId(job),
-      }))
-      .filter(jobData => jobData.userJobId); // Only include jobs with user_job_id
+      }));
+      // Don't filter out jobs without user_job_id to support non-authenticated users
 
     setSelectedJobsData(selectedJobsData);
   };
@@ -291,6 +292,11 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
 
   const handleSelectedJobsChange = useCallback((selectedJobsData: Array<{ userJobId: string; title: string; company: string; jobId: string }>) => {
     setSelectedJobsData(selectedJobsData);
+  }, []);
+
+  // Handler for auth required actions
+  const handleAuthRequired = useCallback(() => {
+    setAuthModalForAction(true);
   }, []);
 
   const handleStatusUpdate = useCallback(() => {
@@ -354,8 +360,8 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       {/* Header with Logo and Auth Button */}
       <Header onSignInClick={() => setAuthModalOpened(true)} />
       
-      {/* Tab Navigation - only for authenticated users */}
-      <TabNavigation />
+      {/* Tab Navigation - for all users */}
+      <TabNavigation onAuthRequired={handleAuthRequired} />
       
       {/* Top Section - Search Summary - only show for "new" status */}
       {status === 'new' && (
@@ -455,10 +461,11 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
                       }
                     </Text>
                   )}
-                  {user && selectedJobsData.length > 0 && (
+                  {selectedJobsData.length > 0 && (
                     <MoveToButton
                       selectedJobs={selectedJobsData}
                       onStatusUpdate={handleStatusUpdate}
+                      onAuthRequired={handleAuthRequired}
                     />
                   )}
                 </Group>
@@ -528,6 +535,14 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
         opened={authModalOpened} 
         onClose={() => setAuthModalOpened(false)}
         hasSearchResults={jobs.length > 0}
+      />
+      
+      {/* Auth Modal for Actions (with custom text) */}
+      <AuthModal 
+        opened={authModalForAction} 
+        onClose={() => setAuthModalForAction(false)}
+        customTitle="Sign in to proceed"
+        customMessage="Please sign in to organize and track your job applications."
       />
     </>
   );

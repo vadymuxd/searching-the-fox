@@ -13,9 +13,11 @@ interface AuthModalProps {
   opened: boolean;
   onClose: () => void;
   hasSearchResults?: boolean; // True if user has performed a search
+  customTitle?: string; // Custom title override
+  customMessage?: string; // Custom message override
 }
 
-export function AuthModal({ opened, onClose, hasSearchResults = false }: AuthModalProps) {
+export function AuthModal({ opened, onClose, hasSearchResults = false, customTitle, customMessage }: AuthModalProps) {
   const [mode, setMode] = useState<AuthMode>('signin');
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -115,12 +117,14 @@ export function AuthModal({ opened, onClose, hasSearchResults = false }: AuthMod
   };
 
   const getTitle = () => {
+    if (customTitle) return customTitle;
     if (mode === 'signup') return 'Create Account';
     if (mode === 'reset') return 'Reset Password';
     return 'Sign In';
   };
 
   const getMessage = () => {
+    if (customMessage) return customMessage;
     if (hasSearchResults) {
       return 'Sign in to save your search results and track job applications across devices.';
     }
@@ -131,11 +135,15 @@ export function AuthModal({ opened, onClose, hasSearchResults = false }: AuthMod
     <Modal
       opened={opened}
       onClose={onClose}
-      title={getTitle()}
       centered
       size="md"
+      withCloseButton={false}
     >
       <Stack gap="md">
+        <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600 }}>
+          {getTitle()}
+        </h1>
+        
         <Text size="sm" c="dimmed">
           {getMessage()}
         </Text>
@@ -151,22 +159,6 @@ export function AuthModal({ opened, onClose, hasSearchResults = false }: AuthMod
                 fullWidth
               >
                 Continue with Google
-              </Button>
-              <Button
-                variant="default"
-                leftSection={<IconBrandGithub size={20} />}
-                onClick={() => handleOAuthSignIn('github')}
-                fullWidth
-              >
-                Continue with GitHub
-              </Button>
-              <Button
-                variant="default"
-                leftSection={<IconBrandLinkedin size={20} />}
-                onClick={() => handleOAuthSignIn('linkedin_oidc')}
-                fullWidth
-              >
-                Continue with LinkedIn
               </Button>
             </Stack>
 

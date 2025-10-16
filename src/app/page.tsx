@@ -373,13 +373,6 @@ export default function HomePage() {
                     height={24}
                     style={{ opacity: 0.2 }}
                   />
-                  <Image 
-                    src="/Glassdoor.svg" 
-                    alt="Glassdoor" 
-                    width={24}
-                    height={24}
-                    style={{ opacity: 0.2 }}
-                  />
                 </Box>
                 {/* Search Form */}
                 <Box style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>

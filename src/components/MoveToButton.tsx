@@ -6,11 +6,13 @@ import { IconChevronDown, IconCheck } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { updateJobStatus, removeUserJob } from '@/lib/db/jobService';
 import { JobStatus } from '@/types/supabase';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 interface MoveToButtonProps {
   selectedJobs: Array<{ userJobId: string; title: string; company: string }>;
   onStatusUpdate: () => void;
   disabled?: boolean;
+  onAuthRequired?: () => void;
 }
 
 const STATUS_OPTIONS: Array<{ value: JobStatus; label: string }> = [
@@ -27,8 +29,9 @@ const MENU_OPTIONS = [
   { value: 'removed', label: 'Removed' }
 ] as const;
 
-export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false }: MoveToButtonProps) {
+export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, onAuthRequired }: MoveToButtonProps) {
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
   const handleStatusChange = async (newStatus: JobStatus) => {
     if (selectedJobs.length === 0) return;
@@ -131,6 +134,12 @@ export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false }:
   };
 
   const handleMenuAction = async (action: string) => {
+    // If user is not authenticated, trigger auth modal instead of performing action
+    if (!user) {
+      onAuthRequired?.();
+      return;
+    }
+
     if (action === 'removed') {
       await handleRemoveJobs();
     } else {

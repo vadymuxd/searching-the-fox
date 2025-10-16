@@ -20,8 +20,8 @@ export async function GET(request: Request) {
     }
 
     if (data.user) {
-      // Redirect confirmed users to results page
-      return NextResponse.redirect(`${origin}/results`)
+      // Redirect confirmed users to a special page that handles localStorage migration
+      return NextResponse.redirect(`${origin}/auth/callback/confirm?token_hash=${token_hash}&type=${type}`)
     }
   }
 

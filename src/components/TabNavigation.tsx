@@ -18,15 +18,14 @@ const JOB_TABS = [
   { value: 'archived', label: 'Archived', path: '/results/archived' },
 ];
 
-export function TabNavigation() {
+interface TabNavigationProps {
+  onAuthRequired?: () => void;
+}
+
+export function TabNavigation({ onAuthRequired }: TabNavigationProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
-
-  // Only show tabs for authenticated users
-  if (!user) {
-    return null;
-  }
 
   // Get the current active tab based on pathname
   const getCurrentTab = () => {
@@ -36,6 +35,12 @@ export function TabNavigation() {
 
   const handleTabChange = (value: string | null) => {
     if (!value) return;
+    
+    // If user is not authenticated, trigger auth modal instead of navigation
+    if (!user) {
+      onAuthRequired?.();
+      return;
+    }
     
     const tab = JOB_TABS.find(t => t.value === value);
     if (tab) {
