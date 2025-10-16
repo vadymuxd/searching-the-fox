@@ -1,22 +1,18 @@
 'use client';
 
-
-
-import { Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { saveJobsToDatabase } from '@/lib/db/jobService';
+import { searchStorage } from '@/lib/localStorage';
+import { Container, Stack, Text, Box, Paper } from '@mantine/core';
+import Image from 'next/image';
 
 function ConfirmCallbackContent() {
-  // Move all imports here so they are available in the client component
-  const { useEffect, useState } = require('react');
-  const { useRouter, useSearchParams } = require('next/navigation');
-  const { createClient } = require('@/lib/supabase/client');
-  const { saveJobsToDatabase } = require('@/lib/db/jobService');
-  const { searchStorage } = require('@/lib/localStorage');
-  const { Container, Stack, Text, Box, Paper } = require('@mantine/core');
-  const Image = require('next/image').default;
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState('loading');
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Confirming your email...');
 
   useEffect(() => {
@@ -157,7 +153,11 @@ function ConfirmCallbackContent() {
 
 export default function ConfirmCallbackPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <Box style={{ backgroundColor: '#f8f9fa', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Text>Loading...</Text>
+      </Box>
+    }>
       <ConfirmCallbackContent />
     </Suspense>
   );

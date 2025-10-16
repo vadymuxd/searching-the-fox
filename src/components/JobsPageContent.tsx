@@ -73,6 +73,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       // First, clear any existing data to ensure clean state for authenticated users
       setJobs([]);
       setFilteredJobs([]);
+      setError(null);
       
       const result = await getUserJobs(userId, status);
       if (result.success) {
@@ -81,11 +82,13 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       } else {
         setJobs([]);
         setFilteredJobs([]);
+        setError('Failed to load jobs from database');
       }
     } catch (error) {
       console.error('Error loading user jobs:', error);
       setJobs([]);
       setFilteredJobs([]);
+      setError('Failed to load jobs from database');
     }
   }, [status]);
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Modal, TextInput, PasswordInput, Button, Stack, Text, Divider, Group, Anchor } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconBrandGoogle, IconBrandGithub, IconBrandLinkedin, IconCheck, IconX } from '@tabler/icons-react';
+import { IconBrandGoogle, IconCheck, IconX } from '@tabler/icons-react';
 import { signUp, signIn, resetPassword } from '@/lib/auth/actions';
 import { createClient } from '@/lib/supabase/client';
 
