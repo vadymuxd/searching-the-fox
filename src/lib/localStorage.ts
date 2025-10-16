@@ -73,6 +73,19 @@ export const searchStorage = {
     }
   },
 
+  // Clear all stored data including page filter (for complete migration)
+  clearAllData: (): void => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(SEARCH_DATA_KEY);
+        localStorage.removeItem(SEARCH_RESULTS_KEY);
+        localStorage.removeItem(PAGE_FILTER_KEY);
+      }
+    } catch (error) {
+      console.warn('Failed to clear all data from localStorage:', error);
+    }
+  },
+
   // Clear only results but preserve search form data
   clearResultsOnly: (): void => {
     try {

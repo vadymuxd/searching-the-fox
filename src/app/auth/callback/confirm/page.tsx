@@ -3,8 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { saveJobsToDatabase } from '@/lib/db/jobService';
-import { searchStorage } from '@/lib/localStorage';
+import { migrateLocalStorageToDatabase, getLocalDataSummary } from '@/lib/db/localStorageMigration';
 import { Container, Stack, Text, Box, Paper } from '@mantine/core';
 import Image from 'next/image';
 
@@ -32,20 +31,36 @@ function ConfirmCallbackContent() {
           throw new Error('Authentication verification failed');
         }
 
-        setMessage('Account verified! Setting up your profile...');
+        setMessage('We are setting up your account...');
 
         // Check if user has localStorage data to migrate
-        const localJobs = searchStorage.loadSearchResults();
-        if (localJobs && localJobs.jobs.length > 0) {
-          setMessage(`Saving your ${localJobs.jobs.length} search results...`);
+        const dataSummary = getLocalDataSummary();
+        const hasDataToMigrate = dataSummary.jobsCount > 0 || dataSummary.hasPreferences || dataSummary.hasKeywords;
+
+        if (hasDataToMigrate) {
+          setMessage('Transferring your data to your account...');
           try {
-            const result = await saveJobsToDatabase(localJobs.jobs, userId);
-            if (result.success) {
-              // Clear localStorage after successful migration
-              searchStorage.clearSearchData();
-              setMessage(`Successfully saved ${result.jobsSaved} jobs! Redirecting...`);
+            const migrationResult = await migrateLocalStorageToDatabase(userId);
+            if (migrationResult.success) {
+              // Create a success message based on what was migrated
+              const migrationParts = [];
+              if (migrationResult.jobsSaved > 0) {
+                migrationParts.push(`${migrationResult.jobsSaved} jobs`);
+              }
+              if (migrationResult.preferencesUpdated) {
+                migrationParts.push('search preferences');
+              }
+              if (migrationResult.keywordsSaved) {
+                migrationParts.push('filter keywords');
+              }
+
+              if (migrationParts.length > 0) {
+                setMessage(`Successfully saved your ${migrationParts.join(', ')}! Redirecting...`);
+              } else {
+                setMessage('Account setup complete! Redirecting...');
+              }
             } else {
-              console.error('Failed to save jobs:', result.error);
+              console.error('Failed to migrate data:', migrationResult.error);
               // Don't fail the entire flow if data migration fails
               setMessage('Account setup complete! Redirecting...');
             }
