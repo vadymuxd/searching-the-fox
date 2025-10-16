@@ -290,7 +290,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
               <Box 
                 style={{ 
                   backgroundColor: '#fff',
-                  padding: '24px 0'
+                  padding: '0 0 24px 0'
                 }}
               >
                 <Container size="xl">

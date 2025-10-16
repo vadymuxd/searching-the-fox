@@ -65,7 +65,7 @@ export function TabNavigation({ onAuthRequired, backgroundColor }: TabNavigation
 
   if (isMobile) {
     return (
-      <Box style={{ backgroundColor: backgroundColor || '#F8F9FA', paddingTop: '16px', paddingBottom: '0px' }}>
+      <Box style={{ backgroundColor: backgroundColor || '#F8F9FA', paddingTop: '16px', paddingBottom: '16px' }}>
         <div
           ref={scrollRef}
           style={{
