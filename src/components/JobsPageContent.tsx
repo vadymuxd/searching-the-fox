@@ -223,9 +223,11 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
 
   // Compute when everything is loaded
   useEffect(() => {
-    const ready = !authLoading && mounted && jobsLoaded && preferencesLoaded && pageFilterReady && !isNavigatingTab;
+    // If there are no jobs, we don't wait for PageFilter readiness
+    const filterGate = filteredJobs.length === 0 ? true : pageFilterReady;
+    const ready = !authLoading && mounted && jobsLoaded && preferencesLoaded && filterGate && !isNavigatingTab;
     setAllLoaded(ready);
-  }, [authLoading, mounted, jobsLoaded, preferencesLoaded, pageFilterReady, isNavigatingTab]);
+  }, [authLoading, mounted, jobsLoaded, preferencesLoaded, pageFilterReady, isNavigatingTab, filteredJobs.length]);
 
   // Handler to mark PageFilter readiness
   const handlePageFilterReady = useCallback(() => {
@@ -477,13 +479,17 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
           {/* Results */}
           {jobs.length === 0 && !error && (
             <Box style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
-              <Button
-                leftSection={<IconRefresh size={16} />}
-                onClick={handleRefresh}
-                size="md"
-              >
-                Search new jobs
-              </Button>
+              {status === 'new' ? (
+                <Button
+                  leftSection={<IconRefresh size={16} />}
+                  onClick={handleRefresh}
+                  size="md"
+                >
+                  Search new jobs
+                </Button>
+              ) : (
+                <Text size="sm" c="dimmed">There are no jobs added to this category</Text>
+              )}
             </Box>
           )}
 
