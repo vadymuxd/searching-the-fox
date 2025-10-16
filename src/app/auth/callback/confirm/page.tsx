@@ -1,60 +1,55 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { saveJobsToDatabase } from '@/lib/db/jobService';
-import { searchStorage } from '@/lib/localStorage';
-import { Container, Stack, Text, Box, Paper } from '@mantine/core';
-import Image from 'next/image';
 
-export default function ConfirmCallbackPage() {
+
+import { Suspense } from 'react';
+
+function ConfirmCallbackContent() {
+  // Move all imports here so they are available in the client component
+  const { useEffect, useState } = require('react');
+  const { useRouter, useSearchParams } = require('next/navigation');
+  const { createClient } = require('@/lib/supabase/client');
+  const { saveJobsToDatabase } = require('@/lib/db/jobService');
+  const { searchStorage } = require('@/lib/localStorage');
+  const { Container, Stack, Text, Box, Paper } = require('@mantine/core');
+  const Image = require('next/image').default;
+
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [status, setStatus] = useState('loading');
   const [message, setMessage] = useState('Confirming your email...');
 
   useEffect(() => {
     const handleEmailConfirmation = async () => {
       try {
         const supabase = createClient();
-        
         // Get the tokens from URL params
         const token_hash = searchParams.get('token_hash');
         const type = searchParams.get('type');
-        
         if (!token_hash || type !== 'email') {
           throw new Error('Invalid confirmation link');
         }
-
         // Verify the email confirmation token
         const { data: authData, error: authError } = await supabase.auth.verifyOtp({
           token_hash,
           type: 'email'
         });
-
         if (authError) {
           throw new Error(authError.message);
         }
-
         if (!authData.user) {
           throw new Error('User not found after confirmation');
         }
-
         setMessage('Email confirmed! Setting up your account...');
-
         // Check if user has localStorage data to migrate
         const localJobs = searchStorage.loadSearchResults();
         if (localJobs && localJobs.jobs.length > 0) {
           setMessage('Saving your search results...');
-          
           try {
             // Save jobs to database for the newly confirmed user
             await saveJobsToDatabase(localJobs.jobs, authData.user.id);
-            
             // Clear localStorage after successful migration
             searchStorage.clearSearchData();
-            
             setMessage('Account setup complete! Redirecting...');
           } catch (dbError) {
             console.error('Error migrating localStorage data:', dbError);
@@ -64,26 +59,21 @@ export default function ConfirmCallbackPage() {
         } else {
           setMessage('Email confirmed! Redirecting...');
         }
-
         setStatus('success');
-        
         // Redirect to results page after a brief delay
         setTimeout(() => {
           router.push('/results');
         }, 2000);
-
       } catch (error) {
         console.error('Email confirmation error:', error);
         setStatus('error');
         setMessage(error instanceof Error ? error.message : 'Failed to confirm email');
-        
         // Redirect to home page after error
         setTimeout(() => {
           router.push('/');
         }, 3000);
       }
     };
-
     // Only run if we have search params, otherwise redirect to home
     if (searchParams.get('token_hash')) {
       handleEmailConfirmation();
@@ -111,7 +101,6 @@ export default function ConfirmCallbackPage() {
                 style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />
             </Box>
-            
             {/* Company Name */}
             <Text 
               style={{ 
@@ -123,7 +112,6 @@ export default function ConfirmCallbackPage() {
             >
               searching the fox
             </Text>
-
             {/* Status Message */}
             <Stack gap="md" align="center">
               {status === 'loading' && (
@@ -136,7 +124,6 @@ export default function ConfirmCallbackPage() {
                   </Text>
                 </>
               )}
-              
               {status === 'success' && (
                 <>
                   <Text size="xl" fw={600} c="green">
@@ -147,7 +134,6 @@ export default function ConfirmCallbackPage() {
                   </Text>
                 </>
               )}
-              
               {status === 'error' && (
                 <>
                   <Text size="xl" fw={600} c="red">
@@ -166,5 +152,13 @@ export default function ConfirmCallbackPage() {
         </Paper>
       </Container>
     </Box>
+  );
+}
+
+export default function ConfirmCallbackPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ConfirmCallbackContent />
+    </Suspense>
   );
 }
