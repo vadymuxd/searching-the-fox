@@ -474,7 +474,44 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
                         value={sortOption}
                         onChange={setSortOption}
                       />
-                      
+                      {/* Select All Button */}
+                      {filteredJobs.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const allIds = sortJobs(filteredJobs, sortOption).map(getJobId);
+                            const allSelected = allIds.every(id => selectedJobs.has(id));
+                            if (allSelected) {
+                              // Deselect all
+                              setSelectedJobs(new Set());
+                              setSelectedJobsCount(0);
+                              setTotalSelectedJobs(0);
+                              setSelectedJobsData([]);
+                            } else {
+                              // Select all
+                              setSelectedJobs(new Set(allIds));
+                              setSelectedJobsCount(allIds.length);
+                              setTotalSelectedJobs(allIds.length);
+                              setSelectedJobsData(
+                                sortJobs(filteredJobs, sortOption).map(job => ({
+                                  userJobId: job.user_job_id || '',
+                                  title: job.title,
+                                  company: job.company,
+                                  jobId: getJobId(job),
+                                }))
+                              );
+                            }
+                          }}
+                          style={{ alignSelf: 'flex-end', width: 'fit-content' }}
+                        >
+                          {(() => {
+                            const allIds = sortJobs(filteredJobs, sortOption).map(getJobId);
+                            const allSelected = allIds.length > 0 && allIds.every(id => selectedJobs.has(id));
+                            return allSelected ? 'Deselect all' : 'Select all';
+                          })()}
+                        </Button>
+                      )}
                       {/* Mobile Job Cards */}
                       <SimpleGrid cols={1} spacing="md">
                         {sortJobs(filteredJobs, sortOption).map((job) => {

@@ -10,6 +10,8 @@ import {
   Box,
   rem,
 } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
+import { useMantineTheme } from '@mantine/core';
 import { SecondaryButton } from './SecondaryButton';
 import { CompanyLogo } from './CompanyLogo';
 import { IconMapPin, IconCalendar, IconCurrency } from '@tabler/icons-react';
@@ -23,6 +25,8 @@ interface JobCardProps {
 }
 
 export function JobCard({ job, jobId, isSelected, onSelectionChange }: JobCardProps) {
+  const theme = useMantineTheme();
+  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
   // Use the same date formatting logic as JobTable
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString || dateString === 'Not specified' || dateString === 'null' || dateString === 'undefined' || dateString === 'None') {
@@ -233,7 +237,8 @@ export function JobCard({ job, jobId, isSelected, onSelectionChange }: JobCardPr
               Remote
             </Badge>
           )}
-          {job.job_type && job.job_type !== 'None' && (
+          {/* Hide job_type badge on mobile */}
+          {!isMobile && job.job_type && job.job_type !== 'None' && (
             <Badge color="blue" variant="light" size="sm">
               {job.job_type}
             </Badge>
@@ -251,7 +256,18 @@ export function JobCard({ job, jobId, isSelected, onSelectionChange }: JobCardPr
           href={job.job_url}
           target="_blank"
           rel="noopener noreferrer"
-          leftSection={getJobBoardLogo(job.source_site, job.job_url)}
+          leftSection={
+            <span style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+              {/* Fix logo size for Indeed and others */}
+              <Image
+                src={job.source_site === 'Indeed' || job.job_url?.includes('indeed.com') ? '/indeed.svg' : getJobBoardLogo(job.source_site, job.job_url)?.props?.src}
+                alt={job.source_site || ''}
+                width={20}
+                height={20}
+                style={{ objectFit: 'contain', maxHeight: 24 }}
+              />
+            </span>
+          }
           fullWidth
         >
           View

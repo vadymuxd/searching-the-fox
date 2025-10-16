@@ -3,6 +3,9 @@
 import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Tabs, Container, Box } from '@mantine/core';
+import { useMantineTheme } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
+import { useRef, useEffect } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
 
 // Job status types based on database enum
@@ -33,6 +36,18 @@ export function TabNavigation({ onAuthRequired }: TabNavigationProps = {}) {
     return currentTab?.value || 'new';
   };
 
+  const theme = useMantineTheme();
+  const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Remember scroll position for mobile
+  useEffect(() => {
+    if (!isMobile) return;
+    const saved = sessionStorage.getItem('tabNavScrollX');
+    if (scrollRef.current && saved) {
+      scrollRef.current.scrollLeft = parseInt(saved, 10);
+    }
+  }, [isMobile]);
+
   const handleTabChange = (value: string | null) => {
     if (!value) return;
     
@@ -48,6 +63,103 @@ export function TabNavigation({ onAuthRequired }: TabNavigationProps = {}) {
     }
   };
 
+  if (isMobile) {
+    return (
+      <Box style={{ backgroundColor: '#F8F9FA', paddingTop: '16px', paddingBottom: '8px' }}>
+        <div
+          ref={scrollRef}
+          style={{
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            whiteSpace: 'nowrap',
+            padding: '0 8px',
+            margin: '0 -8px',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}
+          onScroll={e => {
+            sessionStorage.setItem('tabNavScrollX', String((e.target as HTMLDivElement).scrollLeft));
+          }}
+        >
+          <Tabs
+            value={getCurrentTab()}
+            onChange={handleTabChange}
+            variant="unstyled"
+            styles={{
+              list: {
+                borderBottom: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                flexWrap: 'nowrap',
+              },
+              tab: {
+                border: 'none',
+                backgroundColor: 'transparent',
+                display: 'inline-flex',
+                alignItems: 'center',
+                minWidth: 100,
+                fontSize: '1rem',
+                fontWeight: 600,
+                marginRight: 0,
+                whiteSpace: 'nowrap',
+                padding: '8px 16px',
+                '&:hover': {
+                  backgroundColor: 'transparent',
+                },
+              },
+            }}
+          >
+            <Tabs.List>
+              {JOB_TABS.map((tab, index) => {
+                const isActive = pathname === tab.path;
+                const isFirstTab = index === 0;
+                const isLastTab = index === JOB_TABS.length - 1;
+                return (
+                  <span key={tab.value} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                    <Tabs.Tab
+                      value={tab.value}
+                      style={{
+                        color: isActive ? '#000000' : '#BEBEC1',
+                        fontWeight: 'bold',
+                        fontSize: '1rem',
+                        background: 'transparent',
+                        borderRadius: 0,
+                        paddingLeft: isFirstTab ? '0px' : undefined,
+                        paddingRight: '16px',
+                        paddingTop: '8px',
+                        paddingBottom: '8px',
+                        marginRight: 0,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {tab.label}
+                    </Tabs.Tab>
+                    {!isLastTab && (
+                      <span style={{
+                        color: '#BEBEC1',
+                        fontSize: '0.625rem',
+                        fontWeight: 'bold',
+                        padding: '0 8px',
+                        width: '1px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: 0.5,
+                        userSelect: 'none',
+                      }}>
+                        |
+                      </span>
+                    )}
+                  </span>
+                );
+              })}
+            </Tabs.List>
+          </Tabs>
+        </div>
+      </Box>
+    );
+  }
+  // Desktop version
   return (
     <Box style={{ backgroundColor: '#F8F9FA', paddingTop: '32px' }}>
       <Container size="xl">
