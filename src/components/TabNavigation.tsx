@@ -65,15 +65,16 @@ export function TabNavigation({ onAuthRequired, backgroundColor }: TabNavigation
 
   if (isMobile) {
     return (
-      <Box style={{ backgroundColor: backgroundColor || '#F8F9FA', paddingTop: '16px', paddingBottom: '8px' }}>
+      <Box style={{ backgroundColor: backgroundColor || '#F8F9FA', paddingTop: '16px', paddingBottom: '0px' }}>
         <div
           ref={scrollRef}
           style={{
             overflowX: 'auto',
             WebkitOverflowScrolling: 'touch',
             whiteSpace: 'nowrap',
-            padding: '0 8px',
-            margin: '0 -8px',
+            paddingLeft: '16px',
+            paddingRight: '8px',
+            margin: '0 0 0 0',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
           }}
@@ -97,12 +98,10 @@ export function TabNavigation({ onAuthRequired, backgroundColor }: TabNavigation
                 backgroundColor: 'transparent',
                 display: 'inline-flex',
                 alignItems: 'center',
-                minWidth: 100,
                 fontSize: '1rem',
                 fontWeight: 600,
                 marginRight: 0,
                 whiteSpace: 'nowrap',
-                padding: '8px 16px',
                 '&:hover': {
                   backgroundColor: 'transparent',
                 },
@@ -124,7 +123,7 @@ export function TabNavigation({ onAuthRequired, backgroundColor }: TabNavigation
                         fontSize: '1rem',
                         background: 'transparent',
                         borderRadius: 0,
-                        paddingLeft: isFirstTab ? '0px' : undefined,
+                        paddingLeft: isFirstTab ? '0px' : '16px',
                         paddingRight: '16px',
                         paddingTop: '8px',
                         paddingBottom: '8px',
@@ -140,7 +139,6 @@ export function TabNavigation({ onAuthRequired, backgroundColor }: TabNavigation
                         fontSize: '0.625rem',
                         fontWeight: 'bold',
                         padding: '0 8px',
-                        width: '1px',
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
