@@ -10,7 +10,6 @@ import {
   Box,
   Paper,
   Alert,
-  Button,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconAlertCircle } from '@tabler/icons-react';
@@ -26,7 +25,6 @@ import { saveJobsToDatabase } from '@/lib/db/jobService';
 import { saveLastSearch } from '@/lib/db/userPreferences';
 import { SearchFormData, JobSearchResponse } from '@/types/job';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { createClient } from '@/lib/supabase/client';
 
 export default function HomePage() {
   const router = useRouter();
@@ -36,10 +34,7 @@ export default function HomePage() {
   const [currentSearch, setCurrentSearch] = useState<SearchFormData | null>(null);
   const [mounted, setMounted] = useState(false);
   const [authModalOpened, setAuthModalOpened] = useState(false);
-  const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
-  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [resendingEmail, setResendingEmail] = useState(false);
   const [progressInfo, setProgressInfo] = useState<{
     currentSite: string;
     completed: number;
@@ -58,38 +53,12 @@ export default function HomePage() {
     if (!mounted) return;
     
     console.log('User changed from AuthContext:', user);
-    console.log('Email confirmed:', user?.email_confirmed_at);
     
-    // Check if user exists but email is not confirmed
-    if (user && !user.email_confirmed_at) {
-      console.log('User email not confirmed - showing confirmation screen');
-      setEmailNotConfirmed(true);
-      return;
-    }
-    
-    setEmailNotConfirmed(false);
-    setUnconfirmedEmail(null);
-    
-    // If user is signed in and email is confirmed, they can still use homepage
-    if (user && user.email_confirmed_at) {
-      console.log('User email confirmed - can use homepage for new searches');
+    // Both authenticated and guest users can use the homepage for new searches
+    if (user) {
+      console.log('User authenticated - can use homepage for new searches');
     }
   }, [user, mounted, router]);
-
-  // Listen for custom email confirmation events
-  useEffect(() => {
-    const handleShowEmailConfirmation = (event: CustomEvent) => {
-      console.log('Received showEmailConfirmation event:', event.detail);
-      setEmailNotConfirmed(true);
-      setUnconfirmedEmail(event.detail.email);
-    };
-
-    window.addEventListener('showEmailConfirmation', handleShowEmailConfirmation as EventListener);
-    
-    return () => {
-      window.removeEventListener('showEmailConfirmation', handleShowEmailConfirmation as EventListener);
-    };
-  }, []);
 
   // Load saved data on component mount
   useEffect(() => {
@@ -124,45 +93,6 @@ export default function HomePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
-
-  // Function to resend confirmation email
-  const handleResendConfirmation = async () => {
-    if (!user?.email || resendingEmail) return;
-    
-    setResendingEmail(true);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: user.email
-      });
-      
-      if (error) {
-        notifications.show({
-          title: 'Failed to resend email',
-          message: error.message,
-          color: 'red',
-          icon: <IconAlertCircle size={16} />,
-        });
-      } else {
-        notifications.show({
-          title: 'Email sent!',
-          message: 'We\'ve sent another confirmation email to your inbox.',
-          color: 'green',
-          icon: <IconAlertCircle size={16} />,
-        });
-      }
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to resend confirmation email.',
-        color: 'red',
-        icon: <IconAlertCircle size={16} />,
-      });
-    } finally {
-      setResendingEmail(false);
-    }
-  };
 
   const handleSearch = useCallback(async (searchData: SearchFormData) => {
     // Migrate localStorage data if user just signed in
@@ -269,36 +199,7 @@ export default function HomePage() {
       {/* Header - Show only during loading */}
       {loading && <Header onSignInClick={() => setAuthModalOpened(true)} />}
       
-      {/* Email Confirmation Required State */}
-      {emailNotConfirmed ? (
-        <Box style={{ backgroundColor: '#f8f9fa', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Container size="sm">
-            <Stack gap="lg" align="center" ta="center">
-              {/* Email Confirmation Message */}
-              <Stack gap="md" align="center">
-                <Text size="xl" fw={600} c="blue">
-                  Please Confirm Your Email
-                </Text>
-                <Text size="md" c="dimmed" maw={400}>
-                  We&apos;ve sent a confirmation email to {unconfirmedEmail ? <strong>{unconfirmedEmail}</strong> : user?.email ? <strong>{user.email}</strong> : 'your inbox'}. Please check your email and click the confirmation link to activate your account.
-                </Text>
-                <Text size="sm" c="dimmed">
-                  Don&apos;t see the email? Check your spam folder or contact support if you need help.
-                </Text>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  loading={resendingEmail}
-                  onClick={handleResendConfirmation}
-                  disabled={!user?.email}
-                >
-                  Resend Confirmation Email
-                </Button>
-              </Stack>
-            </Stack>
-          </Container>
-        </Box>
-      ) : !mounted ? (
+      {!mounted ? (
         // Show loading skeleton during hydration
         <Box style={{ backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
           <Container size="xl" style={{ minHeight: '100vh' }}>

@@ -37,19 +37,14 @@ export function AuthModal({ opened, onClose, hasSearchResults = false, customTit
       if (mode === 'signup') {
         result = await signUp(formData);
         if (!result.error) {
-          // Don't show toast - close modal and show email confirmation screen
+          // Redirect to verify-email page with email parameter
           onClose();
-          // Trigger the email confirmation state in parent component
-          window.dispatchEvent(new CustomEvent('showEmailConfirmation', { 
-            detail: { email } 
-          }));
+          window.location.href = `/verify-email?email=${encodeURIComponent(email)}`;
         }
       } else if (mode === 'signin') {
         result = await signIn(formData);
         if (!result.error) {
           onClose();
-          // Don't redirect immediately - let the auth context handle unverified users
-          // The page components will check email_confirmed_at and show confirmation screen
           window.location.href = '/';
         }
       } else if (mode === 'reset') {
