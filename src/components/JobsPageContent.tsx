@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Container,
@@ -24,7 +24,6 @@ import { AuthModal } from '@/components/AuthModal';
 import { Header } from '@/components/Header';
 import { TabNavigation } from '@/components/TabNavigation';
 import { MoveToButton } from '@/components/MoveToButton';
-import { CubePreloader } from '@/components/CubePreloader';
 import { searchStorage } from '@/lib/localStorage';
 import { getUserJobs } from '@/lib/db/jobService';
 import { getUserPreferences, saveLastSearch } from '@/lib/db/userPreferences';
@@ -48,26 +47,18 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
   const [currentSearch, setCurrentSearch] = useState<SearchFormData | null>(null);
   const [selectedJobsCount, setSelectedJobsCount] = useState(0);
   const [totalSelectedJobs, setTotalSelectedJobs] = useState(0);
-  const [mounted, setMounted] = useState(false);
   const [sortOption, setSortOption] = useState<SortOption>('posted-recent');
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
   const [selectedJobsData, setSelectedJobsData] = useState<Array<{ userJobId: string; title: string; company: string; jobId: string }>>([]);
   const [authModalOpened, setAuthModalOpened] = useState(false);
-  const [authModalForAction, setAuthModalForAction] = useState(false); // New state for action-triggered auth modal
-  
-  // Single loading flag controlling the preloader visibility
-  const [isLoading, setIsLoading] = useState(true);
+  const [authModalForAction, setAuthModalForAction] = useState(false);
 
   // Memoized callback for filtered jobs change to prevent PageFilter reloads
   const handleFilteredJobsChange = useCallback((filteredJobs: Job[]) => {
     setFilteredJobs(filteredJobs);
   }, []);
 
-  // Redirect authenticated users to results page but allow guest users
-  useEffect(() => {
-    // No redirect needed - both authenticated and guest users can access results
-    // Guest users will see localStorage data, authenticated users will see database data
-  }, [user, authLoading, router]);
+
 
   // Load user jobs from database
   const loadUserJobsFromDb = useCallback(async (userId: string) => {
@@ -94,52 +85,22 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
     }
   }, [status]);
 
-  // Centralized data loader that always drives the isLoading state
   const loadData = useCallback(async () => {
-    setIsLoading(true);
     setError(null);
-    try {
-      if (user) {
-        await Promise.all([
-          loadUserJobsFromDb(user.id),
-          loadUserPreferencesFromDb(user.id),
-        ]);
-      } else {
-        // Guest path loads from localStorage synchronously
-        loadGuestData();
-      }
-    } finally {
-      setIsLoading(false);
+    if (user) {
+      await loadUserJobsFromDb(user.id);
+      await loadUserPreferencesFromDb(user.id);
+    } else {
+      loadGuestData();
     }
   }, [user, loadUserJobsFromDb]);
 
   // React to auth/status changes by (re)loading data
   useEffect(() => {
-    if (!mounted || authLoading) return;
+    if (authLoading) return;
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, authLoading, user, status]);
-
-  // Prevent unnecessary reloads when page regains focus/visibility
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      // Do nothing - just prevent default behavior that might trigger reloads
-      console.log('Page visibility changed, maintaining current state');
-    };
-
-    const handleFocus = () => {
-      // Do nothing - just prevent default behavior that might trigger reloads
-      console.log('Page focused, maintaining current state');
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, []);
+  }, [authLoading, user, status]);
 
   // Load guest data from localStorage
   const loadGuestData = () => {
@@ -168,18 +129,6 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       console.error('Error loading user preferences:', error);
     }
   };
-
-  // Remove previous heuristic that could finish loading too early.
-
-  // Load saved data on component mount
-  useEffect(() => {
-    setMounted(true);
-    
-    // Initial load for guest users
-    if (!user && !authLoading) {
-      loadGuestData();
-    }
-  }, [user, authLoading]);
 
   // Helper function to get job ID (same as JobTable)
   const getJobId = (job: Job) => {
@@ -291,12 +240,10 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
   }, []);
 
   const handleStatusUpdate = useCallback(async () => {
-    setIsLoading(true);
     router.refresh();
     if (user) {
       await loadUserJobsFromDb(user.id);
     }
-    setIsLoading(false);
   }, [router, user, loadUserJobsFromDb]);
 
   // Helper function to get readable job board name
@@ -317,7 +264,6 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
     const timeOption = timeOptions.find(option => option.value === hoursOld);
     return timeOption ? timeOption.label.toLowerCase() : `past ${hoursOld} hours`;
   };
-  // We always render header and tabs; content area gets an overlay until allLoaded
 
   return (
     <>
@@ -327,26 +273,9 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       {/* Tab Navigation - for all users */}
       <TabNavigation onAuthRequired={handleAuthRequired} backgroundColor="#fff" />
 
-  {/* Content area wrapper (below header/tabs). Overlay lives here and won't cover header/tabs */}
+  {/* Content area wrapper (below header/tabs) */}
   <Box style={{ position: 'relative', minHeight: '60vh' }}>
-        {/* Loading Overlay - covers only the content area below tabs */}
-        {isLoading && (
-          <Box
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundColor: '#ffffff',
-              zIndex: 10,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <CubePreloader />
-          </Box>
-        )}
-
-        {/* Content - Always render; overlay will hide it while loading */}
+        {/* Content */}
         <>
             {/* Top Section - Search Summary - only show for "new" status */}
             {status === 'new' && (
@@ -559,8 +488,8 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
                 )}
               </Stack>
             </Container>
-          </>
-      </Box>
+      </>
+    </Box>
       
       {/* Auth Modal */}
       <AuthModal 
