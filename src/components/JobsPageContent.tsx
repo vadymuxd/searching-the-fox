@@ -54,29 +54,9 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
   const [selectedJobsData, setSelectedJobsData] = useState<Array<{ userJobId: string; title: string; company: string; jobId: string }>>([]);
   const [authModalOpened, setAuthModalOpened] = useState(false);
   const [authModalForAction, setAuthModalForAction] = useState(false); // New state for action-triggered auth modal
-  const [isNavigatingTab, setIsNavigatingTab] = useState(false); // Track tab navigation state
-  // Strict loading gates
-  const [jobsLoaded, setJobsLoaded] = useState(false);
-  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-  const [pageFilterReady, setPageFilterReady] = useState(false);
-  const [allLoaded, setAllLoaded] = useState(false);
   
-  // Track if we've already loaded data for this user to prevent re-loading on tab focus
-  const userDataLoadedRef = useRef<string | null>(null);
-  const currentStatusRef = useRef<string | undefined>(status);
-
-  // Monitor status changes for tab navigation loading
-  useEffect(() => {
-    if (currentStatusRef.current !== status) {
-      setIsNavigatingTab(true);
-      // Reset gates for tab change
-      setJobsLoaded(false);
-      setPreferencesLoaded(false);
-      setPageFilterReady(false);
-      setAllLoaded(false);
-      currentStatusRef.current = status;
-    }
-  }, [status]);
+  // Single loading flag controlling the preloader visibility
+  const [isLoading, setIsLoading] = useState(true);
 
   // Memoized callback for filtered jobs change to prevent PageFilter reloads
   const handleFilteredJobsChange = useCallback((filteredJobs: Job[]) => {
@@ -101,73 +81,44 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       if (result.success) {
         setJobs(result.jobs);
         setFilteredJobs(result.jobs);
-        // Hide navigation loading after successful load
-        setIsNavigatingTab(false);
-        setJobsLoaded(true);
       } else {
         setJobs([]);
         setFilteredJobs([]);
         setError('Failed to load jobs from database');
-        setIsNavigatingTab(false);
-        setJobsLoaded(true); // consider jobs phase complete even on error to avoid deadlock
       }
     } catch (error) {
       console.error('Error loading user jobs:', error);
       setJobs([]);
       setFilteredJobs([]);
       setError('Failed to load jobs from database');
-      setIsNavigatingTab(false);
-      setJobsLoaded(true);
     }
   }, [status]);
 
-  // React to user changes from AuthContext
-  useEffect(() => {
-    // Skip if this is the initial mount and we haven't finished loading
-    if (!mounted || authLoading) return;
-    
-    console.log('User changed from AuthContext:', user);
-    
-    // Reset loading gates when starting to load new data
-    setJobsLoaded(false);
-    setPreferencesLoaded(false);
-    setPageFilterReady(false);
-    setAllLoaded(false);
-    
-    // Set loading state when tab navigation starts
-    setIsNavigatingTab(true);
-    
-    // If user is signed in, load their data
-    if (user) {
-      // Check if we've already loaded data for this user
-      if (userDataLoadedRef.current === user.id) {
-        console.log('User data already loaded, skipping reload');
-        setIsNavigatingTab(false);
-        // Even if we skip reload, mark gates as satisfied for jobs/preferences
-        setJobsLoaded(true);
-        setPreferencesLoaded(true);
-        return;
+  // Centralized data loader that always drives the isLoading state
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (user) {
+        await Promise.all([
+          loadUserJobsFromDb(user.id),
+          loadUserPreferencesFromDb(user.id),
+        ]);
+      } else {
+        // Guest path loads from localStorage synchronously
+        loadGuestData();
       }
-      
-      console.log('User authenticated - loading user data');
-      userDataLoadedRef.current = user.id;
-      
-      // Clear any localStorage data immediately for authenticated users
-      setJobs([]);
-      setFilteredJobs([]);
-      
-      loadUserJobsFromDb(user.id);
-      loadUserPreferencesFromDb(user.id).finally(() => setPreferencesLoaded(true));
-    } else {
-      // Reset the ref when user logs out or for guest users
-      userDataLoadedRef.current = null;
-      // For guest users, load from localStorage
-      if (!user) {
-        loadGuestData(); // will set both jobs and preferences gates
-        setIsNavigatingTab(false);
-      }
+    } finally {
+      setIsLoading(false);
     }
-  }, [user, mounted, authLoading, router, status, loadUserJobsFromDb]);
+  }, [user, loadUserJobsFromDb]);
+
+  // React to auth/status changes by (re)loading data
+  useEffect(() => {
+    if (!mounted || authLoading) return;
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, authLoading, user, status]);
 
   // Prevent unnecessary reloads when page regains focus/visibility
   useEffect(() => {
@@ -204,9 +155,6 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
         setCurrentSearch(savedSearchData);
       }
     }
-    // Gates for guest users
-    setJobsLoaded(true);
-    setPreferencesLoaded(true);
   };
 
   // Load user preferences from database
@@ -221,28 +169,17 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
     }
   };
 
-  // Compute when everything is loaded
-  useEffect(() => {
-    // If there are no jobs, we don't wait for PageFilter readiness
-    const filterGate = filteredJobs.length === 0 ? true : pageFilterReady;
-    const ready = !authLoading && mounted && jobsLoaded && preferencesLoaded && filterGate && !isNavigatingTab;
-    setAllLoaded(ready);
-  }, [authLoading, mounted, jobsLoaded, preferencesLoaded, pageFilterReady, isNavigatingTab, filteredJobs.length]);
-
-  // Handler to mark PageFilter readiness
-  const handlePageFilterReady = useCallback(() => {
-    setPageFilterReady(true);
-  }, []);
+  // Remove previous heuristic that could finish loading too early.
 
   // Load saved data on component mount
   useEffect(() => {
     setMounted(true);
     
-    // Load data for guest users immediately
-    if (!user) {
+    // Initial load for guest users
+    if (!user && !authLoading) {
       loadGuestData();
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   // Helper function to get job ID (same as JobTable)
   const getJobId = (job: Job) => {
@@ -353,13 +290,13 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
     setAuthModalForAction(true);
   }, []);
 
-  const handleStatusUpdate = useCallback(() => {
-    // Refresh the page to show updated jobs in their new status tabs
+  const handleStatusUpdate = useCallback(async () => {
+    setIsLoading(true);
     router.refresh();
-    // Also reload user jobs from database
     if (user) {
-      loadUserJobsFromDb(user.id);
+      await loadUserJobsFromDb(user.id);
     }
+    setIsLoading(false);
   }, [router, user, loadUserJobsFromDb]);
 
   // Helper function to get readable job board name
@@ -390,10 +327,10 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       {/* Tab Navigation - for all users */}
       <TabNavigation onAuthRequired={handleAuthRequired} backgroundColor="#fff" />
 
-  {/* Content area wrapper to control overlay layering */}
-  <Box style={{ position: 'relative' }}>
+  {/* Content area wrapper (below header/tabs). Overlay lives here and won't cover header/tabs */}
+  <Box style={{ position: 'relative', minHeight: '60vh' }}>
         {/* Loading Overlay - covers only the content area below tabs */}
-        {(!allLoaded) && (
+        {isLoading && (
           <Box
             style={{
               position: 'absolute',
@@ -403,202 +340,96 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              minHeight: '40vh'
             }}
           >
-            <CubePreloader isLoaded={allLoaded} />
+            <CubePreloader />
           </Box>
         )}
 
-        {/* Top Section - Search Summary - only show for "new" status */}
-      {status === 'new' && (
-        <Box 
-          style={{ 
-            backgroundColor: '#fff',
-            padding: '24px 0'
-          }}
-        >
-          <Container size="xl">
-            {currentSearch ? (
-              <Stack gap="md">
-                {/* Search Summary */}
-                <Text size="sm" fw={400}>
-                  Jobs for <strong>{currentSearch.jobTitle}</strong> in <strong>{currentSearch.location}</strong> from <strong>{getJobBoardName(currentSearch.site)}</strong> posted within <strong>{getTimePeriod(currentSearch.hoursOld)}</strong>
-                </Text>
-                {/* Action Buttons */}
-                <Group gap={32}>
-                  <TextButton
-                    leftSection={<IconRefresh size={16} />}
-                    onClick={handleRefresh}
-                    size="sm"
-                  >
-                    Search new jobs
-                  </TextButton>
-                  <TextButton
-                    leftSection={<IconEdit size={16} />}
-                    onClick={handleEditSearch}
-                    size="sm"
-                  >
-                    Edit search
-                  </TextButton>
-                </Group>
-              </Stack>
-            ) : (
-              <Text size="lg" c="dimmed">
-                You didn&apos;t perform any search yet
-              </Text>
-            )}
-            {/* Bottom border separator, limited to content width */}
-            <div style={{ borderBottom: '1px solid #dee2e6', marginTop: 24 }} />
-          </Container>
-        </Box>
-      )}
-
-      {/* Bottom Section - Results */}
-      <Container
-        size="xl"
-        py={isMobile ? undefined : 'xl'}
-        style={isMobile ? { paddingTop: 0, paddingBottom: 'var(--mantine-spacing-xl)' } : undefined}
-      >
-        <Stack gap="xl">
-          {/* Error Alert */}
-          {error && (
-            <Alert 
-              icon={<IconAlertCircle size={16} />} 
-              title="Search Error" 
-              color="red"
-              variant="light"
-              styles={{
-                message: { fontSize: '14px' }
-              }}
-            >
-              {error}
-            </Alert>
-          )}
-
-          {/* Results */}
-          {jobs.length === 0 && !error && (
-            <Box style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
-              {status === 'new' ? (
-                <Button
-                  leftSection={<IconRefresh size={16} />}
-                  onClick={handleRefresh}
-                  size="md"
-                >
-                  Search new jobs
-                </Button>
-              ) : (
-                <Text size="sm" c="dimmed">There are no jobs added to this category</Text>
-              )}
-            </Box>
-          )}
-
-          {jobs.length > 0 && (
-            <Stack gap="lg">
-              {/* Job Counter */}
-              <Group justify="space-between" align="center">
-                <Text fw={600} size="sm">
-                  {filteredJobs.length} of {jobs.length} jobs shown
-                </Text>
-                {/* On desktop, do not show selected count and MoveToButton here; on mobile, they're shown in the row with Select all */}
-                {!isMobile && (
-                  <Group gap="md" align="center">
-                    {totalSelectedJobs > 0 && (
-                      <Text fw={500} size="sm" c="blue">
-                        {selectedJobsCount > 0 && selectedJobsCount !== totalSelectedJobs
-                          ? `${selectedJobsCount} of ${totalSelectedJobs} selected job${totalSelectedJobs !== 1 ? 's' : ''} visible`
-                          : `${totalSelectedJobs} job${totalSelectedJobs !== 1 ? 's' : ''} selected`
-                        }
-                      </Text>
-                    )}
-                    {selectedJobsData.length > 0 && (
-                      <MoveToButton
-                        selectedJobs={selectedJobsData}
-                        onStatusUpdate={handleStatusUpdate}
-                        onAuthRequired={handleAuthRequired}
-                      />
-                    )}
-                  </Group>
-                )}
-              </Group>
-
-              {/* Page Filter */}
-              <PageFilter 
-                jobs={jobs} 
-                onFilteredJobsChange={handleFilteredJobsChange}
-                onReady={handlePageFilterReady}
-              />
-
-              {/* Filtered Results */}
-              {filteredJobs.length === 0 ? (
-                <Alert 
-                  icon={<IconInfoCircle size={16} />} 
-                  title="No Matching Jobs" 
-                  color="orange"
-                  variant="light"
-                  styles={{
-                    message: { fontSize: '14px' }
-                  }}
-                >
-                  No jobs match your filter criteria. Try different job title keywords or clear the filter.
-                </Alert>
-              ) : (
-                <>
-                  {isMobile ? (
+        {/* Content - Always render; overlay will hide it while loading */}
+        <>
+            {/* Top Section - Search Summary - only show for "new" status */}
+            {status === 'new' && (
+              <Box 
+                style={{ 
+                  backgroundColor: '#fff',
+                  padding: '24px 0'
+                }}
+              >
+                <Container size="xl">
+                  {currentSearch ? (
                     <Stack gap="md">
-                      {/* Mobile Sort Dropdown */}
-                      <SortDropdown 
-                        value={sortOption}
-                        onChange={setSortOption}
-                      />
-                      {/* Select All, Selected Count, and MoveToButton in a row */}
-                      {filteredJobs.length > 0 && (
-                        <Group gap="sm" align="center" wrap="nowrap" style={{ width: '100%' }}>
-                          <TextButton
-                            size="sm"
-                            onClick={() => {
-                              const allIds = sortJobs(filteredJobs, sortOption).map(getJobId);
-                              const allSelected = allIds.every(id => selectedJobs.has(id));
-                              if (allSelected) {
-                                // Deselect all
-                                setSelectedJobs(new Set());
-                                setSelectedJobsCount(0);
-                                setTotalSelectedJobs(0);
-                                setSelectedJobsData([]);
-                              } else {
-                                // Select all
-                                setSelectedJobs(new Set(allIds));
-                                setSelectedJobsCount(allIds.length);
-                                setTotalSelectedJobs(allIds.length);
-                                setSelectedJobsData(
-                                  sortJobs(filteredJobs, sortOption).map(job => ({
-                                    userJobId: job.user_job_id || '',
-                                    title: job.title,
-                                    company: job.company,
-                                    jobId: getJobId(job),
-                                  }))
-                                );
-                              }
-                            }}
-                            style={{ width: 'fit-content' }}
-                            leftSection={(() => {
-                              const allIds = sortJobs(filteredJobs, sortOption).map(getJobId);
-                              const allSelected = allIds.length > 0 && allIds.every(id => selectedJobs.has(id));
-                              return allSelected ? <IconSquareCheck size={16} /> : <IconSquare size={16} />;
-                            })()}
-                          >
-                            {(() => {
-                              const allIds = sortJobs(filteredJobs, sortOption).map(getJobId);
-                              const allSelected = allIds.length > 0 && allIds.every(id => selectedJobs.has(id));
-                              return allSelected ? 'Deselect all' : 'Select all';
-                            })()}
-                          </TextButton>
-                          <div style={{ flex: 1 }} />
+                      {/* Search Summary */}
+                      <Text size="sm" fw={400}>
+                        Jobs for <strong>{currentSearch.jobTitle}</strong> in <strong>{currentSearch.location}</strong> from <strong>{getJobBoardName(currentSearch.site)}</strong> posted within <strong>{getTimePeriod(currentSearch.hoursOld)}</strong>
+                      </Text>
+                      {/* Action Buttons */}
+                      <Group gap={32}>
+                        <TextButton
+                          leftSection={<IconRefresh size={16} />}
+                          onClick={handleRefresh}
+                          size="sm"
+                        >
+                          Search new jobs
+                        </TextButton>
+                        <TextButton
+                          leftSection={<IconEdit size={16} />}
+                          onClick={handleEditSearch}
+                          size="sm"
+                        >
+                          Edit search
+                        </TextButton>
+                      </Group>
+                    </Stack>
+                  ) : (
+                    <Text size="lg" c="dimmed">
+                      You didn&apos;t perform any search yet
+                    </Text>
+                  )}
+                  {/* Bottom border separator, limited to content width */}
+                  <div style={{ borderBottom: '1px solid #dee2e6', marginTop: 24 }} />
+                </Container>
+              </Box>
+            )}
+
+            {/* Bottom Section - Results */}
+            <Container
+              size="xl"
+              py={isMobile ? undefined : 'xl'}
+              style={isMobile ? { paddingTop: 0, paddingBottom: 'var(--mantine-spacing-xl)' } : undefined}
+            >
+              <Stack gap="xl">
+                {/* Results */}
+                {jobs.length === 0 ? (
+                  <Box style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
+                    {status === 'new' ? (
+                      <Button
+                        leftSection={<IconRefresh size={16} />}
+                        onClick={handleRefresh}
+                        size="md"
+                      >
+                        Search new jobs
+                      </Button>
+                    ) : (
+                      <Text size="sm" c="dimmed">There are no jobs added to this category</Text>
+                    )}
+                  </Box>
+                ) : (
+                  <Stack gap="lg">
+                    {/* Job Counter */}
+                    <Group justify="space-between" align="center">
+                      <Text fw={600} size="sm">
+                        {filteredJobs.length} of {jobs.length} jobs shown
+                      </Text>
+                      {/* On desktop, do not show selected count and MoveToButton here; on mobile, they're shown in the row with Select all */}
+                      {!isMobile && (
+                        <Group gap="md" align="center">
                           {totalSelectedJobs > 0 && (
-                            <Text fw={500} size="sm" c="blue" style={{ whiteSpace: 'nowrap' }}>
+                            <Text fw={500} size="sm" c="blue">
                               {selectedJobsCount > 0 && selectedJobsCount !== totalSelectedJobs
-                                ? `${selectedJobsCount} of ${totalSelectedJobs} selected`
-                                : `${totalSelectedJobs} selected`}
+                                ? `${selectedJobsCount} of ${totalSelectedJobs} selected job${totalSelectedJobs !== 1 ? 's' : ''} visible`
+                                : `${totalSelectedJobs} job${totalSelectedJobs !== 1 ? 's' : ''} selected`
+                              }
                             </Text>
                           )}
                           {selectedJobsData.length > 0 && (
@@ -610,37 +441,126 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
                           )}
                         </Group>
                       )}
-                      {/* Mobile Job Cards */}
-                      <SimpleGrid cols={1} spacing="md">
-                        {sortJobs(filteredJobs, sortOption).map((job) => {
-                          const jobId = getJobId(job);
-                          return (
-                            <JobCard
-                              key={jobId}
-                              job={job}
-                              jobId={jobId}
-                              isSelected={selectedJobs.has(jobId)}
-                              onSelectionChange={handleMobileSelectionChange}
-                            />
-                          );
-                        })}
-                      </SimpleGrid>
-                    </Stack>
-                  ) : (
-                    <JobTable 
-                      jobs={filteredJobs} 
-                      onSelectionChange={handleSelectionChange}
-                      onSelectedJobsChange={handleSelectedJobsChange}
-                    />
-                  )}
-                </>
-              )}
-            </Stack>
-          )}
-        </Stack>
-  </Container>
+                    </Group>
 
-  </Box>
+                    {/* Page Filter */}
+                    <PageFilter 
+                      jobs={jobs} 
+                      onFilteredJobsChange={handleFilteredJobsChange}
+                    />
+
+                    {/* Filtered Results */}
+                    {filteredJobs.length === 0 ? (
+                      <Alert 
+                        icon={<IconInfoCircle size={16} />} 
+                        title="No Matching Jobs" 
+                        color="orange"
+                        variant="light"
+                        styles={{
+                          message: { fontSize: '14px' }
+                        }}
+                      >
+                        No jobs match your filter criteria. Try different job title keywords or clear the filter.
+                      </Alert>
+                    ) : (
+                      <>
+                        {isMobile ? (
+                          <Stack gap="md">
+                            {/* Mobile Sort Dropdown */}
+                            <SortDropdown 
+                              value={sortOption}
+                              onChange={setSortOption}
+                            />
+                            {/* Select All, Selected Count, and MoveToButton in a row */}
+                            {filteredJobs.length > 0 && (
+                              <Group gap="sm" align="center" wrap="nowrap" style={{ width: '100%' }}>
+                                <TextButton
+                                  size="sm"
+                                  onClick={() => {
+                                    const allIds = sortJobs(filteredJobs, sortOption).map(getJobId);
+                                    const allSelected = allIds.every(id => selectedJobs.has(id));
+                                    if (allSelected) {
+                                      // Deselect all
+                                      setSelectedJobs(new Set());
+                                      setSelectedJobsCount(0);
+                                      setTotalSelectedJobs(0);
+                                      setSelectedJobsData([]);
+                                    } else {
+                                      // Select all
+                                      setSelectedJobs(new Set(allIds));
+                                      setSelectedJobsCount(allIds.length);
+                                      setTotalSelectedJobs(allIds.length);
+                                      setSelectedJobsData(
+                                        sortJobs(filteredJobs, sortOption).map(job => ({
+                                          userJobId: job.user_job_id || '',
+                                          title: job.title,
+                                          company: job.company,
+                                          jobId: getJobId(job),
+                                        }))
+                                      );
+                                    }
+                                  }}
+                                  style={{ width: 'fit-content' }}
+                                  leftSection={(() => {
+                                    const allIds = sortJobs(filteredJobs, sortOption).map(getJobId);
+                                    const allSelected = allIds.length > 0 && allIds.every(id => selectedJobs.has(id));
+                                    return allSelected ? <IconSquareCheck size={16} /> : <IconSquare size={16} />;
+                                  })()}
+                                >
+                                  {(() => {
+                                    const allIds = sortJobs(filteredJobs, sortOption).map(getJobId);
+                                    const allSelected = allIds.length > 0 && allIds.every(id => selectedJobs.has(id));
+                                    return allSelected ? 'Deselect all' : 'Select all';
+                                  })()}
+                                </TextButton>
+                                <div style={{ flex: 1 }} />
+                                {totalSelectedJobs > 0 && (
+                                  <Text fw={500} size="sm" c="blue" style={{ whiteSpace: 'nowrap' }}>
+                                    {selectedJobsCount > 0 && selectedJobsCount !== totalSelectedJobs
+                                      ? `${selectedJobsCount} of ${totalSelectedJobs} selected`
+                                      : `${totalSelectedJobs} selected`}
+                                  </Text>
+                                )}
+                                {selectedJobsData.length > 0 && (
+                                  <MoveToButton
+                                    selectedJobs={selectedJobsData}
+                                    onStatusUpdate={handleStatusUpdate}
+                                    onAuthRequired={handleAuthRequired}
+                                  />
+                                )}
+                              </Group>
+                            )}
+                            {/* Mobile Job Cards */}
+                            <SimpleGrid cols={1} spacing="md">
+                              {sortJobs(filteredJobs, sortOption).map((job) => {
+                                const jobId = getJobId(job);
+                                return (
+                                  <JobCard
+                                    key={jobId}
+                                    job={job}
+                                    jobId={jobId}
+                                    isSelected={selectedJobs.has(jobId)}
+                                    onSelectionChange={handleMobileSelectionChange}
+                                  />
+                                );
+                              })}
+                            </SimpleGrid>
+                          </Stack>
+                        ) : (
+                          <JobTable 
+                            jobs={filteredJobs} 
+                            onSelectionChange={handleSelectionChange}
+                            onSelectedJobsChange={handleSelectedJobsChange}
+                          />
+                        )}
+                      </>
+                    )}
+                  </Stack>
+                )}
+              </Stack>
+            </Container>
+          </>
+      </Box>
       
       {/* Auth Modal */}
       <AuthModal 

@@ -8,12 +8,12 @@ interface CubePreloaderProps {
   isLoaded?: boolean;
 }
 
-export function CubePreloader({ style, isLoaded = false }: CubePreloaderProps) {
+export function CubePreloader({ style }: CubePreloaderProps) {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', ...style }}>
       <Player
         autoplay
-        loop={!isLoaded}
+        loop
         animationData={triCubeLoader}
         style={{ width: 160, height: 160 }}
       />
