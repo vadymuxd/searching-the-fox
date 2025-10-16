@@ -9,73 +9,80 @@ import { Container, Stack, Text, Box, Paper } from '@mantine/core';
 import Image from 'next/image';
 
 function ConfirmCallbackContent() {
-
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('Confirming your email...');
+  const [message, setMessage] = useState('Setting up your account...');
 
   useEffect(() => {
-    const handleEmailConfirmation = async () => {
+    const handlePostAuthSetup = async () => {
       try {
         const supabase = createClient();
-        // Get the tokens from URL params
-        const token_hash = searchParams.get('token_hash');
-        const type = searchParams.get('type');
-        if (!token_hash || type !== 'email') {
-          throw new Error('Invalid confirmation link');
+        const userId = searchParams.get('user_id');
+        const type = searchParams.get('type'); // 'email' or 'oauth'
+        const confirmed = searchParams.get('confirmed'); // 'true' for email confirmations
+
+        if (!userId) {
+          throw new Error('User ID not provided');
         }
-        // Verify the email confirmation token
-        const { data: authData, error: authError } = await supabase.auth.verifyOtp({
-          token_hash,
-          type: 'email'
-        });
-        if (authError) {
-          throw new Error(authError.message);
+
+        // Verify the user is actually authenticated
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user || user.id !== userId) {
+          throw new Error('Authentication verification failed');
         }
-        if (!authData.user) {
-          throw new Error('User not found after confirmation');
-        }
-        setMessage('Email confirmed! Setting up your account...');
+
+        setMessage('Account verified! Setting up your profile...');
+
         // Check if user has localStorage data to migrate
         const localJobs = searchStorage.loadSearchResults();
         if (localJobs && localJobs.jobs.length > 0) {
-          setMessage('Saving your search results...');
+          setMessage(`Saving your ${localJobs.jobs.length} search results...`);
           try {
-            // Save jobs to database for the newly confirmed user
-            await saveJobsToDatabase(localJobs.jobs, authData.user.id);
-            // Clear localStorage after successful migration
-            searchStorage.clearSearchData();
-            setMessage('Account setup complete! Redirecting...');
+            const result = await saveJobsToDatabase(localJobs.jobs, userId);
+            if (result.success) {
+              // Clear localStorage after successful migration
+              searchStorage.clearSearchData();
+              setMessage(`Successfully saved ${result.jobsSaved} jobs! Redirecting...`);
+            } else {
+              console.error('Failed to save jobs:', result.error);
+              // Don't fail the entire flow if data migration fails
+              setMessage('Account setup complete! Redirecting...');
+            }
           } catch (dbError) {
             console.error('Error migrating localStorage data:', dbError);
             // Don't fail the entire flow if data migration fails
-            setMessage('Email confirmed! Redirecting...');
+            setMessage('Account setup complete! Redirecting...');
           }
         } else {
-          setMessage('Email confirmed! Redirecting...');
+          setMessage('Account setup complete! Redirecting...');
         }
+
         setStatus('success');
+        
         // Redirect to results page after a brief delay
         setTimeout(() => {
           router.push('/results');
         }, 2000);
+
       } catch (error) {
-        console.error('Email confirmation error:', error);
+        console.error('Post-auth setup error:', error);
         setStatus('error');
-        setMessage(error instanceof Error ? error.message : 'Failed to confirm email');
+        setMessage(error instanceof Error ? error.message : 'Failed to set up account');
+        
         // Redirect to home page after error
         setTimeout(() => {
           router.push('/');
         }, 3000);
       }
     };
-    // Only run if we have search params, otherwise redirect to home
-    if (searchParams.get('token_hash')) {
-      handleEmailConfirmation();
+
+    // Only run if we have required params
+    if (searchParams.get('user_id')) {
+      handlePostAuthSetup();
     } else {
       setStatus('error');
-      setMessage('No confirmation token provided');
+      setMessage('Missing authentication information');
       setTimeout(() => {
         router.push('/');
       }, 2000);
@@ -133,7 +140,7 @@ function ConfirmCallbackContent() {
               {status === 'error' && (
                 <>
                   <Text size="xl" fw={600} c="red">
-                    ✗ Email Confirmation Failed
+                    ✗ Setup Failed
                   </Text>
                   <Text size="sm" c="dimmed">
                     {message}
