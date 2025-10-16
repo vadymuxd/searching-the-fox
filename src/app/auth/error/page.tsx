@@ -1,11 +1,12 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Container, Stack, Text, Box, Paper, Button } from '@mantine/core';
 import Image from 'next/image';
 import Link from 'next/link';
 
-export default function AuthErrorPage() {
+function AuthErrorContent() {
   const searchParams = useSearchParams();
   const message = searchParams.get('message') || 'An error occurred during authentication';
 
@@ -64,5 +65,17 @@ export default function AuthErrorPage() {
         </Paper>
       </Container>
     </Box>
+  );
+}
+
+export default function AuthErrorPage() {
+  return (
+    <Suspense fallback={
+      <Box style={{ backgroundColor: '#f8f9fa', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Text>Loading...</Text>
+      </Box>
+    }>
+      <AuthErrorContent />
+    </Suspense>
   );
 }
