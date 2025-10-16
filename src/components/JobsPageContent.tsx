@@ -52,6 +52,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
   const [selectedJobsData, setSelectedJobsData] = useState<Array<{ userJobId: string; title: string; company: string; jobId: string }>>([]);
   const [authModalOpened, setAuthModalOpened] = useState(false);
   const [authModalForAction, setAuthModalForAction] = useState(false);
+  const [searchDataLoading, setSearchDataLoading] = useState(true);
 
   // Memoized callback for filtered jobs change to prevent PageFilter reloads
   const handleFilteredJobsChange = useCallback((filteredJobs: Job[]) => {
@@ -87,17 +88,24 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
 
   const loadData = useCallback(async () => {
     setError(null);
+    setSearchDataLoading(true);
+    
     if (user) {
       await loadUserJobsFromDb(user.id);
       await loadUserPreferencesFromDb(user.id);
     } else {
       loadGuestData();
     }
+    
+    setSearchDataLoading(false);
   }, [user, loadUserJobsFromDb]);
 
   // React to auth/status changes by (re)loading data
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading) {
+      setSearchDataLoading(true);
+      return;
+    }
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, status]);
@@ -286,7 +294,11 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
                 }}
               >
                 <Container size="xl">
-                  {currentSearch ? (
+                  {searchDataLoading ? (
+                    <Text size="sm" c="dimmed">
+                      Loading search data...
+                    </Text>
+                  ) : currentSearch ? (
                     <Stack gap="md">
                       {/* Search Summary */}
                       <Text size="sm" fw={400}>

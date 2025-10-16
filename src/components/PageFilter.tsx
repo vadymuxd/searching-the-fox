@@ -33,6 +33,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
   const [appliedKeywords, setAppliedKeywords] = useState<string[]>([]);
   const [filtersApplied, setFiltersApplied] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Track if we've already loaded data for this user to prevent re-loading
   const userDataLoadedRef = useRef<string | null>(null);
@@ -87,6 +88,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
         userDataLoadedRef.current === currentUserId && 
         !jobsChanged) {
       console.log('PageFilter: Skipping reload - data already loaded for user:', currentUserId);
+      setIsLoading(false);
       // Ensure onReady is fired once even when skipping subsequent loads
       if (!onReadyCalledRef.current) {
         onReadyCalledRef.current = true;
@@ -103,6 +105,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
     
     // Load filter - database for authenticated users ONLY, localStorage for anonymous users ONLY
     const loadFilter = async () => {
+      setIsLoading(true);
       let savedFilter: string | null = null;
       
       // ALWAYS reset filter value first when user changes to prevent contamination
@@ -138,6 +141,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
       }
       
       initialLoadCompleteRef.current = true;
+      setIsLoading(false);
       if (!onReadyCalledRef.current) {
         onReadyCalledRef.current = true;
         onReady?.();
@@ -151,6 +155,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
       // If no jobs, just show empty results
       onFilteredJobsChange(jobs);
       initialLoadCompleteRef.current = true;
+      setIsLoading(false);
       if (!onReadyCalledRef.current) {
         onReadyCalledRef.current = true;
         onReady?.();
@@ -197,6 +202,15 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
       handleFilter();
     }
   }, [handleFilter]);
+
+  // Show loading state while filter data is being loaded
+  if (isLoading) {
+    return (
+      <Text size="sm" c="dimmed">
+        Loading filters...
+      </Text>
+    );
+  }
 
   // Variant B: Filters Applied - Show applied keywords and clear button
   if (filtersApplied && appliedKeywords.length > 0) {
