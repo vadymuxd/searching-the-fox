@@ -48,21 +48,9 @@ export function AuthModal({ opened, onClose, hasSearchResults = false, customTit
         result = await signIn(formData);
         if (!result.error) {
           onClose();
-          // Hard redirect to results page to ensure fresh data load
-          window.location.href = '/results';
-        } else if (result.error.includes('Email not confirmed')) {
-          // Handle unconfirmed email case - close modal and show confirmation screen
-          notifications.show({
-            title: 'Email not confirmed',
-            message: 'Please check your email and confirm your account to sign in.',
-            color: 'orange',
-            icon: <IconCheck size={16} />,
-          });
-          onClose();
-          // Trigger the email confirmation state in parent component
-          window.dispatchEvent(new CustomEvent('showEmailConfirmation', { 
-            detail: { email } 
-          }));
+          // Don't redirect immediately - let the auth context handle unverified users
+          // The page components will check email_confirmed_at and show confirmation screen
+          window.location.href = '/';
         }
       } else if (mode === 'reset') {
         result = await resetPassword(formData);

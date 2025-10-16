@@ -15,6 +15,7 @@ import {
 import { useMantineTheme } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { IconInfoCircle, IconAlertCircle, IconRefresh, IconEdit } from '@tabler/icons-react';
+import { notifications } from '@mantine/notifications';
 import { JobTable } from '@/components/JobTable';
 import { JobCard } from '@/components/JobCard';
 import { PageFilter } from '@/components/PageFilter';
@@ -29,6 +30,7 @@ import { getUserPreferences, saveLastSearch } from '@/lib/db/userPreferences';
 import { Job, SearchFormData } from '@/types/job';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { SITE_OPTIONS } from '@/lib/api';
+import { createClient } from '@/lib/supabase/client';
 
 interface JobsPageContentProps {
   status?: 'new' | 'interested' | 'applied' | 'progressed' | 'rejected' | 'archived';
@@ -52,6 +54,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
   const [selectedJobsData, setSelectedJobsData] = useState<Array<{ userJobId: string; title: string; company: string; jobId: string }>>([]);
   const [authModalOpened, setAuthModalOpened] = useState(false);
   const [authModalForAction, setAuthModalForAction] = useState(false); // New state for action-triggered auth modal
+  const [resendingEmail, setResendingEmail] = useState(false);
   
   // Track if we've already loaded data for this user to prevent re-loading on tab focus
   const userDataLoadedRef = useRef<string | null>(null);
@@ -302,6 +305,45 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
     setAuthModalForAction(true);
   }, []);
 
+  // Function to resend confirmation email
+  const handleResendConfirmation = async () => {
+    if (!user?.email || resendingEmail) return;
+    
+    setResendingEmail(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: user.email
+      });
+      
+      if (error) {
+        notifications.show({
+          title: 'Failed to resend email',
+          message: error.message,
+          color: 'red',
+          icon: <IconAlertCircle size={16} />,
+        });
+      } else {
+        notifications.show({
+          title: 'Email sent!',
+          message: 'We\'ve sent another confirmation email to your inbox.',
+          color: 'green',
+          icon: <IconAlertCircle size={16} />,
+        });
+      }
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to resend confirmation email.',
+        color: 'red',
+        icon: <IconAlertCircle size={16} />,
+      });
+    } finally {
+      setResendingEmail(false);
+    }
+  };
+
   const handleStatusUpdate = useCallback(() => {
     // Refresh the page to show updated jobs in their new status tabs
     router.refresh();
@@ -349,8 +391,19 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
                 Please Confirm Your Email
               </Text>
               <Text size="md" c="dimmed" maw={400}>
-                We&apos;ve sent a confirmation email to your inbox. Please check your email and click the confirmation link to activate your account.
+                We&apos;ve sent a confirmation email to <strong>{user.email}</strong>. Please check your email and click the confirmation link to activate your account.
               </Text>
+              <Text size="sm" c="dimmed">
+                Don&apos;t see the email? Check your spam folder or try resending.
+              </Text>
+              <Button 
+                variant="outline" 
+                size="sm"
+                loading={resendingEmail}
+                onClick={handleResendConfirmation}
+              >
+                Resend Confirmation Email
+              </Button>
             </Stack>
           </Stack>
         </Container>

@@ -10,6 +10,7 @@ import {
   Box,
   Paper,
   Alert,
+  Button,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconAlertCircle } from '@tabler/icons-react';
@@ -25,6 +26,7 @@ import { saveJobsToDatabase } from '@/lib/db/jobService';
 import { saveLastSearch } from '@/lib/db/userPreferences';
 import { SearchFormData, JobSearchResponse } from '@/types/job';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 export default function HomePage() {
   const router = useRouter();
@@ -37,6 +39,7 @@ export default function HomePage() {
   const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [resendingEmail, setResendingEmail] = useState(false);
   const [progressInfo, setProgressInfo] = useState<{
     currentSite: string;
     completed: number;
@@ -121,6 +124,45 @@ export default function HomePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
+
+  // Function to resend confirmation email
+  const handleResendConfirmation = async () => {
+    if (!user?.email || resendingEmail) return;
+    
+    setResendingEmail(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: user.email
+      });
+      
+      if (error) {
+        notifications.show({
+          title: 'Failed to resend email',
+          message: error.message,
+          color: 'red',
+          icon: <IconAlertCircle size={16} />,
+        });
+      } else {
+        notifications.show({
+          title: 'Email sent!',
+          message: 'We\'ve sent another confirmation email to your inbox.',
+          color: 'green',
+          icon: <IconAlertCircle size={16} />,
+        });
+      }
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to resend confirmation email.',
+        color: 'red',
+        icon: <IconAlertCircle size={16} />,
+      });
+    } finally {
+      setResendingEmail(false);
+    }
+  };
 
   const handleSearch = useCallback(async (searchData: SearchFormData) => {
     // Migrate localStorage data if user just signed in
@@ -238,11 +280,20 @@ export default function HomePage() {
                   Please Confirm Your Email
                 </Text>
                 <Text size="md" c="dimmed" maw={400}>
-                  We&apos;ve sent a confirmation email to {unconfirmedEmail ? <strong>{unconfirmedEmail}</strong> : 'your inbox'}. Please check your email and click the confirmation link to activate your account.
+                  We&apos;ve sent a confirmation email to {unconfirmedEmail ? <strong>{unconfirmedEmail}</strong> : user?.email ? <strong>{user.email}</strong> : 'your inbox'}. Please check your email and click the confirmation link to activate your account.
                 </Text>
                 <Text size="sm" c="dimmed">
                   Don&apos;t see the email? Check your spam folder or contact support if you need help.
                 </Text>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  loading={resendingEmail}
+                  onClick={handleResendConfirmation}
+                  disabled={!user?.email}
+                >
+                  Resend Confirmation Email
+                </Button>
               </Stack>
             </Stack>
           </Container>

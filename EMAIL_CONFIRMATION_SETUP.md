@@ -1,7 +1,15 @@
 # Email Confirmation Setup Guide
 
-## 1. Custom Email Template
+## 1. Supabase Configuration
 
+### A. Allow Sign-in with Unverified Email
+In your Supabase Dashboard:
+1. Go to **Authentication** → **Settings** 
+2. Under **User Verification**, find "Enable email confirmations"
+3. **UNCHECK** "Users must confirm their email before signing in"
+4. This allows users to sign in immediately but still requires email confirmation for full access
+
+### B. Custom Email Template
 Replace the default Supabase email template with the custom HTML template provided in `email-template.html`. 
 
 In your Supabase Dashboard:
@@ -10,8 +18,7 @@ In your Supabase Dashboard:
 3. Replace the content with the HTML from `email-template.html`
 4. Save the template
 
-## 2. Site URL Configuration
-
+### C. Site URL Configuration
 Update your Supabase site URL to use the custom confirmation callback:
 
 In your Supabase Dashboard:
@@ -22,28 +29,34 @@ In your Supabase Dashboard:
    - `https://searching-the-fox.vercel.app/auth/callback`
    - `https://searching-the-fox.vercel.app/`
 
-## 3. How the Flow Works
+## 2. How the Flow Works
 
-### New User Email Confirmation Flow:
+### New User Sign-up Flow:
 1. User signs up with email/password
 2. User receives custom styled email with confirmation link
-3. User clicks confirmation link → redirects to `/auth/confirm`
-4. Server verifies the token → redirects to `/auth/callback/confirm`
-5. Client-side page loads and:
+3. **User can immediately sign in with unverified email**
+4. App shows "Please Confirm Your Email" screen until verification
+5. When user clicks confirmation link → redirects to `/auth/confirm`
+6. Server verifies the token → redirects to `/auth/callback/confirm`
+7. Client-side page loads and:
    - Confirms email verification
    - Checks for localStorage data
    - Migrates any existing job search data to database
-   - Signs user in automatically
+   - Signs user in automatically (if not already)
    - Redirects to `/results` page
 
-### Existing User Email Confirmation (if needed):
-- Same flow works for existing users
-- If they have localStorage data, it gets migrated
-- If they don't, they just get signed in and redirected
+### Sign-in with Unverified Email Flow:
+1. User tries to sign in with unverified email
+2. Sign-in succeeds (no error thrown)
+3. User is redirected to homepage
+4. App detects `user.email_confirmed_at` is null
+5. Shows "Please Confirm Your Email" screen
+6. User remains in this state until they click the confirmation link in their email
 
-### OAuth Users:
-- Continue to use the existing `/auth/callback` route
-- Get redirected directly to `/results`
+### Verified User Flow:
+- Sign-in works normally
+- User gets redirected to `/results` or homepage
+- Full app functionality available
 
 ## 4. Key Features
 
