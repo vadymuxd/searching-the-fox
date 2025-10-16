@@ -412,7 +412,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
               </Stack>
             ) : (
               <Text size="lg" c="dimmed">
-                You didn't perform any search yet
+                You didn&apos;t perform any search yet
               </Text>
             )}
             {/* Bottom border separator, limited to content width */}
