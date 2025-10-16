@@ -55,6 +55,11 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
   const [authModalOpened, setAuthModalOpened] = useState(false);
   const [authModalForAction, setAuthModalForAction] = useState(false); // New state for action-triggered auth modal
   const [isNavigatingTab, setIsNavigatingTab] = useState(false); // Track tab navigation state
+  // Strict loading gates
+  const [jobsLoaded, setJobsLoaded] = useState(false);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const [pageFilterReady, setPageFilterReady] = useState(false);
+  const [allLoaded, setAllLoaded] = useState(false);
   
   // Track if we've already loaded data for this user to prevent re-loading on tab focus
   const userDataLoadedRef = useRef<string | null>(null);
@@ -64,6 +69,11 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
   useEffect(() => {
     if (currentStatusRef.current !== status) {
       setIsNavigatingTab(true);
+      // Reset gates for tab change
+      setJobsLoaded(false);
+      setPreferencesLoaded(false);
+      setPageFilterReady(false);
+      setAllLoaded(false);
       currentStatusRef.current = status;
     }
   }, [status]);
@@ -93,11 +103,13 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
         setFilteredJobs(result.jobs);
         // Hide navigation loading after successful load
         setIsNavigatingTab(false);
+        setJobsLoaded(true);
       } else {
         setJobs([]);
         setFilteredJobs([]);
         setError('Failed to load jobs from database');
         setIsNavigatingTab(false);
+        setJobsLoaded(true); // consider jobs phase complete even on error to avoid deadlock
       }
     } catch (error) {
       console.error('Error loading user jobs:', error);
@@ -105,6 +117,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       setFilteredJobs([]);
       setError('Failed to load jobs from database');
       setIsNavigatingTab(false);
+      setJobsLoaded(true);
     }
   }, [status]);
 
@@ -115,6 +128,12 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
     
     console.log('User changed from AuthContext:', user);
     
+    // Reset loading gates when starting to load new data
+    setJobsLoaded(false);
+    setPreferencesLoaded(false);
+    setPageFilterReady(false);
+    setAllLoaded(false);
+    
     // Set loading state when tab navigation starts
     setIsNavigatingTab(true);
     
@@ -124,6 +143,9 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       if (userDataLoadedRef.current === user.id) {
         console.log('User data already loaded, skipping reload');
         setIsNavigatingTab(false);
+        // Even if we skip reload, mark gates as satisfied for jobs/preferences
+        setJobsLoaded(true);
+        setPreferencesLoaded(true);
         return;
       }
       
@@ -135,13 +157,13 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       setFilteredJobs([]);
       
       loadUserJobsFromDb(user.id);
-      loadUserPreferencesFromDb(user.id);
+      loadUserPreferencesFromDb(user.id).finally(() => setPreferencesLoaded(true));
     } else {
       // Reset the ref when user logs out or for guest users
       userDataLoadedRef.current = null;
       // For guest users, load from localStorage
       if (!user) {
-        loadGuestData();
+        loadGuestData(); // will set both jobs and preferences gates
         setIsNavigatingTab(false);
       }
     }
@@ -182,6 +204,9 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
         setCurrentSearch(savedSearchData);
       }
     }
+    // Gates for guest users
+    setJobsLoaded(true);
+    setPreferencesLoaded(true);
   };
 
   // Load user preferences from database
@@ -195,6 +220,17 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       console.error('Error loading user preferences:', error);
     }
   };
+
+  // Compute when everything is loaded
+  useEffect(() => {
+    const ready = !authLoading && mounted && jobsLoaded && preferencesLoaded && pageFilterReady && !isNavigatingTab;
+    setAllLoaded(ready);
+  }, [authLoading, mounted, jobsLoaded, preferencesLoaded, pageFilterReady, isNavigatingTab]);
+
+  // Handler to mark PageFilter readiness
+  const handlePageFilterReady = useCallback(() => {
+    setPageFilterReady(true);
+  }, []);
 
   // Load saved data on component mount
   useEffect(() => {
@@ -342,32 +378,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
     const timeOption = timeOptions.find(option => option.value === hoursOld);
     return timeOption ? timeOption.label.toLowerCase() : `past ${hoursOld} hours`;
   };
-  // Show loading state while auth is being checked
-  if (authLoading || !mounted) {
-    return (
-      <Box style={{ backgroundColor: '#f8f9fa', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Text>Loading...</Text>
-      </Box>
-    );
-  }
-
-  // Show only TabNavigation and preloader when navigating between tabs
-  if (isNavigatingTab) {
-    return (
-      <>
-        {/* Header with Logo and Auth Button */}
-        <Header onSignInClick={() => setAuthModalOpened(true)} />
-        
-        {/* Tab Navigation - for all users */}
-        <TabNavigation onAuthRequired={handleAuthRequired} backgroundColor="#fff" />
-        
-        {/* Preloader */}
-        <Box style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <CubePreloader />
-        </Box>
-      </>
-    );
-  }
+  // We always render header and tabs; content area gets an overlay until allLoaded
 
   return (
     <>
@@ -377,7 +388,27 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       {/* Tab Navigation - for all users */}
       <TabNavigation onAuthRequired={handleAuthRequired} backgroundColor="#fff" />
 
-      {/* Top Section - Search Summary - only show for "new" status */}
+  {/* Content area wrapper to control overlay layering */}
+  <Box style={{ position: 'relative' }}>
+        {/* Loading Overlay - covers only the content area below tabs */}
+        {(!allLoaded) && (
+          <Box
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundColor: '#ffffff',
+              zIndex: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '40vh'
+            }}
+          >
+            <CubePreloader isLoaded={allLoaded} />
+          </Box>
+        )}
+
+        {/* Top Section - Search Summary - only show for "new" status */}
       {status === 'new' && (
         <Box 
           style={{ 
@@ -489,6 +520,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
               <PageFilter 
                 jobs={jobs} 
                 onFilteredJobsChange={handleFilteredJobsChange}
+                onReady={handlePageFilterReady}
               />
 
               {/* Filtered Results */}
@@ -600,7 +632,9 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
             </Stack>
           )}
         </Stack>
-      </Container>
+  </Container>
+
+  </Box>
       
       {/* Auth Modal */}
       <AuthModal 

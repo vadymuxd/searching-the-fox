@@ -21,9 +21,10 @@ import { useAuth } from '@/lib/auth/AuthContext';
 interface PageFilterProps {
   jobs: Job[];
   onFilteredJobsChange: (filteredJobs: Job[]) => void;
+  onReady?: () => void; // signals when initial filter state is applied
 }
 
-export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
+export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterProps) {
   const theme = useMantineTheme();
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
   const { user } = useAuth();
@@ -36,6 +37,7 @@ export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
   const userDataLoadedRef = useRef<string | null>(null);
   const jobsLengthRef = useRef<number>(0);
   const initialLoadCompleteRef = useRef(false);
+  const onReadyCalledRef = useRef(false);
 
   // Memoize the filter application logic
   const applyFilter = useCallback((filterText: string, jobList: Job[]) => {
@@ -84,6 +86,11 @@ export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
         userDataLoadedRef.current === currentUserId && 
         !jobsChanged) {
       console.log('PageFilter: Skipping reload - data already loaded for user:', currentUserId);
+      // Ensure onReady is fired once even when skipping subsequent loads
+      if (!onReadyCalledRef.current) {
+        onReadyCalledRef.current = true;
+        onReady?.();
+      }
       return;
     }
     
@@ -130,6 +137,10 @@ export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
       }
       
       initialLoadCompleteRef.current = true;
+      if (!onReadyCalledRef.current) {
+        onReadyCalledRef.current = true;
+        onReady?.();
+      }
     };
     
     // Only load if we have jobs to filter
@@ -139,8 +150,12 @@ export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
       // If no jobs, just show empty results
       onFilteredJobsChange(jobs);
       initialLoadCompleteRef.current = true;
+      if (!onReadyCalledRef.current) {
+        onReadyCalledRef.current = true;
+        onReady?.();
+      }
     }
-  }, [jobs, user, mounted, applyFilter, onFilteredJobsChange]);
+  }, [jobs, user, mounted, applyFilter, onFilteredJobsChange, onReady]);
 
   const handleFilter = useCallback(async () => {
     if (filterValue.trim()) {
