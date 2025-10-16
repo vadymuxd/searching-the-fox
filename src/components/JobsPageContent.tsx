@@ -15,6 +15,7 @@ import {
 import { useMantineTheme } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { IconInfoCircle, IconAlertCircle, IconRefresh, IconEdit } from '@tabler/icons-react';
+import { TextButton } from '@/components/TextButton';
 import { JobTable } from '@/components/JobTable';
 import { JobCard } from '@/components/JobCard';
 import { PageFilter } from '@/components/PageFilter';
@@ -23,6 +24,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { Header } from '@/components/Header';
 import { TabNavigation } from '@/components/TabNavigation';
 import { MoveToButton } from '@/components/MoveToButton';
+import { CubePreloader } from '@/components/CubePreloader';
 import { searchStorage } from '@/lib/localStorage';
 import { getUserJobs } from '@/lib/db/jobService';
 import { getUserPreferences, saveLastSearch } from '@/lib/db/userPreferences';
@@ -52,9 +54,19 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
   const [selectedJobsData, setSelectedJobsData] = useState<Array<{ userJobId: string; title: string; company: string; jobId: string }>>([]);
   const [authModalOpened, setAuthModalOpened] = useState(false);
   const [authModalForAction, setAuthModalForAction] = useState(false); // New state for action-triggered auth modal
+  const [isNavigatingTab, setIsNavigatingTab] = useState(false); // Track tab navigation state
   
   // Track if we've already loaded data for this user to prevent re-loading on tab focus
   const userDataLoadedRef = useRef<string | null>(null);
+  const currentStatusRef = useRef<string | undefined>(status);
+
+  // Monitor status changes for tab navigation loading
+  useEffect(() => {
+    if (currentStatusRef.current !== status) {
+      setIsNavigatingTab(true);
+      currentStatusRef.current = status;
+    }
+  }, [status]);
 
   // Memoized callback for filtered jobs change to prevent PageFilter reloads
   const handleFilteredJobsChange = useCallback((filteredJobs: Job[]) => {
@@ -79,16 +91,20 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       if (result.success) {
         setJobs(result.jobs);
         setFilteredJobs(result.jobs);
+        // Hide navigation loading after successful load
+        setIsNavigatingTab(false);
       } else {
         setJobs([]);
         setFilteredJobs([]);
         setError('Failed to load jobs from database');
+        setIsNavigatingTab(false);
       }
     } catch (error) {
       console.error('Error loading user jobs:', error);
       setJobs([]);
       setFilteredJobs([]);
       setError('Failed to load jobs from database');
+      setIsNavigatingTab(false);
     }
   }, [status]);
 
@@ -99,11 +115,15 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
     
     console.log('User changed from AuthContext:', user);
     
+    // Set loading state when tab navigation starts
+    setIsNavigatingTab(true);
+    
     // If user is signed in, load their data
     if (user) {
       // Check if we've already loaded data for this user
       if (userDataLoadedRef.current === user.id) {
         console.log('User data already loaded, skipping reload');
+        setIsNavigatingTab(false);
         return;
       }
       
@@ -122,6 +142,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       // For guest users, load from localStorage
       if (!user) {
         loadGuestData();
+        setIsNavigatingTab(false);
       }
     }
   }, [user, mounted, authLoading, router, status, loadUserJobsFromDb]);
@@ -330,20 +351,37 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
     );
   }
 
+  // Show only TabNavigation and preloader when navigating between tabs
+  if (isNavigatingTab) {
+    return (
+      <>
+        {/* Header with Logo and Auth Button */}
+        <Header onSignInClick={() => setAuthModalOpened(true)} />
+        
+        {/* Tab Navigation - for all users */}
+        <TabNavigation onAuthRequired={handleAuthRequired} backgroundColor="#fff" />
+        
+        {/* Preloader */}
+        <Box style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <CubePreloader />
+        </Box>
+      </>
+    );
+  }
+
   return (
     <>
       {/* Header with Logo and Auth Button */}
       <Header onSignInClick={() => setAuthModalOpened(true)} />
       
       {/* Tab Navigation - for all users */}
-      <TabNavigation onAuthRequired={handleAuthRequired} />
-      
+      <TabNavigation onAuthRequired={handleAuthRequired} backgroundColor="#fff" />
+
       {/* Top Section - Search Summary - only show for "new" status */}
       {status === 'new' && (
         <Box 
           style={{ 
-            backgroundColor: '#f8f9fa',
-            borderBottom: '1px solid #dee2e6',
+            backgroundColor: '#fff',
             padding: '24px 0'
           }}
         >
@@ -354,25 +392,22 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
                 <Text size="md" fw={500}>
                   Jobs for <strong>{currentSearch.jobTitle}</strong> in <strong>{currentSearch.location}</strong> from <strong>{getJobBoardName(currentSearch.site)}</strong> posted within <strong>{getTimePeriod(currentSearch.hoursOld)}</strong>
                 </Text>
-                
                 {/* Action Buttons */}
-                <Group gap="md">
-                  <Button
-                    variant="outline"
+                <Group gap={32}>
+                  <TextButton
                     leftSection={<IconRefresh size={16} />}
                     onClick={handleRefresh}
                     size="sm"
                   >
                     Refresh
-                  </Button>
-                  <Button
-                    variant="outline"
+                  </TextButton>
+                  <TextButton
                     leftSection={<IconEdit size={16} />}
                     onClick={handleEditSearch}
                     size="sm"
                   >
                     Edit search
-                  </Button>
+                  </TextButton>
                 </Group>
               </Stack>
             ) : (
@@ -380,6 +415,8 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
                 No search data available
               </Text>
             )}
+            {/* Bottom border separator, limited to content width */}
+            <div style={{ borderBottom: '1px solid #dee2e6', marginTop: 24 }} />
           </Container>
         </Box>
       )}

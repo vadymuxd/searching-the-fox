@@ -25,7 +25,7 @@ interface TabNavigationProps {
   onAuthRequired?: () => void;
 }
 
-export function TabNavigation({ onAuthRequired }: TabNavigationProps = {}) {
+export function TabNavigation({ onAuthRequired, backgroundColor }: TabNavigationProps & { backgroundColor?: string } = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
@@ -65,7 +65,7 @@ export function TabNavigation({ onAuthRequired }: TabNavigationProps = {}) {
 
   if (isMobile) {
     return (
-      <Box style={{ backgroundColor: '#F8F9FA', paddingTop: '16px', paddingBottom: '8px' }}>
+      <Box style={{ backgroundColor: backgroundColor || '#F8F9FA', paddingTop: '16px', paddingBottom: '8px' }}>
         <div
           ref={scrollRef}
           style={{
@@ -161,7 +161,7 @@ export function TabNavigation({ onAuthRequired }: TabNavigationProps = {}) {
   }
   // Desktop version
   return (
-    <Box style={{ backgroundColor: '#F8F9FA', paddingTop: '32px' }}>
+    <Box style={{ backgroundColor: backgroundColor || '#F8F9FA', paddingTop: '32px' }}>
       <Container size="xl">
         <Tabs 
           value={getCurrentTab()} 
