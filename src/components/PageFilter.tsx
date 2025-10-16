@@ -11,7 +11,7 @@ import {
   Text,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { IconFilter } from '@tabler/icons-react';
+import { IconFilter, IconX } from '@tabler/icons-react';
 import { TextButton } from './TextButton';
 import { Job } from '@/types/job';
 import { searchStorage } from '@/lib/localStorage';
@@ -190,7 +190,7 @@ export function PageFilter({ jobs, onFilteredJobsChange }: PageFilterProps) {
           Filtered by keywords: {appliedKeywords.join(', ')}
         </Text>
         <div>
-          <TextButton onClick={handleClear} size="sm">
+          <TextButton onClick={handleClear} size="sm" leftSection={<IconX size={16} />}>
             Clear filters
           </TextButton>
         </div>

@@ -14,7 +14,7 @@ import {
 } from '@mantine/core';
 import { useMantineTheme } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { IconInfoCircle, IconAlertCircle, IconRefresh, IconEdit } from '@tabler/icons-react';
+import { IconInfoCircle, IconAlertCircle, IconRefresh, IconEdit, IconSquareCheck, IconSquare } from '@tabler/icons-react';
 import { TextButton } from '@/components/TextButton';
 import { JobTable } from '@/components/JobTable';
 import { JobCard } from '@/components/JobCard';
@@ -399,7 +399,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
                     onClick={handleRefresh}
                     size="sm"
                   >
-                    Refresh
+                    Search new jobs
                   </TextButton>
                   <TextButton
                     leftSection={<IconEdit size={16} />}
@@ -422,7 +422,11 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
       )}
 
       {/* Bottom Section - Results */}
-      <Container size="xl" py="xl">
+      <Container
+        size="xl"
+        py={isMobile ? undefined : 'xl'}
+        style={isMobile ? { paddingTop: 0, paddingBottom: 'var(--mantine-spacing-xl)' } : undefined}
+      >
         <Stack gap="xl">
           {/* Error Alert */}
           {error && (
@@ -464,23 +468,26 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
                 <Text fw={600} size="sm">
                   {filteredJobs.length} of {jobs.length} jobs shown
                 </Text>
-                <Group gap="md" align="center">
-                  {totalSelectedJobs > 0 && (
-                    <Text fw={500} size="sm" c="blue">
-                      {selectedJobsCount > 0 && selectedJobsCount !== totalSelectedJobs
-                        ? `${selectedJobsCount} of ${totalSelectedJobs} selected job${totalSelectedJobs !== 1 ? 's' : ''} visible`
-                        : `${totalSelectedJobs} job${totalSelectedJobs !== 1 ? 's' : ''} selected`
-                      }
-                    </Text>
-                  )}
-                  {selectedJobsData.length > 0 && (
-                    <MoveToButton
-                      selectedJobs={selectedJobsData}
-                      onStatusUpdate={handleStatusUpdate}
-                      onAuthRequired={handleAuthRequired}
-                    />
-                  )}
-                </Group>
+                {/* On desktop, do not show selected count and MoveToButton here; on mobile, they're shown in the row with Select all */}
+                {!isMobile && (
+                  <Group gap="md" align="center">
+                    {totalSelectedJobs > 0 && (
+                      <Text fw={500} size="sm" c="blue">
+                        {selectedJobsCount > 0 && selectedJobsCount !== totalSelectedJobs
+                          ? `${selectedJobsCount} of ${totalSelectedJobs} selected job${totalSelectedJobs !== 1 ? 's' : ''} visible`
+                          : `${totalSelectedJobs} job${totalSelectedJobs !== 1 ? 's' : ''} selected`
+                        }
+                      </Text>
+                    )}
+                    {selectedJobsData.length > 0 && (
+                      <MoveToButton
+                        selectedJobs={selectedJobsData}
+                        onStatusUpdate={handleStatusUpdate}
+                        onAuthRequired={handleAuthRequired}
+                      />
+                    )}
+                  </Group>
+                )}
               </Group>
 
               {/* Page Filter */}
@@ -511,43 +518,64 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
                         value={sortOption}
                         onChange={setSortOption}
                       />
-                      {/* Select All Button */}
+                      {/* Select All, Selected Count, and MoveToButton in a row */}
                       {filteredJobs.length > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const allIds = sortJobs(filteredJobs, sortOption).map(getJobId);
-                            const allSelected = allIds.every(id => selectedJobs.has(id));
-                            if (allSelected) {
-                              // Deselect all
-                              setSelectedJobs(new Set());
-                              setSelectedJobsCount(0);
-                              setTotalSelectedJobs(0);
-                              setSelectedJobsData([]);
-                            } else {
-                              // Select all
-                              setSelectedJobs(new Set(allIds));
-                              setSelectedJobsCount(allIds.length);
-                              setTotalSelectedJobs(allIds.length);
-                              setSelectedJobsData(
-                                sortJobs(filteredJobs, sortOption).map(job => ({
-                                  userJobId: job.user_job_id || '',
-                                  title: job.title,
-                                  company: job.company,
-                                  jobId: getJobId(job),
-                                }))
-                              );
-                            }
-                          }}
-                          style={{ alignSelf: 'flex-end', width: 'fit-content' }}
-                        >
-                          {(() => {
-                            const allIds = sortJobs(filteredJobs, sortOption).map(getJobId);
-                            const allSelected = allIds.length > 0 && allIds.every(id => selectedJobs.has(id));
-                            return allSelected ? 'Deselect all' : 'Select all';
-                          })()}
-                        </Button>
+                        <Group gap="sm" align="center" wrap="nowrap" style={{ width: '100%' }}>
+                          <TextButton
+                            size="sm"
+                            onClick={() => {
+                              const allIds = sortJobs(filteredJobs, sortOption).map(getJobId);
+                              const allSelected = allIds.every(id => selectedJobs.has(id));
+                              if (allSelected) {
+                                // Deselect all
+                                setSelectedJobs(new Set());
+                                setSelectedJobsCount(0);
+                                setTotalSelectedJobs(0);
+                                setSelectedJobsData([]);
+                              } else {
+                                // Select all
+                                setSelectedJobs(new Set(allIds));
+                                setSelectedJobsCount(allIds.length);
+                                setTotalSelectedJobs(allIds.length);
+                                setSelectedJobsData(
+                                  sortJobs(filteredJobs, sortOption).map(job => ({
+                                    userJobId: job.user_job_id || '',
+                                    title: job.title,
+                                    company: job.company,
+                                    jobId: getJobId(job),
+                                  }))
+                                );
+                              }
+                            }}
+                            style={{ width: 'fit-content' }}
+                            leftSection={(() => {
+                              const allIds = sortJobs(filteredJobs, sortOption).map(getJobId);
+                              const allSelected = allIds.length > 0 && allIds.every(id => selectedJobs.has(id));
+                              return allSelected ? <IconSquareCheck size={16} /> : <IconSquare size={16} />;
+                            })()}
+                          >
+                            {(() => {
+                              const allIds = sortJobs(filteredJobs, sortOption).map(getJobId);
+                              const allSelected = allIds.length > 0 && allIds.every(id => selectedJobs.has(id));
+                              return allSelected ? 'Deselect all' : 'Select all';
+                            })()}
+                          </TextButton>
+                          <div style={{ flex: 1 }} />
+                          {totalSelectedJobs > 0 && (
+                            <Text fw={500} size="sm" c="blue" style={{ whiteSpace: 'nowrap' }}>
+                              {selectedJobsCount > 0 && selectedJobsCount !== totalSelectedJobs
+                                ? `${selectedJobsCount} of ${totalSelectedJobs} selected`
+                                : `${totalSelectedJobs} selected`}
+                            </Text>
+                          )}
+                          {selectedJobsData.length > 0 && (
+                            <MoveToButton
+                              selectedJobs={selectedJobsData}
+                              onStatusUpdate={handleStatusUpdate}
+                              onAuthRequired={handleAuthRequired}
+                            />
+                          )}
+                        </Group>
                       )}
                       {/* Mobile Job Cards */}
                       <SimpleGrid cols={1} spacing="md">
