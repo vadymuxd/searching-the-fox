@@ -389,7 +389,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
             {currentSearch ? (
               <Stack gap="md">
                 {/* Search Summary */}
-                <Text size="md" fw={500}>
+                <Text size="sm" fw={400}>
                   Jobs for <strong>{currentSearch.jobTitle}</strong> in <strong>{currentSearch.location}</strong> from <strong>{getJobBoardName(currentSearch.site)}</strong> posted within <strong>{getTimePeriod(currentSearch.hoursOld)}</strong>
                 </Text>
                 {/* Action Buttons */}

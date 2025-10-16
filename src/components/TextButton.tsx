@@ -5,21 +5,13 @@ interface TextButtonProps extends Omit<ButtonProps, 'variant' | 'color'> {
   children: React.ReactNode;
   leftSection?: React.ReactNode;
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
-  component?: any;
-  href?: string;
-  target?: string;
-  rel?: string;
 }
 
 export const TextButton = forwardRef<HTMLButtonElement, TextButtonProps>(
-  ({ children, leftSection, onClick, component, href, target, rel, ...props }, ref) => {
+  ({ children, leftSection, onClick, ...props }, ref) => {
     return (
       <Button
         ref={ref}
-        component={component}
-        href={href}
-        target={target}
-        rel={rel}
         onClick={onClick}
         {...props}
         variant="subtle"
