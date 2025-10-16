@@ -9,9 +9,10 @@ import {
   Stack,
   useMantineTheme,
   Text,
+  ActionIcon,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { IconFilter, IconX } from '@tabler/icons-react';
+import { IconFilter, IconX, IconCornerDownLeft } from '@tabler/icons-react';
 import { TextButton } from './TextButton';
 import { Job } from '@/types/job';
 import { searchStorage } from '@/lib/localStorage';
@@ -217,48 +218,36 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
   return (
     <>
       {isMobile ? (
-        // Mobile layout: Input on first line, button on second line
-        <Stack gap="md">
-          <TextInput
-            placeholder={filterValue ? undefined : "Use comma-separated job titles as filters"}
-            leftSection={<IconFilter style={{ width: rem(16), height: rem(16) }} />}
-            value={filterValue}
-            onChange={(event) => setFilterValue(event.currentTarget.value)}
-            onKeyPress={handleKeyPress}
-            size="sm"
-            styles={{
-              input: {
-                '&::placeholder': {
-                  color: '#868e96',
-                  fontStyle: 'normal',
-                },
-              },
-            }}
-          />
-          
-          <Group gap="md" justify="flex-end">
-            <Button
+        // Mobile layout: Single line with right-side Enter icon inside the input
+        <TextInput
+          placeholder={filterValue ? undefined : "Filter by job titles with comma"}
+          leftSection={<IconFilter style={{ width: rem(16), height: rem(16) }} />}
+          rightSection={
+            <ActionIcon
+              variant="filled"
+              color="dark"
+              size={28}
+              radius="sm"
+              aria-label="Apply filter"
               onClick={handleFilter}
-              size="sm"
-              styles={{
-                root: {
-                  backgroundColor: '#000',
-                  border: '1px solid #000',
-                  height: rem(36),
-                  '&:hover': {
-                    backgroundColor: '#333',
-                    borderColor: '#333',
-                  },
-                },
-                label: {
-                  fontSize: rem(14),
-                },
-              }}
+              title="Apply filter (Enter)"
             >
-              Filter
-            </Button>
-          </Group>
-        </Stack>
+              <IconCornerDownLeft size={16} />
+            </ActionIcon>
+          }
+          value={filterValue}
+          onChange={(event) => setFilterValue(event.currentTarget.value)}
+          onKeyPress={handleKeyPress}
+          size="sm"
+          styles={{
+            input: {
+              '&::placeholder': {
+                color: '#868e96',
+                fontStyle: 'normal',
+              },
+            },
+          }}
+        />
       ) : (
         // Desktop layout: Single row
         <Group gap="md" align="end" wrap="nowrap">
