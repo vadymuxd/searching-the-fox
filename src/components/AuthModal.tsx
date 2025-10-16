@@ -45,7 +45,7 @@ export function AuthModal({ opened, onClose, hasSearchResults = false, customTit
         result = await signIn(formData);
         if (!result.error) {
           onClose();
-          window.location.href = '/';
+          window.location.href = '/results';
         }
       } else if (mode === 'reset') {
         result = await resetPassword(formData);
