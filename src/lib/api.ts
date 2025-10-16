@@ -205,7 +205,7 @@ export class JobService {
 
 // Site options for the search form
 export const SITE_OPTIONS = [
-  { value: 'all', label: 'All' },
+  { value: 'all', label: 'All job boards' },
   { value: 'linkedin', label: 'LinkedIn' },
   { value: 'indeed', label: 'Indeed' },
 ] as const;
