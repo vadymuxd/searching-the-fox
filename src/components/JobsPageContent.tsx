@@ -412,7 +412,7 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
               </Stack>
             ) : (
               <Text size="lg" c="dimmed">
-                No search data available
+                You didn't perform any search yet
               </Text>
             )}
             {/* Bottom border separator, limited to content width */}
@@ -445,20 +445,15 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
 
           {/* Results */}
           {jobs.length === 0 && !error && (
-            <Alert 
-              icon={<IconInfoCircle size={16} />} 
-              title={status ? `No ${status} jobs found` : "No Jobs Found"} 
-              color="blue"
-              variant="light"
-              styles={{
-                message: { fontSize: '14px' }
-              }}
-            >
-              {status 
-                ? `No jobs found with status "${status}".` 
-                : "No jobs were found matching your criteria. Try adjusting your search terms or expanding your location."
-              }
-            </Alert>
+            <Box style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
+              <Button
+                leftSection={<IconRefresh size={16} />}
+                onClick={handleRefresh}
+                size="md"
+              >
+                Search new jobs
+              </Button>
+            </Box>
           )}
 
           {jobs.length > 0 && (
