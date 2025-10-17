@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Container,
@@ -52,10 +52,16 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
   const [authModalOpened, setAuthModalOpened] = useState(false);
   const [authModalForAction, setAuthModalForAction] = useState(false);
   const [searchDataLoading, setSearchDataLoading] = useState(true);
+  const [isFiltered, setIsFiltered] = useState(false);
 
   // Memoized callback for filtered jobs change to prevent PageFilter reloads
   const handleFilteredJobsChange = useCallback((filteredJobs: Job[]) => {
     setFilteredJobs(filteredJobs);
+  }, []);
+  
+  // Callback to receive filter state from PageFilter
+  const handleFilterStateChange = useCallback((filtered: boolean) => {
+    setIsFiltered(filtered);
   }, []);
 
 
@@ -367,7 +373,10 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
                     {/* Job Counter */}
                     <Group justify="space-between" align="center">
                       <Text fw={600} size="sm">
-                        {filteredJobs.length} of {jobs.length} jobs shown
+                        {isFiltered 
+                          ? `${filteredJobs.length} jobs filtered by keywords`
+                          : 'Filter by job titles'
+                        }
                       </Text>
                       {/* On desktop, do not show selected count and MoveToButton here; on mobile, they're shown in the row with Select all */}
                       {!isMobile && (
@@ -395,6 +404,7 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
                     <PageFilter 
                       jobs={jobs} 
                       onFilteredJobsChange={handleFilteredJobsChange}
+                      onFilterStateChange={handleFilterStateChange}
                     />
 
                     {/* Filtered Results */}

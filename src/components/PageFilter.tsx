@@ -23,16 +23,16 @@ interface PageFilterProps {
   jobs: Job[];
   onFilteredJobsChange: (filteredJobs: Job[]) => void;
   onReady?: () => void; // signals when initial filter state is applied
+  onFilterStateChange?: (isFiltered: boolean) => void; // notify parent about filter state
 }
 
-export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterProps) {
+export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateChange }: PageFilterProps) {
   const theme = useMantineTheme();
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
   const { user } = useAuth();
   const [filterValue, setFilterValue] = useState('');
   const [appliedKeywords, setAppliedKeywords] = useState<string[]>([]);
   const [filtersApplied, setFiltersApplied] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
   // Track if we've already loaded data for this user to prevent re-loading
@@ -40,6 +40,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
   const jobsLengthRef = useRef<number>(0);
   const initialLoadCompleteRef = useRef(false);
   const onReadyCalledRef = useRef(false);
+  const loadingRef = useRef(false); // Prevent concurrent loads
 
   // Memoize the filter application logic
   const applyFilter = useCallback((filterText: string, jobList: Job[]) => {
@@ -47,6 +48,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
       onFilteredJobsChange(jobList);
       setAppliedKeywords([]);
       setFiltersApplied(false);
+      onFilterStateChange?.(false); // Notify parent: not filtered
       return;
     }
 
@@ -59,6 +61,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
       onFilteredJobsChange(jobList);
       setAppliedKeywords([]);
       setFiltersApplied(false);
+      onFilterStateChange?.(false); // Notify parent: not filtered
       return;
     }
 
@@ -70,14 +73,19 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
     onFilteredJobsChange(filteredJobs);
     setAppliedKeywords(searchTerms);
     setFiltersApplied(true);
-  }, [onFilteredJobsChange]);
+    onFilterStateChange?.(true); // Notify parent: filtered
+  }, [onFilteredJobsChange, onFilterStateChange]);
 
   // Check if there are saved filters on component mount
   useEffect(() => {
-    console.log('PageFilter effect triggered - mounted:', mounted, 'user:', user?.id || 'anonymous', 'jobs.length:', jobs.length);
+    console.log('PageFilter effect triggered - user:', user?.id || 'anonymous', 'jobs.length:', jobs.length, 'loading:', loadingRef.current);
     
-    if (!mounted) {
-      setMounted(true);
+    let isMounted = true; // Track if component is still mounted
+    
+    // Prevent concurrent loads
+    if (loadingRef.current) {
+      console.log('PageFilter: Already loading, skipping');
+      return;
     }
     
     // Skip if we've already completed initial load and user hasn't changed
@@ -88,7 +96,9 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
         userDataLoadedRef.current === currentUserId && 
         !jobsChanged) {
       console.log('PageFilter: Skipping reload - data already loaded for user:', currentUserId);
-      setIsLoading(false);
+      if (isMounted) {
+        setIsLoading(false);
+      }
       // Ensure onReady is fired once even when skipping subsequent loads
       if (!onReadyCalledRef.current) {
         onReadyCalledRef.current = true;
@@ -105,17 +115,42 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
     
     // Load filter - database for authenticated users ONLY, localStorage for anonymous users ONLY
     const loadFilter = async () => {
-      setIsLoading(true);
+      loadingRef.current = true;
+      if (isMounted) {
+        setIsLoading(true);
+      }
       let savedFilter: string | null = null;
       
       // ALWAYS reset filter value first when user changes to prevent contamination
-      setFilterValue('');
-      setFiltersApplied(false);
-      setAppliedKeywords([]);
+      if (isMounted) {
+        setFilterValue('');
+        setFiltersApplied(false);
+        setAppliedKeywords([]);
+      }
       
       if (user) {
         // For authenticated users: ONLY use database, ignore localStorage completely
         console.log('Loading filter for authenticated user:', user.id);
+        
+        // Check if user has manually disabled filters
+        const filterDisabled = jobsDataManager.isFilterDisabled(user.id);
+        if (filterDisabled) {
+          console.log('Filter disabled by user preference');
+          // Don't apply any filter
+          onFilteredJobsChange(jobs);
+          onFilterStateChange?.(false); // Notify parent: not filtered
+          initialLoadCompleteRef.current = true;
+          if (isMounted) {
+            setIsLoading(false);
+          }
+          loadingRef.current = false;
+          if (!onReadyCalledRef.current) {
+            onReadyCalledRef.current = true;
+            onReady?.();
+          }
+          return;
+        }
+        
         const { success, keywords } = await jobsDataManager.getUserKeywords(user.id);
         if (success && keywords.length > 0) {
           savedFilter = keywords.join(', ');
@@ -127,21 +162,47 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
       } else {
         // For anonymous users: ONLY use localStorage
         console.log('Loading filter for anonymous user from localStorage');
+        
+        // Check if user has manually disabled filters
+        const filterDisabled = searchStorage.isFilterDisabled('anonymous');
+        if (filterDisabled) {
+          console.log('Filter disabled by user preference');
+          // Don't apply any filter
+          onFilteredJobsChange(jobs);
+          onFilterStateChange?.(false); // Notify parent: not filtered
+          initialLoadCompleteRef.current = true;
+          if (isMounted) {
+            setIsLoading(false);
+          }
+          loadingRef.current = false;
+          if (!onReadyCalledRef.current) {
+            onReadyCalledRef.current = true;
+            onReady?.();
+          }
+          return;
+        }
+        
         savedFilter = searchStorage.loadPageFilter();
       }
       
       // Auto-apply saved filter on mount ONLY if there is a saved filter
       if (savedFilter && savedFilter.trim()) {
-        setFilterValue(savedFilter);
-        // Apply filter to jobs list
-        applyFilter(savedFilter, jobs);
+        if (isMounted) {
+          setFilterValue(savedFilter);
+          // Apply filter to jobs list (this will notify parent via applyFilter)
+          applyFilter(savedFilter, jobs);
+        }
       } else {
         // No saved filter: show all jobs without filtering
         onFilteredJobsChange(jobs);
+        onFilterStateChange?.(false); // Notify parent: not filtered
       }
       
       initialLoadCompleteRef.current = true;
-      setIsLoading(false);
+      if (isMounted) {
+        setIsLoading(false);
+      }
+      loadingRef.current = false;
       if (!onReadyCalledRef.current) {
         onReadyCalledRef.current = true;
         onReady?.();
@@ -154,14 +215,23 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
     } else {
       // If no jobs, just show empty results
       onFilteredJobsChange(jobs);
+      onFilterStateChange?.(false); // Notify parent: not filtered
       initialLoadCompleteRef.current = true;
-      setIsLoading(false);
+      if (isMounted) {
+        setIsLoading(false);
+      }
+      loadingRef.current = false;
       if (!onReadyCalledRef.current) {
         onReadyCalledRef.current = true;
         onReady?.();
       }
     }
-  }, [jobs, user, mounted, applyFilter, onFilteredJobsChange, onReady]);
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
+  }, [jobs, user, applyFilter, onFilteredJobsChange, onFilterStateChange, onReady]);
 
   const handleFilter = useCallback(async () => {
     if (filterValue.trim()) {
@@ -179,10 +249,14 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
         } else {
           console.error('Failed to save keywords to database:', result.error);
         }
+        // Re-enable filters when user applies them
+        jobsDataManager.setFilterDisabled(user.id, false);
       } else {
         // For anonymous users: Save to localStorage
         console.log('Saving filter to localStorage for anonymous user');
         searchStorage.savePageFilter(filterValue);
+        // Re-enable filters when user applies them
+        searchStorage.setFilterDisabled('anonymous', false);
       }
     }
     
@@ -195,7 +269,17 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
     setFiltersApplied(false);
     setAppliedKeywords([]);
     onFilteredJobsChange(jobs);
-  }, [jobs, onFilteredJobsChange]);
+    onFilterStateChange?.(false); // Notify parent: not filtered
+    
+    // Save filter disabled state when user manually clears
+    if (user) {
+      jobsDataManager.setFilterDisabled(user.id, true);
+      console.log('Filter disabled for user:', user.id);
+    } else {
+      searchStorage.setFilterDisabled('anonymous', true);
+      console.log('Filter disabled for anonymous user');
+    }
+  }, [jobs, onFilteredJobsChange, onFilterStateChange, user]);
 
   const handleKeyPress = useCallback((event: React.KeyboardEvent) => {
     if (event.key === 'Enter') {
@@ -217,7 +301,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
     return (
       <Stack gap="xs">
         <Text size="sm" c="dimmed">
-          Filtered by keywords: {appliedKeywords.join(', ')}
+          {appliedKeywords.join(', ')}
         </Text>
         <div>
           <TextButton onClick={handleClear} size="sm" leftSection={<IconX size={16} />}>
@@ -266,7 +350,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
         // Desktop layout: Single row
         <Group gap="md" align="end" wrap="nowrap">
           <TextInput
-            placeholder={filterValue ? undefined : "Use comma-separated job titles as filters"}
+            placeholder={filterValue ? undefined : "Separate needed job titles by comma"}
             leftSection={<IconFilter style={{ width: rem(16), height: rem(16) }} />}
             value={filterValue}
             onChange={(event) => setFilterValue(event.currentTarget.value)}

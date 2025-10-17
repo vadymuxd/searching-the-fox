@@ -3,6 +3,7 @@ import { SearchFormData, Job } from '@/types/job';
 const SEARCH_DATA_KEY = 'searchingTheFox_searchData';
 const SEARCH_RESULTS_KEY = 'searchingTheFox_searchResults';
 const PAGE_FILTER_KEY = 'searchingTheFox_pageFilter';
+const FILTER_DISABLED_KEY = 'searchingTheFox_filterDisabled';
 
 export const searchStorage = {
   // Save search criteria
@@ -129,6 +130,35 @@ export const searchStorage = {
       }
     } catch (error) {
       console.warn('Failed to check page filter in localStorage:', error);
+    }
+    return false;
+  },
+
+  // Save filter disabled state (when user manually clears filters)
+  setFilterDisabled: (userId: string, disabled: boolean): void => {
+    try {
+      if (typeof window !== 'undefined') {
+        const key = `${FILTER_DISABLED_KEY}_${userId}`;
+        if (disabled) {
+          localStorage.setItem(key, 'true');
+        } else {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to save filter disabled state:', error);
+    }
+  },
+
+  // Check if filter is disabled for user
+  isFilterDisabled: (userId: string): boolean => {
+    try {
+      if (typeof window !== 'undefined') {
+        const key = `${FILTER_DISABLED_KEY}_${userId}`;
+        return localStorage.getItem(key) === 'true';
+      }
+    } catch (error) {
+      console.warn('Failed to check filter disabled state:', error);
     }
     return false;
   },

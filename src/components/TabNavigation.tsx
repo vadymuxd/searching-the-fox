@@ -5,8 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import { Tabs, Container, Box } from '@mantine/core';
 import { useMantineTheme } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { jobsDataManager } from '@/lib/jobsDataManager';
 
 // Job status types based on database enum
 export type JobStatus = 'new' | 'interested' | 'applied' | 'progressed' | 'rejected' | 'archived';
@@ -29,12 +30,79 @@ interface TabNavigationProps {
 export function TabNavigation({ onAuthRequired, onTabChange, backgroundColor }: TabNavigationProps & { backgroundColor?: string } = {}) {
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const [jobCounts, setJobCounts] = useState<Record<JobStatus, number>>({
+    new: 0,
+    interested: 0,
+    applied: 0,
+    progressed: 0,
+    rejected: 0,
+    archived: 0,
+  });
 
   // Get the current active tab from query parameters
   const getCurrentTab = () => {
     const status = searchParams.get('status');
     return status || 'new';
   };
+
+  // Load job counts from cache
+  useEffect(() => {
+    const loadJobCounts = async () => {
+      try {
+        if (typeof window === 'undefined') return;
+
+        if (user) {
+          // For authenticated users, get counts from jobsDataManager cache
+          const cachedData = localStorage.getItem('searchingTheFox_cachedJobs');
+          if (cachedData) {
+            const parsedData = JSON.parse(cachedData);
+            setJobCounts({
+              new: parsedData.new?.length || 0,
+              interested: parsedData.interested?.length || 0,
+              applied: parsedData.applied?.length || 0,
+              progressed: parsedData.progressed?.length || 0,
+              rejected: parsedData.rejected?.length || 0,
+              archived: parsedData.archived?.length || 0,
+            });
+          }
+        } else {
+          // For guest users, get count from localStorage (searchResults)
+          const guestData = localStorage.getItem('searchingTheFox_searchResults');
+          if (guestData) {
+            const parsedData = JSON.parse(guestData);
+            const jobs = parsedData.jobs || [];
+            setJobCounts({
+              new: jobs.length,
+              interested: 0,
+              applied: 0,
+              progressed: 0,
+              rejected: 0,
+              archived: 0,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error loading job counts:', error);
+      }
+    };
+
+    loadJobCounts();
+
+    // Set up a listener for localStorage changes to update counts in real-time
+    const handleStorageChange = () => {
+      loadJobCounts();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    // Also listen for custom events for same-tab updates
+    window.addEventListener('jobsUpdated', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('jobsUpdated', handleStorageChange);
+    };
+  }, [user]);
+
 
   const theme = useMantineTheme();
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
@@ -112,6 +180,7 @@ export function TabNavigation({ onAuthRequired, onTabChange, backgroundColor }: 
                 const isActive = currentTab === tab.value;
                 const isFirstTab = index === 0;
                 const isLastTab = index === JOB_TABS.length - 1;
+                const count = jobCounts[tab.value as JobStatus];
                 return (
                   <span key={tab.value} style={{ display: 'inline-flex', alignItems: 'center' }}>
                     <Tabs.Tab
@@ -128,9 +197,28 @@ export function TabNavigation({ onAuthRequired, onTabChange, backgroundColor }: 
                         paddingBottom: '8px',
                         marginRight: 0,
                         whiteSpace: 'nowrap',
+                        position: 'relative',
                       }}
                     >
-                      {tab.label}
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {tab.label}
+                        {count > 0 && (
+                          <span style={{
+                            backgroundColor: isActive ? '#000000' : '#BEBEC1',
+                            color: '#FFFFFF',
+                            fontSize: '0.625rem',
+                            fontWeight: 'bold',
+                            padding: '2px 6px',
+                            borderRadius: '10px',
+                            lineHeight: '1',
+                            minWidth: '18px',
+                            textAlign: 'center',
+                            display: 'inline-block',
+                          }}>
+                            {count}
+                          </span>
+                        )}
+                      </span>
                     </Tabs.Tab>
                     {!isLastTab && (
                       <span style={{
@@ -187,6 +275,7 @@ export function TabNavigation({ onAuthRequired, onTabChange, backgroundColor }: 
               const isActive = currentTab === tab.value;
               const isFirstTab = index === 0; // Check if it's the first tab ("New")
               const isLastTab = index === JOB_TABS.length - 1;
+              const count = jobCounts[tab.value as JobStatus];
               
               return (
                 <React.Fragment key={tab.value}>
@@ -197,9 +286,28 @@ export function TabNavigation({ onAuthRequired, onTabChange, backgroundColor }: 
                       fontWeight: 'bold',
                       fontSize: '1.25rem',
                       paddingLeft: isFirstTab ? '0px' : undefined, // Remove left padding for first tab
+                      position: 'relative',
                     }}
                   >
-                    {tab.label}
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {tab.label}
+                      {count > 0 && (
+                        <span style={{
+                          backgroundColor: isActive ? '#000000' : '#BEBEC1',
+                          color: '#FFFFFF',
+                          fontSize: '0.75rem',
+                          fontWeight: 'bold',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          lineHeight: '1',
+                          minWidth: '20px',
+                          textAlign: 'center',
+                          display: 'inline-block',
+                        }}>
+                          {count}
+                        </span>
+                      )}
+                    </span>
                   </Tabs.Tab>
                   {!isLastTab && (
                     <span style={{ 

@@ -32,6 +32,8 @@ interface CachedJobsMetadata {
   keywordsUpdatedAt?: string;
   preferences?: UserPreferences;
   preferencesUpdatedAt?: string;
+  filterDisabled?: boolean;
+  filterDisabledUpdatedAt?: string;
 }
 
 class JobsDataManager {
@@ -476,6 +478,52 @@ class JobsDataManager {
     }
 
     return this.isTimestampFresh(metadata.preferencesUpdatedAt, PREFERENCES_CACHE_TTL_HOURS);
+  }
+
+  /**
+   * Set filter disabled state (when user manually clears filters)
+   */
+  setFilterDisabled(userId: string, disabled: boolean): void {
+    try {
+      this.updateMetadata(userId, metadata => ({
+        ...metadata,
+        filterDisabled: disabled,
+        filterDisabledUpdatedAt: new Date().toISOString(),
+      }));
+    } catch (error) {
+      console.error('Error setting filter disabled state:', error);
+    }
+  }
+
+  /**
+   * Check if filter is disabled for user
+   */
+  isFilterDisabled(userId: string): boolean {
+    try {
+      if (typeof window === 'undefined') {
+        return false;
+      }
+      
+      // First check in-memory metadata
+      const metadata = this.getMetadataForUser(userId);
+      if (metadata && metadata.filterDisabled !== undefined) {
+        return metadata.filterDisabled;
+      }
+      
+      // Fallback to localStorage if not in memory
+      const cachedMetadata = localStorage.getItem(CACHED_JOBS_METADATA_KEY);
+      if (cachedMetadata) {
+        const parsed = JSON.parse(cachedMetadata) as CachedJobsMetadata;
+        if (parsed.userId === userId) {
+          return parsed.filterDisabled || false;
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error checking filter disabled state:', error);
+      return false;
+    }
   }
 
   // Private methods for cache management
