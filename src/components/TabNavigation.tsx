@@ -16,7 +16,7 @@ const JOB_TABS = [
   { value: 'new', label: 'New' },
   { value: 'interested', label: 'Interested' },
   { value: 'applied', label: 'Applied' },
-  { value: 'progressed', label: 'In Progress' },
+  { value: 'progressed', label: 'Progressed' },
   { value: 'rejected', label: 'Rejected' },
   { value: 'archived', label: 'Archived' },
 ];
