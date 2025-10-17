@@ -43,6 +43,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
   const initialLoadCompleteRef = useRef(false);
   const onReadyCalledRef = useRef(false);
   const loadingRef = useRef(false); // Prevent concurrent loads
+  const mountedRef = useRef(false); // Track component mount state
 
   // Memoize the filter application logic
   const applyFilter = useCallback((filterText: string, jobList: Job[]) => {
@@ -80,7 +81,8 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
 
   // Check if there are saved filters on component mount
   useEffect(() => {
-    console.log('PageFilter effect triggered - user:', user?.id || 'anonymous', 'jobs.length:', jobs.length, 'loading:', loadingRef.current);
+  console.log('PageFilter effect triggered - user:', user?.id || 'anonymous', 'jobs.length:', jobs.length, 'loading:', loadingRef.current);
+  mountedRef.current = true;
     
     let isMounted = true; // Track if component is still mounted
     
@@ -118,134 +120,88 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
     // Load filter - database for authenticated users ONLY, localStorage for anonymous users ONLY
     const loadFilter = async () => {
       loadingRef.current = true;
-      if (isMounted) {
-        setIsLoading(true);
-      }
+      if (isMounted) setIsLoading(true);
       let savedFilter: string | null = null;
-      
-      // ALWAYS reset filter value first when user changes to prevent contamination
+      let skipApplyingFilter = false; // if true, don't apply even if savedFilter exists (e.g., disabled)
+
+      // ALWAYS reset filter UI first to avoid stale flashes
       if (isMounted) {
         setFilterValue('');
         setFiltersApplied(false);
         setAppliedKeywords([]);
       }
-      
-      if (user) {
-        // For authenticated users: ONLY use database, ignore localStorage completely
-        console.log('Loading filter for authenticated user:', user.id);
-        
-        // First check if there are saved keywords
-        const { success, keywords } = await jobsDataManager.getUserKeywords(user.id);
-        if (success && keywords.length > 0) {
-          savedFilter = keywords.join(', ');
-          if (isMounted) {
-            setHasSavedKeywords(true);
+
+      try {
+        if (user) {
+          // Quick cached path for immediate UI
+          const filterDisabled = jobsDataManager.isFilterDisabled(user.id);
+          skipApplyingFilter = filterDisabled;
+          const cached = jobsDataManager.getCachedKeywords(user.id);
+          if (isMounted) setHasSavedKeywords(Array.isArray(cached) && cached.length > 0);
+          if (cached && cached.length > 0) {
+            savedFilter = cached.join(', ');
           }
-          console.log('Loaded keywords from cache layer:', keywords);
         } else {
-          if (isMounted) {
-            setHasSavedKeywords(false);
-          }
-          console.log('No keywords found for user');
+          // Guest path
+          const filterDisabled = searchStorage.isFilterDisabled('anonymous');
+          skipApplyingFilter = filterDisabled;
+          const savedKeywords = searchStorage.loadPageFilter();
+          if (isMounted) setHasSavedKeywords(!!(savedKeywords && savedKeywords.trim()));
+          savedFilter = savedKeywords;
         }
-        
-        // Check if user has manually disabled filters
-        const filterDisabled = jobsDataManager.isFilterDisabled(user.id);
-        if (filterDisabled) {
-          console.log('Filter disabled by user preference');
-          // Don't apply any filter but keep the saved keywords state
+
+        // Apply immediately based on cached/local values
+        if (!skipApplyingFilter && savedFilter && savedFilter.trim()) {
+          if (isMounted) {
+            setFilterValue(savedFilter);
+            applyFilter(savedFilter, jobs);
+          }
+        } else {
           onFilteredJobsChange(jobs);
-          onFilterStateChange?.(false); // Notify parent: not filtered
-          initialLoadCompleteRef.current = true;
-          if (isMounted) {
-            setIsLoading(false);
-          }
-          loadingRef.current = false;
-          if (!onReadyCalledRef.current) {
-            onReadyCalledRef.current = true;
-            onReady?.();
-          }
-          return;
+          onFilterStateChange?.(false);
         }
-        // If no keywords in database, don't use any filter (don't fallback to localStorage)
-      } else {
-        // For anonymous users: ONLY use localStorage
-        console.log('Loading filter for anonymous user from localStorage');
-        
-        // Check if user has manually disabled filters
-        const filterDisabled = searchStorage.isFilterDisabled('anonymous');
-        
-        // Check if there are saved keywords
-        const savedKeywords = searchStorage.loadPageFilter();
-        if (isMounted) {
-          setHasSavedKeywords(!!(savedKeywords && savedKeywords.trim()));
-        }
-        
-        if (filterDisabled) {
-          console.log('Filter disabled by user preference');
-          // Don't apply any filter
-          onFilteredJobsChange(jobs);
-          onFilterStateChange?.(false); // Notify parent: not filtered
-          initialLoadCompleteRef.current = true;
-          if (isMounted) {
-            setIsLoading(false);
-          }
-          loadingRef.current = false;
-          if (!onReadyCalledRef.current) {
-            onReadyCalledRef.current = true;
-            onReady?.();
-          }
-          return;
-        }
-        
-        savedFilter = savedKeywords;
-      }
-      
-      // Auto-apply saved filter on mount ONLY if there is a saved filter
-      if (savedFilter && savedFilter.trim()) {
-        if (isMounted) {
-          setFilterValue(savedFilter);
-          // Apply filter to jobs list (this will notify parent via applyFilter)
-          applyFilter(savedFilter, jobs);
-        }
-      } else {
-        // No saved filter: show all jobs without filtering
+
+        // Mark initial load done and render UI now
+        initialLoadCompleteRef.current = true;
+        if (isMounted) setIsLoading(false);
+      } catch (e) {
+        console.error('PageFilter fast path error', e);
         onFilteredJobsChange(jobs);
-        onFilterStateChange?.(false); // Notify parent: not filtered
+        onFilterStateChange?.(false);
+        initialLoadCompleteRef.current = true;
+        if (isMounted) setIsLoading(false);
+      } finally {
+        loadingRef.current = false;
+        if (!onReadyCalledRef.current) {
+          onReadyCalledRef.current = true;
+          onReady?.();
+        }
       }
-      
-      initialLoadCompleteRef.current = true;
-      if (isMounted) {
-        setIsLoading(false);
-      }
-      loadingRef.current = false;
-      if (!onReadyCalledRef.current) {
-        onReadyCalledRef.current = true;
-        onReady?.();
+
+      // Background refresh for authenticated users to update hasSavedKeywords without blocking UI
+      if (user) {
+        (async () => {
+          try {
+            const { success, keywords } = await jobsDataManager.getUserKeywords(user.id);
+            if (!mountedRef.current) return;
+            if (success) {
+              setHasSavedKeywords(Array.isArray(keywords) && keywords.length > 0);
+              // Optionally update cached state internally; do NOT auto-apply here to avoid jarring changes
+            }
+          } catch (e) {
+            console.warn('Background keywords refresh failed', e);
+          }
+        })();
       }
     };
     
-    // Only load if we have jobs to filter
-    if (jobs.length > 0) {
-      loadFilter();
-    } else {
-      // If no jobs, just show empty results
-      onFilteredJobsChange(jobs);
-      onFilterStateChange?.(false); // Notify parent: not filtered
-      initialLoadCompleteRef.current = true;
-      if (isMounted) {
-        setIsLoading(false);
-      }
-      loadingRef.current = false;
-      if (!onReadyCalledRef.current) {
-        onReadyCalledRef.current = true;
-        onReady?.();
-      }
-    }
+    // Kick off loading regardless of jobs; when there are no jobs we simply don't apply filters
+    loadFilter();
     
     // Cleanup function
     return () => {
       isMounted = false;
+      mountedRef.current = false;
     };
   }, [jobs, user, applyFilter, onFilteredJobsChange, onFilterStateChange, onReady]);
 

@@ -50,6 +50,31 @@ class JobsDataManager {
   }
 
   /**
+   * Quick check: do we have any cached keywords for this user (from metadata/localStorage)?
+   * Does NOT trigger any server calls.
+   */
+  hasCachedKeywords(userId: string): boolean {
+    try {
+      const metadata = this.getMetadataForUser(userId);
+      return Array.isArray(metadata?.keywords) && (metadata!.keywords!.length > 0);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get cached keywords array if available (no server call)
+   */
+  getCachedKeywords(userId: string): string[] {
+    try {
+      const metadata = this.getMetadataForUser(userId);
+      return Array.isArray(metadata?.keywords) ? (metadata!.keywords as string[]) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * Load jobs for authenticated users with cache-first strategy
    */
   async getJobsForUser(userId: string, status?: string): Promise<{ success: boolean; jobs: Job[]; fromCache: boolean; error?: string }> {
@@ -581,6 +606,9 @@ class JobsDataManager {
         keywordsUpdatedAt: existingMetadata?.keywordsUpdatedAt,
         preferences: existingMetadata?.preferences,
         preferencesUpdatedAt: existingMetadata?.preferencesUpdatedAt,
+        // Preserve filterDisabled flags across cache refreshes
+        filterDisabled: existingMetadata?.filterDisabled,
+        filterDisabledUpdatedAt: existingMetadata?.filterDisabledUpdatedAt,
       };
 
       localStorage.setItem(CACHED_JOBS_KEY, JSON.stringify(jobs));
