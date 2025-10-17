@@ -54,6 +54,11 @@ export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, o
         // All updates successful - sync cache with database
         await jobsDataManager.syncWithDatabase(user.id, undefined, true);
         
+        // Dispatch custom event to update job counters in TabNavigation
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('jobsUpdated'));
+        }
+        
         notifications.show({
           title: 'Jobs Updated',
           message: `Successfully moved ${selectedJobs.length} job${selectedJobs.length > 1 ? 's' : ''} to "${STATUS_OPTIONS.find(s => s.value === newStatus)?.label}"`,
@@ -70,6 +75,11 @@ export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, o
           message: `${results.filter(r => r.success).length} jobs updated successfully, ${failedUpdates.length} failed`,
           color: 'yellow',
         });
+        
+        // Dispatch event even for partial updates to refresh counters
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('jobsUpdated'));
+        }
         
         // Still refresh to show partial updates
         onStatusUpdate();
@@ -106,6 +116,11 @@ export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, o
         // All removals successful - sync cache with database
         await jobsDataManager.syncWithDatabase(user.id, undefined, true);
         
+        // Dispatch custom event to update job counters in TabNavigation
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('jobsUpdated'));
+        }
+        
         notifications.show({
           title: 'Jobs Removed',
           message: `Successfully removed ${selectedJobs.length} job${selectedJobs.length > 1 ? 's' : ''} from your list`,
@@ -122,6 +137,11 @@ export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, o
           message: `${results.filter(r => r.success).length} jobs removed successfully, ${failedRemovals.length} failed`,
           color: 'yellow',
         });
+        
+        // Dispatch event even for partial removals to refresh counters
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('jobsUpdated'));
+        }
         
         // Still refresh to show partial updates
         onStatusUpdate();
