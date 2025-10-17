@@ -164,7 +164,7 @@ export function TabNavigation({ onAuthRequired, onTabChange, backgroundColor }: 
                 backgroundColor: 'transparent',
                 display: 'inline-flex',
                 alignItems: 'center',
-                fontSize: '1rem',
+                fontSize: '1.25rem',
                 fontWeight: 600,
                 marginRight: 0,
                 whiteSpace: 'nowrap',
@@ -188,7 +188,7 @@ export function TabNavigation({ onAuthRequired, onTabChange, backgroundColor }: 
                       style={{
                         color: isActive ? '#000000' : '#BEBEC1',
                         fontWeight: 'bold',
-                        fontSize: '1rem',
+                        fontSize: '1.25rem',
                         background: 'transparent',
                         borderRadius: 0,
                         paddingLeft: isFirstTab ? '0px' : '16px',
