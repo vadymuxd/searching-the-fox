@@ -12,8 +12,9 @@ import {
   ActionIcon,
 } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { IconFilter, IconX, IconCornerDownLeft } from '@tabler/icons-react';
+import { IconFilter, IconX, IconCornerDownLeft, IconDeviceFloppy } from '@tabler/icons-react';
 import { TextButton } from './TextButton';
+import { SecondaryButton } from './SecondaryButton';
 import { Job } from '@/types/job';
 import { searchStorage } from '@/lib/localStorage';
 import { jobsDataManager } from '@/lib/jobsDataManager';
@@ -34,6 +35,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
   const [appliedKeywords, setAppliedKeywords] = useState<string[]>([]);
   const [filtersApplied, setFiltersApplied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasSavedKeywords, setHasSavedKeywords] = useState(false);
   
   // Track if we've already loaded data for this user to prevent re-loading
   const userDataLoadedRef = useRef<string | null>(null);
@@ -132,11 +134,26 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
         // For authenticated users: ONLY use database, ignore localStorage completely
         console.log('Loading filter for authenticated user:', user.id);
         
+        // First check if there are saved keywords
+        const { success, keywords } = await jobsDataManager.getUserKeywords(user.id);
+        if (success && keywords.length > 0) {
+          savedFilter = keywords.join(', ');
+          if (isMounted) {
+            setHasSavedKeywords(true);
+          }
+          console.log('Loaded keywords from cache layer:', keywords);
+        } else {
+          if (isMounted) {
+            setHasSavedKeywords(false);
+          }
+          console.log('No keywords found for user');
+        }
+        
         // Check if user has manually disabled filters
         const filterDisabled = jobsDataManager.isFilterDisabled(user.id);
         if (filterDisabled) {
           console.log('Filter disabled by user preference');
-          // Don't apply any filter
+          // Don't apply any filter but keep the saved keywords state
           onFilteredJobsChange(jobs);
           onFilterStateChange?.(false); // Notify parent: not filtered
           initialLoadCompleteRef.current = true;
@@ -149,14 +166,6 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
             onReady?.();
           }
           return;
-        }
-        
-        const { success, keywords } = await jobsDataManager.getUserKeywords(user.id);
-        if (success && keywords.length > 0) {
-          savedFilter = keywords.join(', ');
-          console.log('Loaded keywords from cache layer:', keywords);
-        } else {
-          console.log('No keywords found for user');
         }
         // If no keywords in database, don't use any filter (don't fallback to localStorage)
       } else {
@@ -165,6 +174,13 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
         
         // Check if user has manually disabled filters
         const filterDisabled = searchStorage.isFilterDisabled('anonymous');
+        
+        // Check if there are saved keywords
+        const savedKeywords = searchStorage.loadPageFilter();
+        if (isMounted) {
+          setHasSavedKeywords(!!(savedKeywords && savedKeywords.trim()));
+        }
+        
         if (filterDisabled) {
           console.log('Filter disabled by user preference');
           // Don't apply any filter
@@ -182,7 +198,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
           return;
         }
         
-        savedFilter = searchStorage.loadPageFilter();
+        savedFilter = savedKeywords;
       }
       
       // Auto-apply saved filter on mount ONLY if there is a saved filter
@@ -246,6 +262,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
         const result = await jobsDataManager.saveUserKeywords(user.id, keywords);
         if (result.success) {
           console.log('Keywords saved successfully');
+          setHasSavedKeywords(true);
         } else {
           console.error('Failed to save keywords to database:', result.error);
         }
@@ -255,6 +272,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
         // For anonymous users: Save to localStorage
         console.log('Saving filter to localStorage for anonymous user');
         searchStorage.savePageFilter(filterValue);
+        setHasSavedKeywords(true);
         // Re-enable filters when user applies them
         searchStorage.setFilterDisabled('anonymous', false);
       }
@@ -280,6 +298,34 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
       console.log('Filter disabled for anonymous user');
     }
   }, [jobs, onFilteredJobsChange, onFilterStateChange, user]);
+
+  const handleUseRecentKeywords = useCallback(async () => {
+    let savedFilter: string | null = null;
+    
+    // Load saved keywords
+    if (user) {
+      const { success, keywords } = await jobsDataManager.getUserKeywords(user.id);
+      if (success && keywords.length > 0) {
+        savedFilter = keywords.join(', ');
+      }
+    } else {
+      savedFilter = searchStorage.loadPageFilter();
+    }
+    
+    if (savedFilter && savedFilter.trim()) {
+      // Re-enable filters
+      if (user) {
+        jobsDataManager.setFilterDisabled(user.id, false);
+      } else {
+        searchStorage.setFilterDisabled('anonymous', false);
+      }
+      
+      // Set and apply the filter
+      setFilterValue(savedFilter);
+      applyFilter(savedFilter, jobs);
+      console.log('Restored recent keywords:', savedFilter);
+    }
+  }, [user, jobs, applyFilter]);
 
   const handleKeyPress = useCallback((event: React.KeyboardEvent) => {
     if (event.key === 'Enter') {
@@ -317,40 +363,53 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
     <>
       {isMobile ? (
         // Mobile layout: Single line with right-side Enter icon inside the input
-        <TextInput
-          placeholder={filterValue ? undefined : "Filter by job titles with comma"}
-          leftSection={<IconFilter style={{ width: rem(16), height: rem(16) }} />}
-          rightSection={
-            <ActionIcon
-              variant="filled"
-              color="dark"
-              size={28}
-              radius="sm"
-              aria-label="Apply filter"
-              onClick={handleFilter}
-              title="Apply filter (Enter)"
-            >
-              <IconCornerDownLeft size={16} />
-            </ActionIcon>
-          }
-          value={filterValue}
-          onChange={(event) => setFilterValue(event.currentTarget.value)}
-          onKeyPress={handleKeyPress}
-          size="sm"
-          styles={{
-            input: {
-              '&::placeholder': {
-                color: '#868e96',
-                fontStyle: 'normal',
+        <Stack gap="xs">
+          <TextInput
+            placeholder={filterValue ? undefined : "Separate job titles by comma"}
+            leftSection={<IconFilter style={{ width: rem(16), height: rem(16) }} />}
+            rightSection={
+              <ActionIcon
+                variant="filled"
+                color="dark"
+                size={28}
+                radius="sm"
+                aria-label="Apply filter"
+                onClick={handleFilter}
+                title="Apply filter (Enter)"
+              >
+                <IconCornerDownLeft size={16} />
+              </ActionIcon>
+            }
+            value={filterValue}
+            onChange={(event) => setFilterValue(event.currentTarget.value)}
+            onKeyPress={handleKeyPress}
+            size="sm"
+            styles={{
+              input: {
+                '&::placeholder': {
+                  color: '#868e96',
+                  fontStyle: 'normal',
+                },
               },
-            },
-          }}
-        />
+            }}
+          />
+          {hasSavedKeywords && (
+            <div>
+              <TextButton 
+                onClick={handleUseRecentKeywords} 
+                size="sm" 
+                leftSection={<IconDeviceFloppy size={16} />}
+              >
+                Use recent keywords
+              </TextButton>
+            </div>
+          )}
+        </Stack>
       ) : (
         // Desktop layout: Single row
         <Group gap="md" align="end" wrap="nowrap">
           <TextInput
-            placeholder={filterValue ? undefined : "Separate needed job titles by comma"}
+            placeholder={filterValue ? undefined : "Separate job titles by comma"}
             leftSection={<IconFilter style={{ width: rem(16), height: rem(16) }} />}
             value={filterValue}
             onChange={(event) => setFilterValue(event.currentTarget.value)}
@@ -366,6 +425,16 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
               },
             }}
           />
+          
+          {hasSavedKeywords && (
+            <SecondaryButton
+              onClick={handleUseRecentKeywords}
+              size="sm"
+              leftSection={<IconDeviceFloppy size={16} />}
+            >
+              Use recent keywords
+            </SecondaryButton>
+          )}
           
           <Button
             onClick={handleFilter}
