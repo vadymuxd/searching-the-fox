@@ -7,6 +7,7 @@ import { notifications } from '@mantine/notifications';
 import { updateJobStatus, removeUserJob } from '@/lib/db/jobService';
 import { JobStatus } from '@/types/supabase';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { jobsDataManager } from '@/lib/jobsDataManager';
 
 interface MoveToButtonProps {
   selectedJobs: Array<{ userJobId: string; title: string; company: string }>;
@@ -34,12 +35,12 @@ export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, o
   const { user } = useAuth();
 
   const handleStatusChange = async (newStatus: JobStatus) => {
-    if (selectedJobs.length === 0) return;
+    if (selectedJobs.length === 0 || !user) return;
 
     setLoading(true);
     
     try {
-      // Update all selected jobs
+      // Update all selected jobs in database
       const updatePromises = selectedJobs.map(job => 
         updateJobStatus(job.userJobId, newStatus)
       );
@@ -50,7 +51,9 @@ export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, o
       const failedUpdates = results.filter(result => !result.success);
       
       if (failedUpdates.length === 0) {
-        // All updates successful
+        // All updates successful - sync cache with database
+        await jobsDataManager.syncWithDatabase(user.id, undefined, true);
+        
         notifications.show({
           title: 'Jobs Updated',
           message: `Successfully moved ${selectedJobs.length} job${selectedJobs.length > 1 ? 's' : ''} to "${STATUS_OPTIONS.find(s => s.value === newStatus)?.label}"`,
@@ -84,7 +87,7 @@ export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, o
   };
 
   const handleRemoveJobs = async () => {
-    if (selectedJobs.length === 0) return;
+    if (selectedJobs.length === 0 || !user) return;
 
     setLoading(true);
     
@@ -100,7 +103,9 @@ export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, o
       const failedRemovals = results.filter(result => !result.success);
       
       if (failedRemovals.length === 0) {
-        // All removals successful
+        // All removals successful - sync cache with database
+        await jobsDataManager.syncWithDatabase(user.id, undefined, true);
+        
         notifications.show({
           title: 'Jobs Removed',
           message: `Successfully removed ${selectedJobs.length} job${selectedJobs.length > 1 ? 's' : ''} from your list`,

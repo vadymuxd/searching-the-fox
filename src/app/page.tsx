@@ -25,6 +25,7 @@ import { saveJobsToDatabase } from '@/lib/db/jobService';
 import { saveLastSearch } from '@/lib/db/userPreferences';
 import { SearchFormData, JobSearchResponse } from '@/types/job';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { jobsDataManager } from '@/lib/jobsDataManager';
 
 export default function HomePage() {
   const router = useRouter();
@@ -100,7 +101,7 @@ export default function HomePage() {
       const localJobs = searchStorage.loadSearchResults();
       if (localJobs && localJobs.jobs.length > 0) {
         try {
-          await saveJobsToDatabase(localJobs.jobs, user.id);
+          await jobsDataManager.saveNewJobsAndSync(localJobs.jobs, user.id, localJobs.searchData);
           console.log('Migrated localStorage jobs to database');
           // Clear localStorage after successful migration
           searchStorage.clearSearchData();
@@ -159,11 +160,12 @@ export default function HomePage() {
       }
 
       if (response.success) {
-        // Auto-save to database for authenticated users
+        // Save jobs and redirect
         if (user) {
-          await saveJobsToDatabase(response.jobs, user.id);
+          // For authenticated users: save to database and sync with cache
+          await jobsDataManager.saveNewJobsAndSync(response.jobs, user.id, searchData);
         } else {
-          // Save to localStorage for anonymous users
+          // For guest users: save to localStorage
           searchStorage.saveSearchResults({
             jobs: response.jobs,
             searchStarted: true,
@@ -171,8 +173,8 @@ export default function HomePage() {
           });
         }
         
-        // Redirect to new jobs page immediately
-        router.push('/results/new');
+  // Redirect to results page (defaults to 'new' tab)
+  router.push('/results');
       } else {
         throw new Error(response.error || 'Failed to search jobs');
       }

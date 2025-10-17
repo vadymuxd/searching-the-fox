@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Tabs, Container, Box } from '@mantine/core';
 import { useMantineTheme } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
@@ -13,27 +13,28 @@ export type JobStatus = 'new' | 'interested' | 'applied' | 'progressed' | 'rejec
 
 // Tab configuration
 const JOB_TABS = [
-  { value: 'new', label: 'New', path: '/results/new' },
-  { value: 'interested', label: 'Interested', path: '/results/interested' },
-  { value: 'applied', label: 'Applied', path: '/results/applied' },
-  { value: 'progressed', label: 'In Progress', path: '/results/progressed' },
-  { value: 'rejected', label: 'Rejected', path: '/results/rejected' },
-  { value: 'archived', label: 'Archived', path: '/results/archived' },
+  { value: 'new', label: 'New' },
+  { value: 'interested', label: 'Interested' },
+  { value: 'applied', label: 'Applied' },
+  { value: 'progressed', label: 'In Progress' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'archived', label: 'Archived' },
 ];
 
 interface TabNavigationProps {
   onAuthRequired?: () => void;
+  onTabChange?: (status: JobStatus) => void;
 }
 
-export function TabNavigation({ onAuthRequired, backgroundColor }: TabNavigationProps & { backgroundColor?: string } = {}) {
+export function TabNavigation({ onAuthRequired, onTabChange, backgroundColor }: TabNavigationProps & { backgroundColor?: string } = {}) {
   const router = useRouter();
-  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
 
-  // Get the current active tab based on pathname
+  // Get the current active tab from query parameters
   const getCurrentTab = () => {
-    const currentTab = JOB_TABS.find(tab => tab.path === pathname);
-    return currentTab?.value || 'new';
+    const status = searchParams.get('status');
+    return status || 'new';
   };
 
   const theme = useMantineTheme();
@@ -50,20 +51,18 @@ export function TabNavigation({ onAuthRequired, backgroundColor }: TabNavigation
 
   const handleTabChange = (value: string | null) => {
     if (!value) return;
-    
+
     // If user is not authenticated, trigger auth modal instead of navigation
     if (!user) {
       onAuthRequired?.();
       return;
     }
     
-    const tab = JOB_TABS.find(t => t.value === value);
-    if (tab) {
-      router.push(tab.path);
+    // Use onTabChange callback for client-side navigation
+    if (onTabChange) {
+      onTabChange(value as JobStatus);
     }
-  };
-
-  if (isMobile) {
+  };  if (isMobile) {
     return (
       <Box style={{ backgroundColor: backgroundColor || '#F8F9FA', paddingTop: '16px', paddingBottom: '16px' }}>
         <div
@@ -110,7 +109,8 @@ export function TabNavigation({ onAuthRequired, backgroundColor }: TabNavigation
           >
             <Tabs.List>
               {JOB_TABS.map((tab, index) => {
-                const isActive = pathname === tab.path;
+                const currentTab = getCurrentTab();
+                const isActive = currentTab === tab.value;
                 const isFirstTab = index === 0;
                 const isLastTab = index === JOB_TABS.length - 1;
                 return (
@@ -184,7 +184,8 @@ export function TabNavigation({ onAuthRequired, backgroundColor }: TabNavigation
         >
           <Tabs.List>
             {JOB_TABS.map((tab, index) => {
-              const isActive = pathname === tab.path;
+              const currentTab = getCurrentTab();
+              const isActive = currentTab === tab.value;
               const isFirstTab = index === 0; // Check if it's the first tab ("New")
               const isLastTab = index === JOB_TABS.length - 1;
               

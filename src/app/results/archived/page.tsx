@@ -1,5 +1,15 @@
-import JobsPageContent from '@/components/JobsPageContent';
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function ArchivedJobsPage() {
-  return <JobsPageContent status="archived" />;
+  const router = useRouter();
+  
+  useEffect(() => {
+    // Redirect to main results page, preserving the /archived path
+    router.replace('/results');
+  }, [router]);
+
+  return null;
 }

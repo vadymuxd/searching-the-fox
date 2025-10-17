@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User, Session } from '@supabase/supabase-js'
+import { jobsDataManager } from '@/lib/jobsDataManager'
 
 type AuthContextType = {
   user: User | null
@@ -51,6 +52,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
+        
+        // Trigger sync when user signs in
+        if (event === 'SIGNED_IN' && session?.user) {
+          jobsDataManager.syncWithDatabase(session.user.id, undefined, true)
+            .catch(error => console.error('Error syncing on sign in:', error));
+        }
+        
+        // Clear cache when user signs out
+        if (event === 'SIGNED_OUT') {
+          jobsDataManager.clearCache();
+        }
       }
     })
 

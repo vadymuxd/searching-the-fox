@@ -30,12 +30,14 @@ import { getUserPreferences, saveLastSearch } from '@/lib/db/userPreferences';
 import { Job, SearchFormData } from '@/types/job';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { SITE_OPTIONS } from '@/lib/api';
+import { jobsDataManager } from '@/lib/jobsDataManager';
 
 interface JobsPageContentProps {
   status?: 'new' | 'interested' | 'applied' | 'progressed' | 'rejected' | 'archived';
+  onTabChange?: (newStatus: 'new' | 'interested' | 'applied' | 'progressed' | 'rejected' | 'archived') => void;
 }
 
-export default function JobsPageContent({ status }: JobsPageContentProps) {
+export default function JobsPageContent({ status, onTabChange }: JobsPageContentProps) {
   const theme = useMantineTheme();
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
   const router = useRouter();
@@ -61,28 +63,39 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
 
 
 
-  // Load user jobs from database
-  const loadUserJobsFromDb = useCallback(async (userId: string) => {
+  // Load user jobs with cache-first strategy
+  const loadUserJobsFromCache = useCallback(async (userId: string, forceSync = false) => {
     try {
-      // First, clear any existing data to ensure clean state for authenticated users
-      setJobs([]);
-      setFilteredJobs([]);
       setError(null);
       
-      const result = await getUserJobs(userId, status);
+      let result;
+      if (forceSync) {
+        // Force sync with database
+        result = await jobsDataManager.syncWithDatabase(userId, status, true);
+      } else {
+        // Cache-first strategy
+        result = await jobsDataManager.getJobsForUser(userId, status);
+      }
+      
       if (result.success) {
         setJobs(result.jobs);
         setFilteredJobs(result.jobs);
+        
+        // Load search data for authenticated users
+        const searchData = jobsDataManager.getCachedSearchData(userId);
+        if (searchData) {
+          setCurrentSearch(searchData);
+        }
       } else {
         setJobs([]);
         setFilteredJobs([]);
-        setError('Failed to load jobs from database');
+        setError(result.error || 'Failed to load jobs');
       }
     } catch (error) {
       console.error('Error loading user jobs:', error);
       setJobs([]);
       setFilteredJobs([]);
-      setError('Failed to load jobs from database');
+      setError('Failed to load jobs');
     }
   }, [status]);
 
@@ -91,14 +104,14 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
     setSearchDataLoading(true);
     
     if (user) {
-      await loadUserJobsFromDb(user.id);
+      await loadUserJobsFromCache(user.id);
       await loadUserPreferencesFromDb(user.id);
     } else {
       loadGuestData();
     }
     
     setSearchDataLoading(false);
-  }, [user, loadUserJobsFromDb]);
+  }, [user, loadUserJobsFromCache]);
 
   // React to auth/status changes by (re)loading data
   useEffect(() => {
@@ -112,17 +125,15 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
 
   // Load guest data from localStorage
   const loadGuestData = () => {
-    const savedResults = searchStorage.loadSearchResults();
-    if (savedResults) {
-      setJobs(savedResults.jobs);
-      setFilteredJobs(savedResults.jobs);
-      setCurrentSearch(savedResults.searchData);
+    const result = jobsDataManager.getJobsForGuest();
+    if (result.success) {
+      setJobs(result.jobs);
+      setFilteredJobs(result.jobs);
+      setCurrentSearch(result.searchData);
     } else {
-      // If no results, still try to load just the search form data
-      const savedSearchData = searchStorage.loadSearchData();
-      if (savedSearchData) {
-        setCurrentSearch(savedSearchData);
-      }
+      setJobs([]);
+      setFilteredJobs([]);
+      setCurrentSearch(null);
     }
   };
 
@@ -250,9 +261,9 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
   const handleStatusUpdate = useCallback(async () => {
     router.refresh();
     if (user) {
-      await loadUserJobsFromDb(user.id);
+      await loadUserJobsFromCache(user.id, true); // Force sync after status update
     }
-  }, [router, user, loadUserJobsFromDb]);
+  }, [router, user, loadUserJobsFromCache]);
 
   // Helper function to get readable job board name
   const getJobBoardName = (site: string) => {
@@ -277,9 +288,10 @@ export default function JobsPageContent({ status }: JobsPageContentProps) {
     <>
       {/* Header with Logo and Auth Button */}
       <Header onSignInClick={() => setAuthModalOpened(true)} />
-      
       {/* Tab Navigation - for all users */}
-      <TabNavigation onAuthRequired={handleAuthRequired} backgroundColor="#fff" />
+      <div style={{ marginBottom: isMobile ? 0 : 24 }}>
+        <TabNavigation onAuthRequired={handleAuthRequired} onTabChange={onTabChange} backgroundColor="#fff" />
+      </div>
 
   {/* Content area wrapper (below header/tabs) */}
   <Box style={{ position: 'relative', minHeight: '60vh' }}>
