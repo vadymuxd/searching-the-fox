@@ -283,6 +283,13 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
     }
   }, [user, jobs, applyFilter]);
 
+  // When jobs change (e.g., after refresh load), if filters are applied, re-apply to new jobs
+  useEffect(() => {
+    if (filtersApplied && filterValue.trim() && jobs.length > 0) {
+      applyFilter(filterValue, jobs);
+    }
+  }, [jobs, filtersApplied, filterValue, applyFilter]);
+
   const handleKeyPress = useCallback((event: React.KeyboardEvent) => {
     if (event.key === 'Enter') {
       handleFilter();
