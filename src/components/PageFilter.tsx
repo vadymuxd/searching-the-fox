@@ -16,7 +16,7 @@ import { IconFilter, IconX, IconCornerDownLeft } from '@tabler/icons-react';
 import { TextButton } from './TextButton';
 import { Job } from '@/types/job';
 import { searchStorage } from '@/lib/localStorage';
-import { getUserKeywords, saveUserKeywords } from '@/lib/db/userPreferences';
+import { jobsDataManager } from '@/lib/jobsDataManager';
 import { useAuth } from '@/lib/auth/AuthContext';
 
 interface PageFilterProps {
@@ -116,12 +116,12 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
       if (user) {
         // For authenticated users: ONLY use database, ignore localStorage completely
         console.log('Loading filter for authenticated user:', user.id);
-        const { success, keywords } = await getUserKeywords(user.id);
-        if (success && keywords && keywords.length > 0) {
+        const { success, keywords } = await jobsDataManager.getUserKeywords(user.id);
+        if (success && keywords.length > 0) {
           savedFilter = keywords.join(', ');
-          console.log('Loaded keywords from database:', keywords);
+          console.log('Loaded keywords from cache layer:', keywords);
         } else {
-          console.log('No keywords found in database for user');
+          console.log('No keywords found for user');
         }
         // If no keywords in database, don't use any filter (don't fallback to localStorage)
       } else {
@@ -173,9 +173,9 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady }: PageFilterPr
           .map(term => term.trim())
           .filter(term => term.length > 0);
         console.log('Saving keywords to database for user:', user.id, keywords);
-        const result = await saveUserKeywords(user.id, keywords);
+        const result = await jobsDataManager.saveUserKeywords(user.id, keywords);
         if (result.success) {
-          console.log('Keywords saved successfully to database');
+          console.log('Keywords saved successfully');
         } else {
           console.error('Failed to save keywords to database:', result.error);
         }

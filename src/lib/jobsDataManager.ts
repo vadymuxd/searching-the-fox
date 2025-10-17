@@ -3,11 +3,21 @@
 import { Job, SearchFormData } from '@/types/job';
 import { getUserJobs, saveJobsToDatabase } from '@/lib/db/jobService';
 import { searchStorage } from '@/lib/localStorage';
+import type { UserPreferences } from '@/lib/db/userPreferences';
+import {
+  getUserKeywords as fetchUserKeywords,
+  getUserPreferences as fetchUserPreferences,
+  saveLastSearch as saveLastSearchToDb,
+  saveUserKeywords as persistUserKeywords,
+} from '@/lib/db/userPreferences';
 
 // Storage keys for authenticated users
 const CACHED_JOBS_KEY = 'searchingTheFox_cachedJobs';
 const CACHED_JOBS_METADATA_KEY = 'searchingTheFox_cachedJobsMetadata';
 const LAST_SYNC_KEY = 'searchingTheFox_lastSync';
+const CACHE_TTL_HOURS = 1;
+const KEYWORDS_CACHE_TTL_HOURS = 6;
+const PREFERENCES_CACHE_TTL_HOURS = 1;
 
 interface CachedJobsData {
   [status: string]: Job[];
@@ -18,6 +28,10 @@ interface CachedJobsMetadata {
   userId: string;
   lastUpdated: string;
   searchData?: SearchFormData;
+  keywords?: string[];
+  keywordsUpdatedAt?: string;
+  preferences?: UserPreferences;
+  preferencesUpdatedAt?: string;
 }
 
 class JobsDataManager {
@@ -58,6 +72,166 @@ class JobsDataManager {
         jobs: [],
         fromCache: false,
         error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Load user keywords with cache-first strategy
+   */
+  async getUserKeywords(
+    userId: string,
+    forceSync = false
+  ): Promise<{ success: boolean; keywords: string[]; fromCache: boolean; error?: string }> {
+    try {
+      const metadata = this.getMetadataForUser(userId);
+
+      if (!forceSync && metadata && this.isTimestampFresh(metadata.keywordsUpdatedAt, KEYWORDS_CACHE_TTL_HOURS)) {
+        return {
+          success: true,
+          keywords: metadata.keywords || [],
+          fromCache: true,
+        };
+      }
+
+      const result = await fetchUserKeywords(userId);
+
+      if (!result.success) {
+        if (metadata?.keywords) {
+          return {
+            success: true,
+            keywords: metadata.keywords,
+            fromCache: true,
+          };
+        }
+
+        return {
+          success: false,
+          keywords: [],
+          fromCache: false,
+          error: result.error,
+        };
+      }
+
+      const keywords = result.keywords || [];
+      this.updateCachedKeywords(userId, keywords);
+
+      return {
+        success: true,
+        keywords,
+        fromCache: false,
+      };
+    } catch (error) {
+      console.error('Error getting user keywords:', error);
+      return {
+        success: false,
+        keywords: [],
+        fromCache: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Load user preferences with cache-first strategy
+   */
+  async getUserPreferences(
+    userId: string,
+    forceSync = false
+  ): Promise<{ success: boolean; preferences: UserPreferences | null; fromCache: boolean; error?: string }> {
+    try {
+      const metadata = this.getMetadataForUser(userId);
+
+      if (!forceSync && metadata && this.isTimestampFresh(metadata.preferencesUpdatedAt, PREFERENCES_CACHE_TTL_HOURS)) {
+        return {
+          success: true,
+          preferences: metadata.preferences || null,
+          fromCache: true,
+        };
+      }
+
+      const result = await fetchUserPreferences(userId);
+
+      if (!result.success) {
+        if (metadata) {
+          return {
+            success: true,
+            preferences: metadata.preferences || null,
+            fromCache: true,
+          };
+        }
+
+        return {
+          success: false,
+          preferences: null,
+          fromCache: false,
+          error: result.error,
+        };
+      }
+
+      const preferences = result.preferences ?? null;
+      this.updateCachedPreferences(userId, preferences);
+
+      return {
+        success: true,
+        preferences,
+        fromCache: false,
+      };
+    } catch (error) {
+      console.error('Error getting user preferences:', error);
+      return {
+        success: false,
+        preferences: null,
+        fromCache: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Persist user keywords and update cache
+   */
+  async saveUserKeywords(
+    userId: string,
+    keywords: string[]
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const result = await persistUserKeywords(userId, keywords);
+
+      if (result.success) {
+        this.updateCachedKeywords(userId, keywords);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error saving user keywords:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Persist last search preferences and update cache
+   */
+  async saveLastSearch(
+    userId: string,
+    searchData: SearchFormData
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const result = await saveLastSearchToDb(userId, searchData);
+
+      if (result.success) {
+        this.updateSearchDataInCache(userId, searchData);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error saving last search:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -247,12 +421,49 @@ class JobsDataManager {
     try {
       const cached = this.getCachedJobsMetadata();
       if (cached.success && cached.metadata?.userId === userId) {
-        return cached.metadata.searchData || null;
+        if (cached.metadata.searchData) {
+          return cached.metadata.searchData;
+        }
+
+        if (cached.metadata.preferences?.lastSearch) {
+          return cached.metadata.preferences.lastSearch;
+        }
       }
     } catch (error) {
       console.error('Error getting cached search data:', error);
     }
     return null;
+  }
+
+  /**
+   * Update cached keywords manually (e.g., after saving)
+   */
+  updateCachedKeywords(userId: string, keywords: string[]): void {
+    try {
+      this.updateMetadata(userId, metadata => ({
+        ...metadata,
+        keywords,
+        keywordsUpdatedAt: new Date().toISOString(),
+      }));
+    } catch (error) {
+      console.error('Error updating cached keywords:', error);
+    }
+  }
+
+  /**
+   * Update cached preferences manually (e.g., after saving)
+   */
+  updateCachedPreferences(userId: string, preferences: UserPreferences | null): void {
+    try {
+      this.updateMetadata(userId, metadata => ({
+        ...metadata,
+        preferences: preferences || undefined,
+        preferencesUpdatedAt: new Date().toISOString(),
+        searchData: preferences?.lastSearch || metadata.searchData,
+      }));
+    } catch (error) {
+      console.error('Error updating cached preferences:', error);
+    }
   }
 
   // Private methods for cache management
@@ -281,7 +492,7 @@ class JobsDataManager {
       const now = new Date();
       const hoursSinceUpdate = (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60);
 
-      if (hoursSinceUpdate > 1) {
+      if (hoursSinceUpdate > CACHE_TTL_HOURS) {
         // Cache is too old
         return { success: false, data: null };
       }
@@ -300,17 +511,21 @@ class JobsDataManager {
     try {
       if (typeof window === 'undefined') return;
 
+      const existingMetadata = this.getMetadataForUser(userId);
+
       const metadata: CachedJobsMetadata = {
         userId,
         lastUpdated: new Date().toISOString(),
-        searchData: this.cachedMetadata?.searchData || undefined
+        searchData: existingMetadata?.searchData,
+        keywords: existingMetadata?.keywords,
+        keywordsUpdatedAt: existingMetadata?.keywordsUpdatedAt,
+        preferences: existingMetadata?.preferences,
+        preferencesUpdatedAt: existingMetadata?.preferencesUpdatedAt,
       };
 
       localStorage.setItem(CACHED_JOBS_KEY, JSON.stringify(jobs));
-      localStorage.setItem(CACHED_JOBS_METADATA_KEY, JSON.stringify(metadata));
-
       this.cachedJobs = jobs;
-      this.cachedMetadata = metadata;
+      this.saveMetadata(metadata);
     } catch (error) {
       console.error('Error setting cached jobs:', error);
     }
@@ -377,19 +592,67 @@ class JobsDataManager {
 
   private updateSearchDataInCache(userId: string, searchData: SearchFormData): void {
     try {
-      if (!this.cachedMetadata || this.cachedMetadata.userId !== userId) return;
+      this.updateMetadata(userId, metadata => {
+        const updatedPreferences = metadata.preferences
+          ? { ...metadata.preferences, lastSearch: searchData }
+          : { lastSearch: searchData };
 
-      const updatedMetadata: CachedJobsMetadata = {
-        ...this.cachedMetadata,
-        searchData,
-        lastUpdated: new Date().toISOString()
-      };
-
-      localStorage.setItem(CACHED_JOBS_METADATA_KEY, JSON.stringify(updatedMetadata));
-      this.cachedMetadata = updatedMetadata;
+        return {
+          ...metadata,
+          searchData,
+          preferences: updatedPreferences,
+          preferencesUpdatedAt: new Date().toISOString(),
+        };
+      });
     } catch (error) {
       console.error('Error updating search data in cache:', error);
     }
+  }
+
+  private isTimestampFresh(timestamp?: string, ttlHours = CACHE_TTL_HOURS): boolean {
+    if (!timestamp) return false;
+
+    const parsed = new Date(timestamp);
+    if (Number.isNaN(parsed.getTime())) {
+      return false;
+    }
+
+    const hoursSinceUpdate = (Date.now() - parsed.getTime()) / (1000 * 60 * 60);
+    return hoursSinceUpdate < ttlHours;
+  }
+
+  private getMetadataForUser(userId: string): CachedJobsMetadata | null {
+    const cached = this.getCachedJobsMetadata();
+    if (cached.success && cached.metadata?.userId === userId) {
+      return cached.metadata;
+    }
+    return null;
+  }
+
+  private saveMetadata(metadata: CachedJobsMetadata): void {
+    if (typeof window === 'undefined') return;
+
+    localStorage.setItem(CACHED_JOBS_METADATA_KEY, JSON.stringify(metadata));
+    this.cachedMetadata = metadata;
+  }
+
+  private updateMetadata(userId: string, updater: (metadata: CachedJobsMetadata) => CachedJobsMetadata): void {
+    if (typeof window === 'undefined') return;
+
+    const existingMetadata = this.getMetadataForUser(userId);
+    const baseMetadata: CachedJobsMetadata = existingMetadata || {
+      userId,
+      lastUpdated: new Date().toISOString(),
+    };
+
+    const updatedMetadata = updater(baseMetadata);
+    const normalizedMetadata: CachedJobsMetadata = {
+      ...updatedMetadata,
+      userId,
+      lastUpdated: updatedMetadata.lastUpdated || baseMetadata.lastUpdated || new Date().toISOString(),
+    };
+
+    this.saveMetadata(normalizedMetadata);
   }
 }
 

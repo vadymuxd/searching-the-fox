@@ -21,7 +21,6 @@ import { Timer } from '@/components/Timer';
 import { LoadingInsightWithIcon as LoadingInsight } from '@/components/LoadingInsight';
 import { JobService } from '@/lib/api';
 import { searchStorage } from '@/lib/localStorage';
-import { saveLastSearch } from '@/lib/db/userPreferences';
 import { SearchFormData, JobSearchResponse } from '@/types/job';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { jobsDataManager } from '@/lib/jobsDataManager';
@@ -121,7 +120,7 @@ export default function HomePage() {
     // Save search parameters to database if user is authenticated
     if (user) {
       try {
-        await saveLastSearch(user.id, searchData);
+  await jobsDataManager.saveLastSearch(user.id, searchData);
       } catch (error) {
         console.error('Error saving search to database:', error);
       }

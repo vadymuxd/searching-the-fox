@@ -25,7 +25,6 @@ import { Header } from '@/components/Header';
 import { TabNavigation } from '@/components/TabNavigation';
 import { MoveToButton } from '@/components/MoveToButton';
 import { searchStorage } from '@/lib/localStorage';
-import { getUserPreferences, saveLastSearch } from '@/lib/db/userPreferences';
 import { Job, SearchFormData } from '@/types/job';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { SITE_OPTIONS } from '@/lib/api';
@@ -99,7 +98,7 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
     
     if (user) {
       await loadUserJobsFromCache(user.id);
-      await loadUserPreferencesFromDb(user.id);
+  await loadUserPreferences(user.id);
     } else {
       loadGuestData();
     }
@@ -132,9 +131,9 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
   };
 
   // Load user preferences from database
-  const loadUserPreferencesFromDb = async (userId: string) => {
+  const loadUserPreferences = async (userId: string) => {
     try {
-      const result = await getUserPreferences(userId);
+      const result = await jobsDataManager.getUserPreferences(userId);
       if (result.success && result.preferences?.lastSearch) {
         setCurrentSearch(result.preferences.lastSearch);
       }
@@ -217,7 +216,7 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
       try {
         // Save to both localStorage (for immediate homepage use) and database (for persistence)
         searchStorage.saveSearchData(currentSearch);
-        await saveLastSearch(user.id, currentSearch);
+  await jobsDataManager.saveLastSearch(user.id, currentSearch);
       } catch (error) {
         console.error('Error saving search preferences:', error);
       }
