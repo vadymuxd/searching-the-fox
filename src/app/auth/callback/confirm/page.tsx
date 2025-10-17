@@ -18,8 +18,8 @@ function ConfirmCallbackContent() {
       try {
         const supabase = createClient();
         const userId = searchParams.get('user_id');
-        const type = searchParams.get('type'); // 'email' or 'oauth'
-        const confirmed = searchParams.get('confirmed'); // 'true' for email confirmations
+        // const type = searchParams.get('type'); // 'email' or 'oauth'
+        // const confirmed = searchParams.get('confirmed'); // 'true' for email confirmations
 
         if (!userId) {
           throw new Error('User ID not provided');

@@ -21,7 +21,6 @@ import { Timer } from '@/components/Timer';
 import { LoadingInsightWithIcon as LoadingInsight } from '@/components/LoadingInsight';
 import { JobService } from '@/lib/api';
 import { searchStorage } from '@/lib/localStorage';
-import { saveJobsToDatabase } from '@/lib/db/jobService';
 import { saveLastSearch } from '@/lib/db/userPreferences';
 import { SearchFormData, JobSearchResponse } from '@/types/job';
 import { useAuth } from '@/lib/auth/AuthContext';

@@ -2,9 +2,6 @@ import { searchStorage } from '@/lib/localStorage';
 import { saveJobsToDatabase } from './jobService';
 import { saveLastSearch, saveUserKeywords } from './userPreferences';
 
-// Import types for server actions
-import type { Job, SearchFormData } from '@/types/job';
-
 export interface MigrationResult {
   success: boolean;
   jobsSaved: number;

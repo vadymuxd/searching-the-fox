@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import JobsPageContent from '@/components/JobsPageContent';
 
@@ -8,7 +8,7 @@ export type JobStatus = 'new' | 'interested' | 'applied' | 'progressed' | 'rejec
 
 const validStatuses: JobStatus[] = ['new', 'interested', 'applied', 'progressed', 'rejected', 'archived'];
 
-export default function ResultsPage() {
+function ResultsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -29,5 +29,13 @@ export default function ResultsPage() {
       status={currentStatus} 
       onTabChange={handleTabChange}
     />
+  );
+}
+
+export default function ResultsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ResultsPageContent />
+    </Suspense>
   );
 }

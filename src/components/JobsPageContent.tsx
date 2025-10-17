@@ -14,7 +14,7 @@ import {
 } from '@mantine/core';
 import { useMantineTheme } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import { IconInfoCircle, IconAlertCircle, IconRefresh, IconEdit, IconSquareCheck, IconSquare } from '@tabler/icons-react';
+import { IconInfoCircle, IconRefresh, IconEdit, IconSquareCheck, IconSquare } from '@tabler/icons-react';
 import { TextButton } from '@/components/TextButton';
 import { JobTable } from '@/components/JobTable';
 import { JobCard } from '@/components/JobCard';
@@ -25,7 +25,6 @@ import { Header } from '@/components/Header';
 import { TabNavigation } from '@/components/TabNavigation';
 import { MoveToButton } from '@/components/MoveToButton';
 import { searchStorage } from '@/lib/localStorage';
-import { getUserJobs } from '@/lib/db/jobService';
 import { getUserPreferences, saveLastSearch } from '@/lib/db/userPreferences';
 import { Job, SearchFormData } from '@/types/job';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -45,7 +44,6 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
   
   const [jobs, setJobs] = useState<Job[]>([]);
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [currentSearch, setCurrentSearch] = useState<SearchFormData | null>(null);
   const [selectedJobsCount, setSelectedJobsCount] = useState(0);
   const [totalSelectedJobs, setTotalSelectedJobs] = useState(0);
@@ -66,7 +64,6 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
   // Load user jobs with cache-first strategy
   const loadUserJobsFromCache = useCallback(async (userId: string, forceSync = false) => {
     try {
-      setError(null);
       
       let result;
       if (forceSync) {
@@ -89,18 +86,15 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
       } else {
         setJobs([]);
         setFilteredJobs([]);
-        setError(result.error || 'Failed to load jobs');
       }
     } catch (error) {
       console.error('Error loading user jobs:', error);
       setJobs([]);
       setFilteredJobs([]);
-      setError('Failed to load jobs');
     }
   }, [status]);
 
   const loadData = useCallback(async () => {
-    setError(null);
     setSearchDataLoading(true);
     
     if (user) {
