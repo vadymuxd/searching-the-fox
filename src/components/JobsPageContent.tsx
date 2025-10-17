@@ -98,7 +98,13 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
     
     if (user) {
       await loadUserJobsFromCache(user.id);
-  await loadUserPreferences(user.id);
+
+      const cachedSearch = jobsDataManager.getCachedSearchData(user.id);
+      const cacheIsFresh = jobsDataManager.hasFreshPreferences(user.id);
+
+      if (!cachedSearch || !cacheIsFresh) {
+        await loadUserPreferences(user.id, !cacheIsFresh);
+      }
     } else {
       loadGuestData();
     }
@@ -131,9 +137,9 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
   };
 
   // Load user preferences from database
-  const loadUserPreferences = async (userId: string) => {
+  const loadUserPreferences = async (userId: string, force = false) => {
     try {
-      const result = await jobsDataManager.getUserPreferences(userId);
+      const result = await jobsDataManager.getUserPreferences(userId, force);
       if (result.success && result.preferences?.lastSearch) {
         setCurrentSearch(result.preferences.lastSearch);
       }
@@ -299,11 +305,7 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
                 }}
               >
                 <Container size="xl">
-                  {searchDataLoading ? (
-                    <Text size="sm" c="dimmed">
-                      Loading search data...
-                    </Text>
-                  ) : currentSearch ? (
+                  {currentSearch ? (
                     <Stack gap="md">
                       {/* Search Summary */}
                       <Text size="sm" fw={400}>

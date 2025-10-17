@@ -466,6 +466,18 @@ class JobsDataManager {
     }
   }
 
+  /**
+   * Determine whether cached preferences are still fresh enough to use without hitting the backend.
+   */
+  hasFreshPreferences(userId: string): boolean {
+    const metadata = this.getMetadataForUser(userId);
+    if (!metadata) {
+      return false;
+    }
+
+    return this.isTimestampFresh(metadata.preferencesUpdatedAt, PREFERENCES_CACHE_TTL_HOURS);
+  }
+
   // Private methods for cache management
 
   private getCachedJobs(userId: string): { success: boolean; data: CachedJobsData | null } {
