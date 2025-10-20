@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Progress, Stack, Text, Group } from '@mantine/core';
-import { IconCheck } from '@tabler/icons-react';
 
 interface ProgressToastProps {
   current: number;
@@ -23,7 +22,7 @@ export function ProgressToast({
     return (
       <Stack gap={4}>
         <Text size="sm">
-          Successfully updated {total} job{total !== 1 ? 's' : ''} to "{targetStatus}"
+          Successfully updated {total} job{total !== 1 ? 's' : ''} to &quot;{targetStatus}&quot;
         </Text>
       </Stack>
     );
@@ -33,7 +32,7 @@ export function ProgressToast({
     <Stack gap={6}>
       <Group justify="space-between" gap="xs">
         <Text size="sm">
-          Updating jobs to "{targetStatus}"
+          Updating jobs to &quot;{targetStatus}&quot;
         </Text>
         <Text size="sm" fw={500} c="dimmed">
           {current}/{total}

@@ -7,7 +7,6 @@ import { useMantineTheme } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { useRef, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { jobsDataManager } from '@/lib/jobsDataManager';
 
 // Job status types based on database enum
 export type JobStatus = 'new' | 'interested' | 'applied' | 'progressed' | 'rejected' | 'archived';
