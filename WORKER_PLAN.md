@@ -8,100 +8,339 @@ The primary goal is to improve user experience by proactively fetching fresh job
 
 This will be achieved by a scheduled worker that runs several times a day, performing job searches based on each user's last known search criteria.
 
-## 2. The Challenge: Scaling
+## 2. Current Limitations
 
-A simple, sequential approach (looping through users one by one in a single serverless function) is not scalable.
+A purely serverless approach remains infeasible because of familiar constraints, and we must also solve for new user experience goals (cross-device visibility into search progress).
 
-- **Vercel Timeouts:** Serverless functions on Vercel's free/pro tiers have a maximum execution time (e.g., 5 minutes). Processing hundreds of users sequentially would exceed this limit.
-- **Fragility:** A single long-running process is prone to failure. If one user's search fails midway, it could stop the entire process for all subsequent users.
-- **Inefficiency:** Sequential processing is slow. 100 users at ~1 minute each would take over 1.5 hours.
+- **Vercel timeouts:** Serverless functions on the free/pro tiers have strict runtime ceilings (~5 minutes). Sequentially scraping many users risks hitting this limit.
+- **Fragility today:** A single long-lived request on Render can still fail midway; we need better isolation, retries, and idempotency.
+- **Manual-search blind spot:** When a user kicks off a search from any client, the status lives only in local state. Closing the app or switching devices hides all progress.
+- **Lack of run tracking:** There is no persistent record tying the user, search parameters, triggering device, and current status together. Without it, meaningful UX updates are impossible.
 
-## 3. The Recommended Architecture: Offload and Parallelize
+## 3. Updated Architecture Overview
 
-The best practice for this scenario is to offload the heavy lifting from the web frontend (Vercel) to a dedicated background worker service (Render).
+We keep Render as the heavy-lift worker, but introduce a persistent search queue so every search (manual or automated) follows the same lifecycle. This gives us a single source of truth for status, enables cross-device UX, and allows gradual rollout.
 
 ![Architecture Diagram](https://i.imgur.com/eY2h4vW.png)
 
-### **Component Roles:**
+### Core Concepts
 
-1.  **Vercel (Next.js App): The "Trigger"**
-    *   **Role:** Its only job is to kick off the process. It should not perform any long-running tasks.
-    *   **Implementation:** A Vercel Cron Job will be configured to run at the specified UK times.
-    *   This cron job will call a single, lightweight API endpoint in your Next.js app (e.g., `/api/cron/trigger-worker`).
-    *   This endpoint's only responsibility is to immediately send a secure "start" signal to the Python worker on Render. It should complete in milliseconds.
+- **`search_runs` table (Supabase):** Stores one row per search attempt. Columns include `id`, `user_id`, `source` (`manual`, `cron`), `client_context` (optional metadata, e.g. device), `parameters`, `status` (`pending`, `running`, `success`, `failed`), timestamps, and an error field. This table powers UX and acts as the job queue.
+- **Unified enqueue flow:** Any time a search is triggered (button click or scheduled refresh) the Next.js app records a new `search_runs` entry and returns the identifier to the client.
+- **Render workers:** Poll or receive batches of pending runs, mark them `running`, execute the scrape, persist jobs, then mark the run `success` or `failed` with context.
+- **Frontend feedback loop:** Clients subscribe (Supabase realtime) or poll a lightweight API to reflect shared status. A user can close or swap devices and still see the exact progress of their latest search.
+- **Cron as a producer:** Vercel cron becomes just another enqueuer. It inserts a run per user instead of calling Render directly, keeping the trigger cheap and reliable.
 
-2.  **Render (Python `jobspy-service`): The "Worker"**
-    *   **Role:** This is where all the heavy lifting happens. It's designed for long-running, intensive tasks.
-    *   **Implementation:**
-        *   It will expose a new, secure endpoint (e.g., `/worker/run-all-searches`).
-        *   When triggered by Vercel, this endpoint will:
-            1.  **Fetch Users:** Connect to the Supabase database (using the Service Role Key) and retrieve all users who have saved search preferences.
-            2.  **Process in Parallel:** Instead of a simple loop, it will use a thread pool (`ThreadPoolExecutor`) to process multiple users concurrently. This is the key to speed and scalability. For example, it can process 5-10 users at the same time.
-            3.  **Execute Searches:** For each user, it will call the existing `jobspy` scraping logic.
-            4.  **Save to Database:** It will handle the logic to save new jobs to the `jobs` table and link them to users in the `user_jobs` table.
-        *   This entire process runs on Render, independent of Vercel's timeouts.
+### Component Roles
 
-### **Security:**
+1. **Next.js application**
+   - Collects search parameters from either the user or scheduled jobs.
+   - Creates `search_runs` entries and responds immediately with the ongoing status ID.
+   - Exposes authenticated APIs to list and inspect run status for the user.
 
-*   The connection between Vercel and Render will be secured with a shared secret key (`CRON_SECRET`). The Render worker will reject any requests that don't provide this key.
-*   The Render worker will use the `SUPABASE_SERVICE_ROLE_KEY` to bypass Row Level Security, allowing it to work on behalf of all users. This key must be stored securely in Render's environment variables.
+2. **Supabase database**
+   - Persists `search_runs` rows and enforces ownership via RLS (users see only their runs; Render operates with service key).
+   - Optionally publishes realtime updates when rows change.
 
-## 4. Implementation Steps
+3. **Render `jobspy-service`**
+   - Polls for pending runs in manageable batches (configurable batch size) to avoid timeouts.
+   - Marks runs `running` before work, updates `status` and `error` on completion, and writes job results as today.
+   - Runs under the service role key so it can process any user.
 
-### **Step 1: Enhance the Python Worker (Render)**
+4. **Vercel Cron**
+   - Inserts scheduled runs (`source = 'cron'`) at desired intervals.
+   - Remains ignorant of worker internals, improving reliability and simplifying secrets management.
 
-1.  **Add Dependencies:**
-    *   Add `supabase-py` to `jobspy-service/requirements.txt` to allow database access.
-    *   Add `python-dotenv` for managing environment variables locally.
+### Security Considerations
 
-2.  **Configure Environment:**
-    *   Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to the environment variables on Render.
+- Store `CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, and any queue polling credentials in dedicated environments with rotation procedures.
+- Rate-limit public trigger endpoints and log all run creation events for auditing.
+- Consider IP allow-lists or signed requests for Render webhooks if we expose push triggers later.
 
-3.  **Create a New Worker Endpoint (`/worker/run-all-searches`):**
-    *   This endpoint will contain the main logic:
-        *   Initialize a Supabase client.
-        *   Fetch all users and their `preferences->lastSearch`.
-        *   Create a `ThreadPoolExecutor` to manage concurrent processing.
-        *   Loop through users and submit a "process user" task to the thread pool for each one.
-        *   The "process user" function will contain the `scrape_jobs` and database-saving logic.
-    *   This ensures that if one user's search fails, it does not block the others.
+## 4. Execution Roadmap (Incremental Releases)
 
-### **Step 2: Simplify the Vercel Trigger**
+Each release has a clear goal, user value, and testing plan. Releases are kept small to minimise risk and ensure each step can be tested independently.
 
-1.  **Create a single API Route (`/api/cron/trigger-worker`):**
-    *   This route will be extremely simple.
-    *   It will read the `CRON_SECRET` and the `RENDER_WORKER_URL` from environment variables.
-    *   It will make a single `POST` request to the Render worker's `/worker/run-all-searches` endpoint, passing the secret in the headers.
-    *   It will **not** wait for a response (fire-and-forget). It should return a `202 Accepted` status immediately.
+---
 
-### **Step 3: Configure Vercel Cron**
+### Release 1 – Database Foundation: Track Search Runs
 
-1.  **Create a `vercel.json` file:**
-    *   Define the cron schedule to hit the `/api/cron/trigger-worker` endpoint at the desired UK times (8:00, 10:00, 14:00, 16:00, 16:45, 22:00).
-    *   It's crucial to specify the timezone as `Europe/London` to handle daylight saving changes automatically.
+**Goal:** Create the database infrastructure to persist search run metadata without changing any user-facing behavior.
 
-```json
-{
-  "crons": [
-    {
-      "path": "/api/cron/trigger-worker",
-      "schedule": "0 8,10,14,16,22 * * *",
-      "timezone": "Europe/London"
-    },
-    {
-      "path": "/api/cron/trigger-worker",
-      "schedule": "45 16 * * *",
-      "timezone": "Europe/London"
-    }
-  ]
-}
-```
+**User Value:** None yet (foundational work). This enables future releases.
 
-## 5. Benefits of this Approach
+**Implementation:**
+- Create `search_runs` table in Supabase with columns:
+  - `id` (UUID, primary key)
+  - `user_id` (UUID, foreign key to users)
+  - `source` (ENUM: `manual`, `cron`)
+  - `client_context` (JSONB, nullable - stores device/browser info)
+  - `parameters` (JSONB - stores search parameters: jobTitle, location, site, etc.)
+  - `status` (ENUM: `pending`, `running`, `success`, `failed`)
+  - `error_message` (TEXT, nullable)
+  - `jobs_found` (INTEGER, nullable)
+  - `created_at` (TIMESTAMPTZ)
+  - `updated_at` (TIMESTAMPTZ)
+  - `started_at` (TIMESTAMPTZ, nullable)
+  - `completed_at` (TIMESTAMPTZ, nullable)
+- Add RLS policies:
+  - Users can SELECT only their own runs
+  - Users can INSERT runs with their own user_id
+  - Service role can do everything
+- Create migration SQL file and apply to Supabase
 
-*   **Scalable:** Can handle hundreds or thousands of users by adjusting the number of parallel workers on Render. 100 users could be processed in minutes, not hours.
-*   **Robust:** The process is isolated on Render. A failure in one user's search won't crash the entire system.
-*   **Efficient:** Vercel's resources are freed up instantly. You are using the right tool for the right job (Vercel for web hosting, Render for background processing).
-*   **Maintainable:** The logic is cleanly separated. The Next.js app worries about the UI, and the Python service worries about the data processing.
+**Testing Plan:**
+- Run migration in Supabase SQL editor
+- Verify table exists with correct schema
+- Test RLS policies:
+  - Authenticated user can insert a test row with their user_id
+  - Authenticated user can SELECT their own rows
+  - Authenticated user CANNOT select another user's rows
+- Document the schema in `docs/DATABASE_SCHEMA.md`
 
-This plan provides a professional-grade solution that will grow with your user base.
+**Success Criteria:** Table exists, policies work, no errors in Supabase logs.
+
+---
+
+### Release 2 – Backend: Create Search Run Records
+
+**Goal:** When a user initiates a search, create a `search_runs` record in the database while maintaining existing search functionality.
+
+**User Value:** None visible yet, but search history is now being tracked in the database.
+
+**Implementation:**
+- Create `src/lib/db/searchRunService.ts` with functions:
+  - `createSearchRun(userId, parameters, source, clientContext?)` - creates a new run with status `pending`
+  - `updateSearchRunStatus(runId, status, error?, jobsFound?)` - updates run status
+  - `getSearchRun(runId)` - retrieves a single run
+  - `getUserSearchRuns(userId, limit?)` - gets recent runs for a user
+- Update the existing manual search flow in Next.js:
+  - Before calling Render API, create a `search_runs` record
+  - Pass the `run_id` to Render in the request payload
+  - After Render returns results, update the run status to `success` with jobs count
+  - On error, update run status to `failed` with error message
+- Render API updates:
+  - Accept optional `run_id` parameter
+  - When scraping starts, update run status to `running` (if run_id provided)
+  - When scraping completes, update run status to `success` or `failed`
+
+**Testing Plan:**
+- Initiate a manual search as a logged-in user
+- Check Supabase `search_runs` table:
+  - Verify a new row was created with status `pending`
+  - After search completes, verify status updated to `success` and `jobs_found` is set
+  - Verify `started_at` and `completed_at` timestamps are populated
+- Test error case:
+  - Trigger a search that will fail (invalid parameters)
+  - Verify status updates to `failed` with error message
+- Confirm existing search functionality still works (jobs appear in UI as before)
+
+**Success Criteria:** Every manual search creates and updates a `search_runs` record; existing UX unchanged.
+
+---
+
+### Release 3 – Frontend: Cross-Device Search Status Visibility
+
+**Goal:** Allow users to see their ongoing search status even after closing the app or switching devices.
+
+**User Value:** **High impact UX improvement** - Users can initiate a search on their phone, close the app, and check progress later on their laptop. No more wondering if the search is still running.
+
+**Implementation:**
+- Create `src/lib/db/searchRunService.ts` client-side functions:
+  - `getActiveSearchRun(userId)` - gets the most recent `pending` or `running` search
+  - `subscribeToSearchRun(runId, callback)` - uses Supabase realtime to listen for status changes
+- Update `SearchForm` component:
+  - On mount, check if there's an active search run for the user
+  - If found, immediately show loading state with existing `LoadingInsight` and `Timer` components
+  - Display the search parameters from the stored run
+- Create `SearchStatusManager` component/hook:
+  - Manages search run lifecycle
+  - Shows `LoadingInsight` and `Timer` when status is `pending` or `running`
+  - Subscribes to realtime updates for the active run
+  - Redirects to results when status changes to `success`
+  - Shows error notification when status changes to `failed`
+- Update home page (`page.tsx`):
+  - On load, check for active search runs
+  - If active run exists, automatically navigate to loading state
+  - Resume timer based on `created_at` timestamp
+
+**Testing Plan:**
+- **Test 1: Same device continuation**
+  - Initiate search on desktop
+  - Close the browser tab mid-search
+  - Reopen the app
+  - Verify: Loading screen appears with `LoadingInsight` and `Timer` showing elapsed time
+  - Wait for search to complete
+  - Verify: Results appear automatically
+  
+- **Test 2: Cross-device continuation**
+  - Initiate search on mobile device
+  - Close mobile app
+  - Open app on desktop
+  - Verify: Loading screen appears with search status
+  - Verify: Timer shows correct elapsed time
+  - Verify: Results appear when search completes
+  
+- **Test 3: Multiple searches**
+  - Initiate search A (long search)
+  - While A is running, try to initiate search B
+  - Verify: UI handles this gracefully (either blocks new search or queues it)
+  
+- **Test 4: Failed search recovery**
+  - Initiate a search that will fail
+  - Close app during search
+  - Reopen app
+  - Verify: Error message appears when status updates to `failed`
+  - Verify: User can initiate a new search
+
+**Success Criteria:** Users can seamlessly continue monitoring searches across devices; `LoadingInsight` and `Timer` components work correctly with persisted state.
+
+---
+
+### Release 4 – Search History & Run Management
+
+**Goal:** Let users view their past searches and manage active/failed searches.
+
+**User Value:** Users can see their search history, re-run previous searches with one click, and cancel stuck searches.
+
+**Implementation:**
+- Create `SearchHistory` component:
+  - Lists recent search runs with status badges
+  - Shows parameters, timestamps, and results count
+  - Allows clicking to re-run with same parameters
+- Add "Search History" link to header/navigation
+- Create `src/app/search-history/page.tsx`
+- Add ability to cancel pending/running searches:
+  - Button to mark a run as `cancelled` (new status)
+  - Render worker should check for cancelled status and skip processing
+
+**Testing Plan:**
+- Navigate to search history page
+- Verify all past searches appear with correct statuses
+- Click to re-run a previous search
+- Verify new search initiates with same parameters
+- Cancel a running search
+- Verify status updates to `cancelled`
+- Verify Render worker skips cancelled runs
+
+**Success Criteria:** Search history is visible and functional; users can re-run and cancel searches.
+
+---
+
+### Release 5 – Render Worker: Queue-Based Processing
+
+**Goal:** Decouple search execution from the HTTP request/response cycle by having Render poll the queue.
+
+**User Value:** More reliable searches - if Render worker crashes, searches can be retried automatically.
+
+**Implementation:**
+- Update Render `jobspy-service`:
+  - Add `supabase-py` dependency
+  - Create `/worker/poll-queue` endpoint
+  - Poll `search_runs` for `pending` runs (batch of 5)
+  - Mark each as `running`, execute scrape, update status
+  - Add retry logic (3 attempts) for failed runs
+  - Add idempotency checks (skip if already running/completed)
+- Update Next.js manual search flow:
+  - Create run with status `pending`
+  - Return run_id to client immediately (don't wait for Render)
+  - Client polls run status or subscribes via realtime
+- Add Render worker as a background job (not triggered by HTTP):
+  - Configure Render to run the polling endpoint every 30 seconds
+  - Or use Render background worker (if available on plan)
+
+**Testing Plan:**
+- Initiate search from UI
+- Verify search run created with `pending` status
+- Verify UI immediately shows loading state
+- Monitor Render logs for queue polling
+- Verify run status changes to `running` then `success`
+- Test with multiple concurrent searches
+- Test retry logic by simulating failures
+- Verify searches complete even if Next.js restarts
+
+**Success Criteria:** Searches complete reliably via queue polling; no long HTTP requests; retries work.
+
+---
+
+### Release 6 – Scheduled Automation via Vercel Cron
+
+**Goal:** Automatically refresh job searches for all users at scheduled times.
+
+**User Value:** **Core feature delivered** - Users wake up to fresh jobs without having to manually search.
+
+**Implementation:**
+- Create `/api/cron/schedule-user-searches` endpoint:
+  - Fetches all users with saved preferences
+  - Creates one `search_runs` row per user with source=`cron`
+  - Returns immediately (doesn't wait for processing)
+- Configure `vercel.json` with cron schedules:
+  - Runs at 8:00, 10:00, 14:00, 16:00, 16:45, 22:00 UK time
+  - Timezone: `Europe/London`
+- Protect endpoint with `CRON_SECRET`
+- Add rate limiting to prevent abuse
+- Update Render worker to process both `manual` and `cron` runs
+
+**Testing Plan:**
+- Manually trigger the cron endpoint (with secret)
+- Verify `search_runs` rows created for all users
+- Verify Render worker processes them
+- Verify users see new jobs appear
+- Test at actual scheduled time (deploy and wait)
+- Monitor for 24 hours to ensure all cron jobs fire
+- Check users receive fresh jobs at scheduled times
+
+**Success Criteria:** Automated searches run on schedule; all users receive fresh jobs; no failures.
+
+---
+
+### Release 7 – Advanced Observability & Optimization
+
+**Goal:** Monitor system health and optimize performance.
+
+**User Value:** Faster, more reliable searches through performance improvements and proactive issue detection.
+
+**Implementation:**
+- Create admin dashboard showing:
+  - Search run success/failure rates
+  - Average search duration
+  - Queue depth
+  - Errors by type
+- Add alerting:
+  - Email when failure rate exceeds threshold
+  - Slack notification for critical errors
+- Optimize queue processing:
+  - Increase worker concurrency based on load
+  - Skip inactive users (no login in 30 days)
+  - Prioritize manual searches over cron
+- Add database indexes for query performance
+
+**Testing Plan:**
+- Access admin dashboard
+- Verify metrics display correctly
+- Trigger alerts intentionally
+- Verify notifications received
+- Load test with 100 simulated users
+- Verify queue processes efficiently
+
+**Success Criteria:** Dashboard works; alerts fire correctly; system handles load gracefully.
+
+## 5. Benefits of the Updated Plan
+
+- **Immediate UX win:** Users gain cross-device visibility in Release 3 (after foundational work in releases 1-2).
+- **Scalable and resilient:** Releases 5-6 introduce queue-driven processing, better error handling, and flexibility to scale worker capacity.
+- **Incremental risk:** Each release is small and testable end-to-end with real users, reducing chances of breaking existing Render functionality.
+- **Aligned triggers:** Manual searches, cron jobs, and any future integrations share the same infrastructure, simplifying maintenance.
+- **Reuses existing components:** The plan leverages existing `LoadingInsight` and `Timer` components, minimising new UI development.
+- **Clear testing path:** Each release has explicit testing scenarios, making it easier to validate and catch issues early.
+
+## 6. Notes on Existing Components
+
+The plan leverages these existing UI components for the loading experience:
+
+- **`LoadingInsight` component** (`src/components/LoadingInsight.tsx`): Displays random job search insights during loading to keep users engaged.
+- **`Timer` component** (`src/components/Timer.tsx`): Shows elapsed time during search execution.
+
+These components are already integrated into the current search flow and will be reused for cross-device search status visibility. In Release 3, we'll adapt them to work with persisted search run data from the database instead of only local state.
+
+This phased approach keeps the existing Render service stable while progressively layering in the shared queue, richer UX, and automated scheduling.
