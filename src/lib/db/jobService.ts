@@ -4,6 +4,30 @@ import { createClient } from '@/lib/supabase/server';
 import { Job } from '@/types/job';
 
 /**
+ * Converts date_posted to ISO string, falling back to today's date if NULL or invalid
+ * @param datePosted - The date_posted value from the job
+ * @returns ISO string date or null
+ */
+function getDatePostedOrToday(datePosted: string | null | undefined): string {
+  // If date_posted is provided and valid, use it
+  if (datePosted) {
+    try {
+      const date = new Date(datePosted);
+      if (!isNaN(date.getTime())) {
+        return date.toISOString();
+      }
+    } catch {
+      // Fall through to use today's date
+    }
+  }
+  
+  // If date_posted is NULL or invalid, use today's date
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Set to start of day for consistency
+  return today.toISOString();
+}
+
+/**
  * Maps frontend Job type to database jobs table structure
  */
 function mapJobToDatabase(job: Job) {
@@ -32,14 +56,8 @@ function mapJobToDatabase(job: Job) {
     company_industry: job.company_industry || null,
     
     // Additional fields
-    date_posted: job.date_posted ? (() => {
-      try {
-        const date = new Date(job.date_posted);
-        return isNaN(date.getTime()) ? null : date.toISOString();
-      } catch {
-        return null;
-      }
-    })() : null,
+    // If date_posted is NULL or invalid, assign today's date
+    date_posted: getDatePostedOrToday(job.date_posted),
     
     // Metadata (required field)
     site: job.source_site?.toLowerCase() || 'unknown',
