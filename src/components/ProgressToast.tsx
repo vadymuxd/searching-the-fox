@@ -32,7 +32,7 @@ export function ProgressToast({
     <Stack gap={6}>
       <Group justify="space-between" gap="xs">
         <Text size="sm">
-          Updating jobs to &quot;{targetStatus}&quot;
+          Moving jobs to &quot;{targetStatus}&quot;
         </Text>
         <Text size="sm" fw={500} c="dimmed">
           {current}/{total}
