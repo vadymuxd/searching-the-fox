@@ -87,7 +87,7 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
       
       if (result.success) {
         setJobs(result.jobs);
-        setFilteredJobs(result.jobs);
+        // Don't set filteredJobs here - let PageFilter handle it through onFilteredJobsChange
         
         // Load search data for authenticated users
         const searchData = jobsDataManager.getCachedSearchData(userId);
@@ -96,12 +96,12 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
         }
       } else {
         setJobs([]);
-        setFilteredJobs([]);
+        // Don't set filteredJobs here - let PageFilter handle it through onFilteredJobsChange
       }
     } catch (error) {
       console.error('Error loading user jobs:', error);
       setJobs([]);
-      setFilteredJobs([]);
+      // Don't set filteredJobs here - let PageFilter handle it through onFilteredJobsChange
     }
   }, [status]);
 
@@ -189,11 +189,11 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
     const result = jobsDataManager.getJobsForGuest();
     if (result.success) {
       setJobs(result.jobs);
-      setFilteredJobs(result.jobs);
+      // Don't set filteredJobs here - let PageFilter handle it through onFilteredJobsChange
       setCurrentSearch(result.searchData);
     } else {
       setJobs([]);
-      setFilteredJobs([]);
+      // Don't set filteredJobs here - let PageFilter handle it through onFilteredJobsChange
       setCurrentSearch(null);
     }
   };

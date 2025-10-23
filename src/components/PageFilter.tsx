@@ -281,14 +281,19 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
       applyFilter(savedFilter, jobs);
       console.log('Restored recent keywords:', savedFilter);
     }
-  }, [user, jobs, applyFilter]);
+  }, [user, jobs, applyFilter, onFilteredJobsChange, onFilterStateChange]);
 
   // When jobs change (e.g., after refresh load), if filters are applied, re-apply to new jobs
+  // If no filters are applied, pass through all jobs to ensure filteredJobs is set
   useEffect(() => {
     if (filtersApplied && filterValue.trim() && jobs.length > 0) {
       applyFilter(filterValue, jobs);
+    } else if (!filtersApplied && jobs.length > 0) {
+      // No filters applied, pass through all jobs
+      onFilteredJobsChange(jobs);
+      onFilterStateChange?.(false);
     }
-  }, [jobs, filtersApplied, filterValue, applyFilter]);
+  }, [jobs, filtersApplied, filterValue, applyFilter, onFilteredJobsChange, onFilterStateChange]);
 
   const handleKeyPress = useCallback((event: React.KeyboardEvent) => {
     if (event.key === 'Enter') {
