@@ -1,8 +1,9 @@
 'use client';
 
 import { Button, Menu, Text, Avatar } from '@mantine/core';
-import { IconLogout, IconUser } from '@tabler/icons-react';
+import { IconLogout, IconUser, IconBriefcase } from '@tabler/icons-react';
 import { signOut } from '@/lib/auth/actions';
+import { useRouter } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
 import { useAuth } from '@/lib/auth/AuthContext';
 
@@ -12,6 +13,7 @@ interface AuthButtonProps {
 
 export function AuthButton({ onSignInClick }: AuthButtonProps) {
   const { user, loading } = useAuth(); // Use the centralized auth context
+  const router = useRouter();
 
   const handleSignOut = async () => {
     try {
@@ -77,6 +79,12 @@ export function AuthButton({ onSignInClick }: AuthButtonProps) {
           <Text size="xs" c="dimmed">{user.email}</Text>
         </Menu.Item>
         <Menu.Divider />
+        <Menu.Item
+          leftSection={<IconBriefcase size={14} />}
+          onClick={() => router.push('/results')}
+        >
+          Jobs
+        </Menu.Item>
         <Menu.Item
           leftSection={<IconLogout size={14} />}
           color="red"
