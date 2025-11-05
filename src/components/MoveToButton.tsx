@@ -15,6 +15,7 @@ interface MoveToButtonProps {
   onStatusUpdate: () => void;
   disabled?: boolean;
   onAuthRequired?: () => void;
+  onJobsMoved?: () => void; // Callback after jobs are successfully moved
 }
 
 const STATUS_OPTIONS: Array<{ value: JobStatus; label: string }> = [
@@ -31,7 +32,7 @@ const MENU_OPTIONS = [
   { value: 'removed', label: 'Removed' }
 ] as const;
 
-export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, onAuthRequired }: MoveToButtonProps) {
+export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, onAuthRequired, onJobsMoved }: MoveToButtonProps) {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const notificationIdRef = useRef<string | null>(null);
@@ -97,6 +98,8 @@ export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, o
             autoClose: 3000,
           });
         }
+        // Call onJobsMoved callback after successful move
+        onJobsMoved?.();
       } else {
         // Some updates failed
         notifications.update({
@@ -181,6 +184,8 @@ export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, o
             autoClose: 3000,
           });
         }
+        // Call onJobsMoved callback after successful removal
+        onJobsMoved?.();
       } else {
         // Some removals failed
         notifications.update({

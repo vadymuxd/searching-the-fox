@@ -88,11 +88,19 @@ interface JobTableProps {
   jobs: Job[];
   onSelectionChange?: (selectedCount: number) => void;
   onSelectedJobsChange?: (selectedJobs: Array<{ userJobId: string; title: string; company: string; jobId: string }>) => void;
+  clearSelections?: number; // Trigger to clear selections (increment to clear)
 }
 
-export function JobTable({ jobs, onSelectionChange, onSelectedJobsChange }: JobTableProps) {
+export function JobTable({ jobs, onSelectionChange, onSelectedJobsChange, clearSelections }: JobTableProps) {
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
   const [sortState, setSortState] = useState<SortState>({ column: null, direction: null });
+
+  // Clear selections when clearSelections prop changes
+  useEffect(() => {
+    if (clearSelections !== undefined && clearSelections > 0) {
+      setSelectedJobs(new Set());
+    }
+  }, [clearSelections]);
 
   // Helper function to get job board logo
   const getJobBoardLogo = (sourceSite: string | undefined, jobUrl: string) => {

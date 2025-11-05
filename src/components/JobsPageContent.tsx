@@ -55,6 +55,7 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
   const [authModalForAction, setAuthModalForAction] = useState(false);
   const [searchDataLoading, setSearchDataLoading] = useState(true);
   const [isFiltered, setIsFiltered] = useState(false);
+  const [clearSelectionsKey, setClearSelectionsKey] = useState(0); // Key to trigger clearing selections
   // Overlay control: keep overlay until content is stable to avoid flicker
   const [isSettling, setIsSettling] = useState(true);
   const [overlayMounted, setOverlayMounted] = useState(true);
@@ -326,6 +327,15 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
     }
   }, [router, user, loadUserJobsFromCache]);
 
+  // Handler to clear selections after jobs are moved
+  const handleJobsMoved = useCallback(() => {
+    setSelectedJobs(new Set());
+    setSelectedJobsCount(0);
+    setTotalSelectedJobs(0);
+    setSelectedJobsData([]);
+    setClearSelectionsKey(prev => prev + 1); // Increment to trigger JobTable clear
+  }, []);
+
   // Helper function to get readable job board name
   const getJobBoardName = (site: string) => {
     const siteOption = SITE_OPTIONS.find(option => option.value === site);
@@ -453,6 +463,7 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
                               selectedJobs={selectedJobsData}
                               onStatusUpdate={handleStatusUpdate}
                               onAuthRequired={handleAuthRequired}
+                              onJobsMoved={handleJobsMoved}
                             />
                           )}
                         </Group>
@@ -543,6 +554,7 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
                                     selectedJobs={selectedJobsData}
                                     onStatusUpdate={handleStatusUpdate}
                                     onAuthRequired={handleAuthRequired}
+                                    onJobsMoved={handleJobsMoved}
                                   />
                                 )}
                               </Group>
@@ -568,6 +580,7 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
                             jobs={filteredJobs} 
                             onSelectionChange={handleSelectionChange}
                             onSelectedJobsChange={handleSelectedJobsChange}
+                            clearSelections={clearSelectionsKey}
                           />
                         )}
                       </>
