@@ -127,8 +127,7 @@ export function SearchForm({ onSearch, onReset, loading = false, initialValues, 
                     { value: '1', label: 'Past 1 hour' },
                     { value: '24', label: 'Past 24 hours' },
                     { value: '72', label: 'Past 3 days' },
-                    { value: '168', label: 'Past week' },
-                    { value: '720', label: 'Past month' },
+                      // ...existing code...
                   ]}
                   {...form.getInputProps('hoursOld')}
                 />
@@ -199,8 +198,7 @@ export function SearchForm({ onSearch, onReset, loading = false, initialValues, 
                     { value: '1', label: 'Past 1 hour' },
                     { value: '24', label: 'Past 24 hours' },
                     { value: '72', label: 'Past 3 days' },
-                    { value: '168', label: 'Past week' },
-                    { value: '720', label: 'Past month' },
+                      // ...existing code...
                   ]}
                   {...form.getInputProps('hoursOld')}
                   style={{ flex: '2 1 140px', minWidth: '140px' }}
