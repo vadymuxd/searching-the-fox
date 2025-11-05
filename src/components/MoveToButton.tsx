@@ -1,14 +1,12 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button, Menu, rem } from '@mantine/core';
-import { IconChevronDown, IconCheck, IconAlertCircle } from '@tabler/icons-react';
-import { notifications } from '@mantine/notifications';
-import { updateJobStatus, removeUserJob } from '@/lib/db/jobService';
+import { IconChevronDown } from '@tabler/icons-react';
 import { JobStatus } from '@/types/supabase';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { jobsDataManager } from '@/lib/jobsDataManager';
-import { ProgressToast } from './ProgressToast';
+import { jobOperationStorage } from '@/lib/localStorage';
+import { processJobOperation } from '@/lib/jobOperationProcessor';
 
 interface MoveToButtonProps {
   selectedJobs: Array<{ userJobId: string; title: string; company: string }>;
@@ -16,6 +14,7 @@ interface MoveToButtonProps {
   disabled?: boolean;
   onAuthRequired?: () => void;
   onJobsMoved?: () => void; // Callback after jobs are successfully moved
+  onOperationStart?: (operationId: string) => void; // Callback when operation starts
 }
 
 const STATUS_OPTIONS: Array<{ value: JobStatus; label: string }> = [
@@ -32,184 +31,89 @@ const MENU_OPTIONS = [
   { value: 'removed', label: 'Removed' }
 ] as const;
 
-export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, onAuthRequired, onJobsMoved }: MoveToButtonProps) {
+export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, onAuthRequired, onJobsMoved, onOperationStart }: MoveToButtonProps) {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
-  const notificationIdRef = useRef<string | null>(null);
+  const isProcessingRef = useRef(false);
+
+  // Listen for operation completion
+  useEffect(() => {
+    const handleOperationComplete = () => {
+      setLoading(false);
+      isProcessingRef.current = false;
+      onStatusUpdate();
+      onJobsMoved?.();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('jobOperationComplete', handleOperationComplete);
+      return () => {
+        window.removeEventListener('jobOperationComplete', handleOperationComplete);
+      };
+    }
+  }, [onStatusUpdate, onJobsMoved]);
+
+  const startOperation = async (
+    jobsToProcess: Array<{ userJobId: string; title: string; company: string }>,
+    operationType: 'status-change' | 'remove',
+    newStatus?: JobStatus,
+    statusLabel?: string
+  ) => {
+    if (!user || isProcessingRef.current) return;
+
+    isProcessingRef.current = true;
+    setLoading(true);
+
+    // Create new operation state
+    const operationId = `${operationType}-${Date.now()}`;
+    const state = {
+      operationId,
+      userId: user.id,
+      operationType,
+      targetStatus: newStatus,
+      targetStatusLabel: statusLabel,
+      jobs: jobsToProcess.map(j => ({ ...j, jobId: j.userJobId })),
+      processedJobIds: [],
+      startedAt: Date.now(),
+      lastUpdatedAt: Date.now(),
+      completed: false,
+      successCount: 0,
+      failedCount: 0,
+    };
+    
+    jobOperationStorage.saveOperation(state);
+    onOperationStart?.(operationId);
+
+    // Start processing using the global processor (fire and forget - don't block UI)
+    processJobOperation(user.id).then((success) => {
+      if (success) {
+        // Operation completed successfully
+        onStatusUpdate();
+        onJobsMoved?.();
+      }
+      setLoading(false);
+      isProcessingRef.current = false;
+    }).catch((error) => {
+      console.error('Error starting job operation:', error);
+      setLoading(false);
+      isProcessingRef.current = false;
+    });
+    
+    // Don't block - return immediately so user can navigate
+    // The operation will continue in the background via the global processor
+  };
 
   const handleStatusChange = async (newStatus: JobStatus) => {
     if (selectedJobs.length === 0 || !user) return;
 
-    setLoading(true);
     const statusLabel = STATUS_OPTIONS.find(s => s.value === newStatus)?.label;
-    let successCount = 0;
-    let failedUpdates = 0;
-    
-    try {
-      // Show initial progress notification
-      notificationIdRef.current = notifications.show({
-        message: <ProgressToast current={0} total={selectedJobs.length} targetStatus={statusLabel} />,
-        autoClose: false,
-        color: 'white',
-      });
-
-      // Update jobs sequentially to track progress
-      const results = [];
-      for (let i = 0; i < selectedJobs.length; i++) {
-        const job = selectedJobs[i];
-        const result = await updateJobStatus(job.userJobId, newStatus);
-        results.push(result);
-
-        if (result.success) {
-          successCount++;
-        } else {
-          failedUpdates++;
-        }
-
-        // Update notification with current progress
-        if (notificationIdRef.current) {
-          notifications.update({
-            id: notificationIdRef.current,
-            message: <ProgressToast current={successCount + failedUpdates} total={selectedJobs.length} targetStatus={statusLabel} />,
-            autoClose: false,
-            color: 'white',
-          });
-        }
-      }
-
-      // All updates done - sync cache with database
-      await jobsDataManager.syncWithDatabase(user.id, undefined, true);
-
-      // Dispatch custom event to update job counters in TabNavigation
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('jobsUpdated'));
-      }
-
-      // Show appropriate final notification
-      if (failedUpdates === 0) {
-        // All updates successful
-        if (notificationIdRef.current) {
-          notifications.update({
-            id: notificationIdRef.current,
-            message: <ProgressToast current={successCount} total={selectedJobs.length} targetStatus={statusLabel} isComplete />,
-            title: 'Jobs Updated',
-            color: 'green',
-            icon: <IconCheck size={16} />,
-            autoClose: 3000,
-          });
-        }
-        // Call onJobsMoved callback after successful move
-        onJobsMoved?.();
-      } else {
-        // Some updates failed
-        notifications.update({
-          id: notificationIdRef.current || '',
-          title: 'Partial Update',
-          message: `${successCount} job${successCount > 1 ? 's' : ''} updated successfully, ${failedUpdates} failed`,
-          color: 'yellow',
-          icon: <IconAlertCircle size={16} />,
-          autoClose: 3000,
-        });
-      }      // Refresh the page to show updated status
-      onStatusUpdate();
-    } catch (error) {
-      console.error('Error updating job status:', error);
-      notifications.show({
-        title: 'Update Failed',
-        message: 'Failed to update job status. Please try again.',
-        color: 'red',
-      });
-    } finally {
-      setLoading(false);
-    }
+    await startOperation(selectedJobs, 'status-change', newStatus, statusLabel);
   };
 
   const handleRemoveJobs = async () => {
     if (selectedJobs.length === 0 || !user) return;
 
-    setLoading(true);
-    let successCount = 0;
-    let failedRemovals = 0;
-    
-    try {
-      // Show initial progress notification
-      notificationIdRef.current = notifications.show({
-        message: <ProgressToast current={0} total={selectedJobs.length} targetStatus="Removed" />,
-        autoClose: false,
-        color: 'white',
-      });
-
-      // Remove jobs sequentially to track progress
-      const results = [];
-      for (let i = 0; i < selectedJobs.length; i++) {
-        const job = selectedJobs[i];
-        const result = await removeUserJob(job.userJobId);
-        results.push(result);
-
-        if (result.success) {
-          successCount++;
-        } else {
-          failedRemovals++;
-        }
-
-        // Update notification with current progress
-        if (notificationIdRef.current) {
-          notifications.update({
-            id: notificationIdRef.current,
-            message: <ProgressToast current={successCount + failedRemovals} total={selectedJobs.length} targetStatus="Removed" />,
-            autoClose: false,
-            color: 'white',
-          });
-        }
-      }
-
-      // All removals done - sync cache with database
-      await jobsDataManager.syncWithDatabase(user.id, undefined, true);
-
-      // Dispatch custom event to update job counters in TabNavigation
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('jobsUpdated'));
-      }
-
-      // Show appropriate final notification
-      if (failedRemovals === 0) {
-        // All removals successful
-        if (notificationIdRef.current) {
-          notifications.update({
-            id: notificationIdRef.current,
-            message: <ProgressToast current={successCount} total={selectedJobs.length} targetStatus="Removed" isComplete />,
-            title: 'Jobs Removed',
-            color: 'green',
-            icon: <IconCheck size={16} />,
-            autoClose: 3000,
-          });
-        }
-        // Call onJobsMoved callback after successful removal
-        onJobsMoved?.();
-      } else {
-        // Some removals failed
-        notifications.update({
-          id: notificationIdRef.current || '',
-          title: 'Partial Removal',
-          message: `${successCount} job${successCount > 1 ? 's' : ''} removed successfully, ${failedRemovals} failed`,
-          color: 'yellow',
-          icon: <IconAlertCircle size={16} />,
-          autoClose: 3000,
-        });
-      }
-
-      // Refresh the page to show updated list
-      onStatusUpdate();
-    } catch (error) {
-      console.error('Error removing jobs:', error);
-      notifications.show({
-        title: 'Removal Failed',
-        message: 'Failed to remove jobs. Please try again.',
-        color: 'red',
-      });
-    } finally {
-      setLoading(false);
-    }
+    await startOperation(selectedJobs, 'remove', undefined, 'Removed');
   };
 
   const handleMenuAction = async (action: string) => {

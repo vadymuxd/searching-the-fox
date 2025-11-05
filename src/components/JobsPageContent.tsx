@@ -25,6 +25,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { Header } from '@/components/Header';
 import { TabNavigation } from '@/components/TabNavigation';
 import { MoveToButton } from '@/components/MoveToButton';
+import { JobOperationManager } from '@/components/JobOperationManager';
 import { searchStorage } from '@/lib/localStorage';
 import { Job, SearchFormData } from '@/types/job';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -357,6 +358,9 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
 
   return (
     <>
+      {/* Job Operation Manager - handles resuming interrupted operations */}
+      <JobOperationManager onOperationComplete={handleStatusUpdate} />
+      
       {/* Header with Logo and Auth Button */}
       <div style={{ position: 'relative', zIndex: 20 }}>
         <Header onSignInClick={() => setAuthModalOpened(true)} />
