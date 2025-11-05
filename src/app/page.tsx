@@ -158,16 +158,56 @@ export default function HomePage() {
       }
 
       if (response.success) {
+        console.log(`[Search] API returned ${response.jobs?.length || 0} jobs`);
+        
+        // Check if we got any jobs
+        if (!response.jobs || response.jobs.length === 0) {
+          notifications.show({
+            title: 'No jobs found',
+            message: 'No jobs were found matching your search criteria. Try adjusting your search parameters.',
+            icon: <IconAlertCircle size={16} />,
+            color: 'yellow',
+            autoClose: 5000,
+          });
+          // Still redirect to show empty results page
+          router.push('/results');
+          return;
+        }
+        
         // Save jobs and redirect
         if (user) {
           // For authenticated users: save to database and sync with cache
-          await jobsDataManager.saveNewJobsAndSync(response.jobs, user.id, searchData);
+          console.log(`[Search] Saving ${response.jobs.length} jobs for authenticated user`);
+          const saveResult = await jobsDataManager.saveNewJobsAndSync(response.jobs, user.id, searchData);
+          
+          if (!saveResult.success) {
+            throw new Error(saveResult.error || 'Failed to save jobs to database');
+          }
+          
+          console.log(`[Search] Successfully saved ${saveResult.jobsSaved || response.jobs.length} jobs to database`);
+          
+          // Show success notification
+          notifications.show({
+            title: 'Search completed',
+            message: `Found and saved ${saveResult.jobsSaved || response.jobs.length} jobs`,
+            color: 'green',
+            autoClose: 3000,
+          });
         } else {
           // For guest users: save to localStorage
+          console.log(`[Search] Saving ${response.jobs.length} jobs to localStorage for guest user`);
           searchStorage.saveSearchResults({
             jobs: response.jobs,
             searchStarted: true,
             searchData: searchData,
+          });
+          
+          // Show success notification
+          notifications.show({
+            title: 'Search completed',
+            message: `Found ${response.jobs.length} jobs`,
+            color: 'green',
+            autoClose: 3000,
           });
         }
         

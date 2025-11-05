@@ -363,27 +363,43 @@ class JobsDataManager {
 
   /**
    * Save new jobs to database and update cache
+   * Ensures ALL jobs are saved to database first, then fetches prioritized 1000 for display
    */
-  async saveNewJobsAndSync(jobs: Job[], userId: string, searchData: SearchFormData): Promise<{ success: boolean; error?: string }> {
+  async saveNewJobsAndSync(jobs: Job[], userId: string, searchData: SearchFormData): Promise<{ success: boolean; jobsSaved?: number; error?: string }> {
     try {
-      // Save to database
+      console.log(`[saveNewJobsAndSync] Saving ${jobs.length} jobs to database for user ${userId}`);
+      
+      // Save ALL jobs to database (no limit)
       const result = await saveJobsToDatabase(jobs, userId);
       
       if (!result.success) {
+        console.error('[saveNewJobsAndSync] Failed to save jobs:', result.error);
         return {
           success: false,
           error: result.error
         };
       }
 
+      console.log(`[saveNewJobsAndSync] Successfully saved ${result.jobsSaved} jobs to database`);
+
       // Force sync to get updated data with proper user_job_ids
-      await this.syncWithDatabase(userId, undefined, true);
+      // This will fetch the prioritized 1000 jobs for cache/display
+      console.log('[saveNewJobsAndSync] Syncing to fetch prioritized jobs for display');
+      const syncResult = await this.syncWithDatabase(userId, undefined, true);
+      
+      if (!syncResult.success) {
+        console.warn('[saveNewJobsAndSync] Sync failed but jobs were saved:', syncResult.error);
+        // Jobs are saved, but cache update failed - still return success
+      } else {
+        console.log(`[saveNewJobsAndSync] Sync complete, fetched ${syncResult.jobs.length} jobs for cache`);
+      }
 
       // Update search data in metadata
       this.updateSearchDataInCache(userId, searchData);
 
       return {
-        success: true
+        success: true,
+        jobsSaved: result.jobsSaved
       };
     } catch (error) {
       console.error('Error saving new jobs and syncing:', error);

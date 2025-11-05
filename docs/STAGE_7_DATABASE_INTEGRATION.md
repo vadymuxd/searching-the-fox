@@ -24,9 +24,14 @@ Server-side functions for database operations:
 
 #### **getUserJobs(userId, status?)**
 - Fetches user's jobs from database with JOIN
-- Filters by status if provided (new, interested, applied, etc.)
+- **Prioritized fetching for better performance** (max 1000 jobs):
+  1. **High priority**: Interested, Applied, Progressed
+  2. **Medium priority**: New
+  3. **Low priority**: Rejected
+  4. **Lowest priority**: Archived
+- If specific status provided, fetches only that status (up to 1000)
 - Returns jobs with user_jobs metadata (status, applied_at, notes)
-- Sorts by created_at (newest first)
+- Sorts by created_at (newest first) within each priority group
 
 #### **updateJobStatus(userJobId, status, notes?)**
 - Updates job status for a user
