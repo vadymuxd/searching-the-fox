@@ -132,7 +132,7 @@ export async function saveJobsToDatabase(
     
     console.log(`[saveJobsToDatabase] Checking ${jobUrls.length} URLs in ${jobUrlBatches.length} batches`);
     
-    let allExistingJobs: Array<{ id: string; job_url: string }> = [];
+    const allExistingJobs: Array<{ id: string; job_url: string }> = [];
     
     for (let i = 0; i < jobUrlBatches.length; i++) {
       const urlBatch = jobUrlBatches[i];
@@ -172,7 +172,7 @@ export async function saveJobsToDatabase(
 
     console.log(`[saveJobsToDatabase] ${newJobs.length} new jobs to insert, ${existingJobsFromList.length} already exist`);
 
-    let allJobIds: string[] = [];
+    const allJobIds: string[] = [];
 
     // Insert new jobs in batches
     if (newJobs.length > 0) {
@@ -216,7 +216,7 @@ export async function saveJobsToDatabase(
 
     // Check which user_jobs entries already exist (process in batches)
     const jobIdBatches = batchArray(allJobIds, BATCH_SIZE);
-    let allExistingUserJobs: Array<{ job_id: string }> = [];
+    const allExistingUserJobs: Array<{ job_id: string }> = [];
     
     console.log(`[saveJobsToDatabase] Checking existing user_jobs in ${jobIdBatches.length} batches`);
     
@@ -304,7 +304,7 @@ export async function getUserJobs(
 
     // If a specific status is requested, fetch only that status
     if (status) {
-      let query = supabase
+      const query = supabase
         .from('user_jobs')
         .select(`
           id,

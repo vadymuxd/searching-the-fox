@@ -13,7 +13,6 @@ import { createElement } from 'react';
 
 let isProcessing = false;
 let currentNotificationId: string | null = null;
-let processingInterval: NodeJS.Timeout | null = null;
 let currentUserId: string | null = null;
 let processingStartTime: number = 0;
 
@@ -38,6 +37,7 @@ if (typeof document !== 'undefined') {
 // Helper to create ProgressToast element
 function createProgressToast(current: number, total: number, targetStatus: string, isComplete = false) {
   // Dynamically import ProgressToast to avoid circular dependencies
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const ProgressToast = require('@/components/ProgressToast').ProgressToast;
   return createElement(ProgressToast, {
     current,

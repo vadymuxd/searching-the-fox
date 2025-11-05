@@ -52,6 +52,7 @@ export function JobOperationManager({ onOperationComplete }: JobOperationManager
     // Set up periodic checking every 2 seconds to ensure operation continues
     // This helps recover from any interruptions
     checkIntervalRef.current = setInterval(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const operation = require('@/lib/localStorage').jobOperationStorage.loadOperation();
       if (operation && !operation.completed && operation.userId === user.id && !isCheckingRef.current) {
         console.log('JobOperationManager: Periodic check found incomplete operation, resuming');
