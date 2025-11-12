@@ -65,6 +65,7 @@ class JobSearchRequest(BaseModel):
     country_indeed: Optional[str] = "USA"
     run_id: Optional[str] = None  # Optional search run ID for tracking
     user_id: Optional[str] = None  # Optional user ID for direct database writes
+    increment_only: Optional[bool] = False  # If True, only increment jobs_found without changing status
     # Removed job_type and is_remote to avoid validation issues
 
 class JobResponse(BaseModel):
@@ -150,31 +151,46 @@ async def options_scrape():
     from fastapi.responses import Response
     return Response(status_code=204)
 
-def update_search_run_status(run_id: str, status: str, error: Optional[str] = None, jobs_found: Optional[int] = None):
+def update_search_run_status(run_id: str, status: str, error: Optional[str] = None, jobs_found: Optional[int] = None, increment_only: bool = False):
     """
     Update the status of a search run in Supabase
+    If jobs_found is provided, it will be ADDED to the existing count (cumulative)
+    If increment_only is True, only update jobs_found without changing status (for multi-site searches)
     """
     if not supabase or not run_id:
         return
     
     try:
-        update_data = {"status": status}
+        update_data = {}
         
-        # Add timestamps based on status
-        if status == "running":
-            update_data["started_at"] = datetime.now().isoformat()
-        elif status in ["success", "failed"]:
-            update_data["completed_at"] = datetime.now().isoformat()
+        # Only update status if not increment_only mode
+        if not increment_only:
+            update_data["status"] = status
+            
+            # Add timestamps based on status
+            if status == "running":
+                update_data["started_at"] = datetime.now().isoformat()
+            elif status in ["success", "failed"]:
+                update_data["completed_at"] = datetime.now().isoformat()
+            
+            # Add optional fields
+            if error is not None:
+                update_data["error_message"] = error
         
-        # Add optional fields
-        if error is not None:
-            update_data["error_message"] = error
+        # For jobs_found, we want to ADD to existing count, not replace it
+        # This allows multiple searches (e.g., "all boards") to accumulate the total
         if jobs_found is not None:
-            update_data["jobs_found"] = jobs_found
+            # First, get the current jobs_found value
+            current = supabase.table("search_runs").select("jobs_found").eq("id", run_id).execute()
+            current_count = current.data[0]["jobs_found"] if current.data and current.data[0]["jobs_found"] else 0
+            update_data["jobs_found"] = current_count + jobs_found
+            logger.info(f"Incrementing jobs_found from {current_count} to {update_data['jobs_found']}")
         
-        result = supabase.table("search_runs").update(update_data).eq("id", run_id).execute()
-        logger.info(f"Updated search run {run_id} to status: {status}")
-        return result
+        if update_data:  # Only update if there's something to update
+            result = supabase.table("search_runs").update(update_data).eq("id", run_id).execute()
+            logger.info(f"Updated search run {run_id}{' (increment only)' if increment_only else f' to status: {status}'}")
+            return result
+        return None
     except Exception as e:
         logger.error(f"Failed to update search run {run_id}: {e}")
         return None
@@ -432,7 +448,12 @@ async def scrape_jobs(request: JobSearchRequest):
                 
                 # Update search run with actual saved count
                 if request.run_id:
-                    update_search_run_status(request.run_id, "success", jobs_found=saved_count)
+                    if request.increment_only:
+                        # Just increment the count, don't change status (for multi-site searches)
+                        update_search_run_status(request.run_id, "", jobs_found=saved_count, increment_only=True)
+                    else:
+                        # Final update with status change
+                        update_search_run_status(request.run_id, "success", jobs_found=saved_count)
             except Exception as db_error:
                 logger.error(f"Error saving jobs to database: {db_error}")
                 # Don't fail the entire request if database save fails

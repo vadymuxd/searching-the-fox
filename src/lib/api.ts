@@ -19,7 +19,7 @@ export class JobService {
     return siteMap[siteValue] || siteValue;
   }
 
-  static async searchJobs(params: JobSearchParams, userId?: string, skipSearchRunCreation = false, parentRunId?: string): Promise<JobSearchResponse> {
+  static async searchJobs(params: JobSearchParams, userId?: string, skipSearchRunCreation = false, parentRunId?: string, incrementOnly = false): Promise<JobSearchResponse> {
     let searchRunId: string | undefined = parentRunId;
     
     try {
@@ -67,6 +67,7 @@ export class JobService {
         country_indeed: countryIndeed || 'UK',
         run_id: searchRunId, // Pass the search run ID to Render
         user_id: userId, // Pass user ID so Render can save to database
+        increment_only: incrementOnly, // For multi-site searches, only increment count on first 3 sites
       };
 
       const response = await fetch(`${API_BASE_URL}/scrape`, {
@@ -215,9 +216,10 @@ export class JobService {
         // Determine if this is the last site
         const isLastSite = completedSites === totalSites - 1;
         
-        // Only pass run_id to the LAST site search so it updates the final status
-        // This prevents multiple status updates and ensures status is updated even if user closes browser
-        const response = await this.searchJobs(siteParams, userId, true, isLastSite ? searchRunId : undefined);
+        // Pass run_id to ALL sites for job counting
+        // First 3 sites: increment_only=true (just add to jobs_found, don't change status)
+        // Last site: increment_only=false (add to jobs_found AND update status to success)
+        const response = await this.searchJobs(siteParams, userId, true, searchRunId, !isLastSite);
         
         if (response.success && response.jobs) {
           // Add site information to each job for identification
