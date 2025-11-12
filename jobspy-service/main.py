@@ -102,6 +102,47 @@ async def root():
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
+@app.post("/cleanup-stuck-searches")
+async def cleanup_stuck_searches():
+    """
+    Mark searches that have been 'running' for more than 5 minutes as 'failed'
+    This handles cases where Render times out the HTTP request but the search_run status wasn't updated
+    """
+    if not supabase:
+        return {"error": "Database not configured"}
+    
+    try:
+        # Get all running searches older than 5 minutes
+        five_minutes_ago = (datetime.now() - timedelta(minutes=5)).isoformat()
+        
+        result = supabase.table("search_runs")\
+            .select("id, created_at")\
+            .eq("status", "running")\
+            .lt("created_at", five_minutes_ago)\
+            .execute()
+        
+        stuck_searches = result.data if result.data else []
+        
+        # Update each stuck search to failed
+        updated_count = 0
+        for search in stuck_searches:
+            update_search_run_status(
+                search["id"], 
+                "failed", 
+                error="Request timed out - Render free tier has 30s HTTP timeout limit"
+            )
+            updated_count += 1
+        
+        logger.info(f"Cleaned up {updated_count} stuck searches")
+        return {
+            "success": True,
+            "cleaned_up": updated_count,
+            "searches": stuck_searches
+        }
+    except Exception as e:
+        logger.error(f"Error cleaning up stuck searches: {e}")
+        return {"error": str(e)}
+
 # Explicit OPTIONS handler to ensure preflight responses are returned by the app
 @app.options("/scrape")
 async def options_scrape():
