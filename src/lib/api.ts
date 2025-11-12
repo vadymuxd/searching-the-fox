@@ -212,8 +212,12 @@ export class JobService {
           site: site.value,
         };
 
-        // Skip search run creation for individual sites, but pass the parent search_run ID
-        const response = await this.searchJobs(siteParams, userId, true, searchRunId);
+        // Determine if this is the last site
+        const isLastSite = completedSites === totalSites - 1;
+        
+        // Only pass run_id to the LAST site search so it updates the final status
+        // This prevents multiple status updates and ensures status is updated even if user closes browser
+        const response = await this.searchJobs(siteParams, userId, true, isLastSite ? searchRunId : undefined);
         
         if (response.success && response.jobs) {
           // Add site information to each job for identification
@@ -251,19 +255,8 @@ export class JobService {
     // Enhance company logos for better fallback
     const enhancedJobs = await this.enhanceCompanyLogos(deduplicatedJobs);
 
-    // Update search run to success/failed
-    if (searchRunId && userId) {
-      const supabase = createClient();
-      await updateSearchRunStatus(
-        {
-          runId: searchRunId,
-          status: enhancedJobs.length > 0 ? 'success' : 'failed',
-          jobsFound: enhancedJobs.length,
-          error: errors.length > 0 ? `Some sites failed: ${errors.join('; ')}` : undefined,
-        },
-        supabase
-      );
-    }
+    // Note: Status update is handled by Render when the last site completes
+    // This ensures status is updated even if user closes browser
 
     return {
       success: enhancedJobs.length > 0,
