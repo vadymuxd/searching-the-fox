@@ -19,12 +19,12 @@ export class JobService {
     return siteMap[siteValue] || siteValue;
   }
 
-  static async searchJobs(params: JobSearchParams, userId?: string, skipSearchRunCreation = false): Promise<JobSearchResponse> {
-    let searchRunId: string | undefined;
+  static async searchJobs(params: JobSearchParams, userId?: string, skipSearchRunCreation = false, parentRunId?: string): Promise<JobSearchResponse> {
+    let searchRunId: string | undefined = parentRunId;
     
     try {
       // Create search run record if userId is provided and not skipped (for individual searches only)
-      if (userId && !skipSearchRunCreation) {
+      if (userId && !skipSearchRunCreation && !parentRunId) {
         const supabase = createClient();
         const searchRunParams: SearchRunParameters = {
           jobTitle: params.job_title,
@@ -212,8 +212,8 @@ export class JobService {
           site: site.value,
         };
 
-        // Skip search run creation for individual sites (pass true for skipSearchRunCreation)
-        const response = await this.searchJobs(siteParams, userId, true);
+        // Skip search run creation for individual sites, but pass the parent search_run ID
+        const response = await this.searchJobs(siteParams, userId, true, searchRunId);
         
         if (response.success && response.jobs) {
           // Add site information to each job for identification
