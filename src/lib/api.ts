@@ -19,12 +19,12 @@ export class JobService {
     return siteMap[siteValue] || siteValue;
   }
 
-  static async searchJobs(params: JobSearchParams, userId?: string): Promise<JobSearchResponse> {
+  static async searchJobs(params: JobSearchParams, userId?: string, skipSearchRunCreation = false): Promise<JobSearchResponse> {
     let searchRunId: string | undefined;
     
     try {
-      // Create search run record if userId is provided
-      if (userId) {
+      // Create search run record if userId is provided and not skipped (for individual searches only)
+      if (userId && !skipSearchRunCreation) {
         const supabase = createClient();
         const searchRunParams: SearchRunParameters = {
           jobTitle: params.job_title,
@@ -152,10 +152,54 @@ export class JobService {
     onProgress?: (currentSite: string, completedSites: number, totalSites: number) => void,
     userId?: string
   ): Promise<JobSearchResponse> {
+    let searchRunId: string | undefined;
+    
+    // Create ONE search run for "all job boards" search
+    if (userId) {
+      const supabase = createClient();
+      const searchRunParams: SearchRunParameters = {
+        jobTitle: params.job_title,
+        location: params.location,
+        site: 'all', // Mark as "all job boards"
+        hours_old: parseInt(params.hours_old || '24'),
+        results_wanted: params.results_wanted || 1000,
+      };
+
+      const searchRun = await createSearchRun(
+        {
+          userId,
+          parameters: searchRunParams,
+          source: 'manual',
+          clientContext: {
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+            timestamp: new Date().toISOString(),
+          },
+        },
+        supabase
+      );
+
+      if (searchRun) {
+        searchRunId = searchRun.id;
+        console.log('Created search run for all job boards:', searchRunId);
+      }
+    }
+    
     const allJobs: Job[] = [];
     const errors: string[] = [];
     const totalSites = INDIVIDUAL_SITES.length;
     let completedSites = 0;
+
+    // Update status to 'running' when we start
+    if (searchRunId && userId) {
+      const supabase = createClient();
+      await updateSearchRunStatus(
+        {
+          runId: searchRunId,
+          status: 'running',
+        },
+        supabase
+      );
+    }
 
     for (const site of INDIVIDUAL_SITES) {
       try {
@@ -168,7 +212,8 @@ export class JobService {
           site: site.value,
         };
 
-        const response = await this.searchJobs(siteParams, userId);
+        // Skip search run creation for individual sites (pass true for skipSearchRunCreation)
+        const response = await this.searchJobs(siteParams, userId, true);
         
         if (response.success && response.jobs) {
           // Add site information to each job for identification
@@ -205,6 +250,20 @@ export class JobService {
     
     // Enhance company logos for better fallback
     const enhancedJobs = await this.enhanceCompanyLogos(deduplicatedJobs);
+
+    // Update search run to success/failed
+    if (searchRunId && userId) {
+      const supabase = createClient();
+      await updateSearchRunStatus(
+        {
+          runId: searchRunId,
+          status: enhancedJobs.length > 0 ? 'success' : 'failed',
+          jobsFound: enhancedJobs.length,
+          error: errors.length > 0 ? `Some sites failed: ${errors.join('; ')}` : undefined,
+        },
+        supabase
+      );
+    }
 
     return {
       success: enhancedJobs.length > 0,
