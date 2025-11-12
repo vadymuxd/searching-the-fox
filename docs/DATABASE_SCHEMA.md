@@ -181,6 +181,98 @@ new → interested → applied → progressed
 
 ---
 
+### 4. `search_runs` (Search Execution Tracking)
+
+Tracks job search execution for cross-device visibility and automation.
+
+```sql
+-- Create ENUM type for search source
+CREATE TYPE search_source AS ENUM ('manual', 'cron');
+
+-- Create ENUM type for search run status
+CREATE TYPE search_run_status AS ENUM ('pending', 'running', 'success', 'failed');
+
+-- Create search_runs table
+CREATE TABLE search_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  source search_source NOT NULL DEFAULT 'manual',
+  client_context JSONB,
+  parameters JSONB NOT NULL,
+  status search_run_status NOT NULL DEFAULT 'pending',
+  error_message TEXT,
+  jobs_found INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ
+);
+
+-- Indexes for performance
+CREATE INDEX idx_search_runs_user_id ON search_runs(user_id);
+CREATE INDEX idx_search_runs_status ON search_runs(status);
+CREATE INDEX idx_search_runs_created_at ON search_runs(created_at DESC);
+CREATE INDEX idx_search_runs_user_status ON search_runs(user_id, status);
+```
+
+**Fields:**
+- `id` - Unique identifier for the search run
+- `user_id` - Reference to the user who owns this search
+- `source` - How the search was triggered: `manual` (user-initiated) or `cron` (automated)
+- `client_context` - Optional metadata about the client (device, browser, etc.)
+- `parameters` - Search parameters: jobTitle, location, site, hours_old, etc.
+  ```json
+  {
+    "jobTitle": "Software Engineer",
+    "location": "London",
+    "site": ["indeed", "linkedin"],
+    "hours_old": 24,
+    "results_wanted": 20
+  }
+  ```
+- `status` - Current status: `pending`, `running`, `success`, or `failed`
+- `error_message` - Error details if status is failed
+- `jobs_found` - Number of jobs found in successful searches
+- `created_at` - When the search run was created
+- `updated_at` - When the search run was last updated
+- `started_at` - When the search actually started processing
+- `completed_at` - When the search finished (success or failed)
+
+**Status Workflow:**
+```
+pending → running → success
+                  → failed
+```
+
+**RLS Policies:**
+
+```sql
+-- Enable RLS
+ALTER TABLE search_runs ENABLE ROW LEVEL SECURITY;
+
+-- Users can view only their own search runs
+CREATE POLICY "Users can view own search runs"
+  ON search_runs FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Users can insert search runs with their own user_id
+CREATE POLICY "Users can insert own search runs"
+  ON search_runs FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can update only their own search runs
+CREATE POLICY "Users can update own search runs"
+  ON search_runs FOR UPDATE
+  USING (auth.uid() = user_id);
+
+-- Service role has full access (for worker)
+CREATE POLICY "Service role has full access"
+  ON search_runs FOR ALL
+  USING (auth.jwt()->>'role' = 'service_role');
+```
+
+---
+
 ## Mapping JobSpy API Response to Database
 
 ### JobSpy DataFrame Columns → `jobs` Table
@@ -324,6 +416,12 @@ CREATE TRIGGER update_jobs_updated_at
 -- Trigger for user_jobs table
 CREATE TRIGGER update_user_jobs_updated_at
   BEFORE UPDATE ON user_jobs
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger for search_runs table
+CREATE TRIGGER update_search_runs_updated_at
+  BEFORE UPDATE ON search_runs
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 ```

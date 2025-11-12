@@ -144,7 +144,8 @@ export default function HomePage() {
               completed,
               total,
             });
-          }
+          },
+          user?.id // Pass userId for search run tracking
         );
       } else {
         // Handle single job board selection
@@ -154,7 +155,7 @@ export default function HomePage() {
           job_title: searchData.jobTitle,
           results_wanted: searchData.resultsWanted,
           hours_old: searchData.hoursOld,
-        });
+        }, user?.id); // Pass userId for search run tracking
       }
 
       if (response.success) {

@@ -1,5 +1,11 @@
 import { JobSearchParams, JobSearchResponse, Job } from '@/types/job';
 import { LogoService } from './logoService';
+import { createClient } from '@/lib/supabase/client';
+import { 
+  createSearchRun, 
+  updateSearchRunStatus, 
+  SearchRunParameters 
+} from '@/lib/db/searchRunService';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
 
@@ -13,8 +19,41 @@ export class JobService {
     return siteMap[siteValue] || siteValue;
   }
 
-  static async searchJobs(params: JobSearchParams): Promise<JobSearchResponse> {
+  static async searchJobs(params: JobSearchParams, userId?: string): Promise<JobSearchResponse> {
+    let searchRunId: string | undefined;
+    
     try {
+      // Create search run record if userId is provided
+      if (userId) {
+        const supabase = createClient();
+        const searchRunParams: SearchRunParameters = {
+          jobTitle: params.job_title,
+          location: params.location,
+          site: params.site,
+          hours_old: parseInt(params.hours_old || '24'),
+          results_wanted: params.results_wanted || 1000,
+          country_indeed: params.site === 'indeed' ? 'UK' : params.country_indeed,
+        };
+
+        const searchRun = await createSearchRun(
+          {
+            userId,
+            parameters: searchRunParams,
+            source: 'manual',
+            clientContext: {
+              userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+              timestamp: new Date().toISOString(),
+            },
+          },
+          supabase
+        );
+
+        if (searchRun) {
+          searchRunId = searchRun.id;
+          console.log('Created search run:', searchRunId);
+        }
+      }
+
       // Automatically set UK as default country for Indeed searches
       const countryIndeed = params.site === 'indeed' ? 'UK' : params.country_indeed;
       
@@ -26,6 +65,7 @@ export class JobService {
         results_wanted: params.results_wanted || 1000,
         hours_old: parseInt(params.hours_old || '24'),
         country_indeed: countryIndeed || 'UK',
+        run_id: searchRunId, // Pass the search run ID to Render
       };
 
       const response = await fetch(`${API_BASE_URL}/scrape`, {
@@ -37,6 +77,18 @@ export class JobService {
       });
 
       if (!response.ok) {
+        // Update search run to failed status if we have one
+        if (searchRunId && userId) {
+          const supabase = createClient();
+          await updateSearchRunStatus(
+            {
+              runId: searchRunId,
+              status: 'failed',
+              error: `HTTP error! status: ${response.status}`,
+            },
+            supabase
+          );
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -51,6 +103,19 @@ export class JobService {
       // Enhance company logos
       const enhancedJobs = await this.enhanceCompanyLogos(jobsWithSourceSite);
       
+      // Update search run to success status with job count
+      if (searchRunId && userId) {
+        const supabase = createClient();
+        await updateSearchRunStatus(
+          {
+            runId: searchRunId,
+            status: 'success',
+            jobsFound: enhancedJobs.length,
+          },
+          supabase
+        );
+      }
+      
       return {
         success: data.success,
         jobs: enhancedJobs,
@@ -59,6 +124,20 @@ export class JobService {
       };
     } catch (error) {
       console.error('Job search error:', error);
+      
+      // Update search run to failed status if we have one
+      if (searchRunId && userId) {
+        const supabase = createClient();
+        await updateSearchRunStatus(
+          {
+            runId: searchRunId,
+            status: 'failed',
+            error: error instanceof Error ? error.message : 'Unknown error occurred',
+          },
+          supabase
+        );
+      }
+      
       return {
         success: false,
         jobs: [],
@@ -69,7 +148,8 @@ export class JobService {
 
   static async searchAllJobBoards(
     params: Omit<JobSearchParams, 'site'>,
-    onProgress?: (currentSite: string, completedSites: number, totalSites: number) => void
+    onProgress?: (currentSite: string, completedSites: number, totalSites: number) => void,
+    userId?: string
   ): Promise<JobSearchResponse> {
     const allJobs: Job[] = [];
     const errors: string[] = [];
@@ -87,7 +167,7 @@ export class JobService {
           site: site.value,
         };
 
-        const response = await this.searchJobs(siteParams);
+        const response = await this.searchJobs(siteParams, userId);
         
         if (response.success && response.jobs) {
           // Add site information to each job for identification

@@ -197,37 +197,7 @@ Each release has a clear goal, user value, and testing plan. Releases are kept s
 
 ---
 
-### Release 4 – Search History & Run Management
-
-**Goal:** Let users view their past searches and manage active/failed searches.
-
-**User Value:** Users can see their search history, re-run previous searches with one click, and cancel stuck searches.
-
-**Implementation:**
-- Create `SearchHistory` component:
-  - Lists recent search runs with status badges
-  - Shows parameters, timestamps, and results count
-  - Allows clicking to re-run with same parameters
-- Add "Search History" link to header/navigation
-- Create `src/app/search-history/page.tsx`
-- Add ability to cancel pending/running searches:
-  - Button to mark a run as `cancelled` (new status)
-  - Render worker should check for cancelled status and skip processing
-
-**Testing Plan:**
-- Navigate to search history page
-- Verify all past searches appear with correct statuses
-- Click to re-run a previous search
-- Verify new search initiates with same parameters
-- Cancel a running search
-- Verify status updates to `cancelled`
-- Verify Render worker skips cancelled runs
-
-**Success Criteria:** Search history is visible and functional; users can re-run and cancel searches.
-
----
-
-### Release 5 – Render Worker: Queue-Based Processing
+### Release 4 – Render Worker: Queue-Based Processing
 
 **Goal:** Decouple search execution from the HTTP request/response cycle by having Render poll the queue.
 
@@ -263,7 +233,7 @@ Each release has a clear goal, user value, and testing plan. Releases are kept s
 
 ---
 
-### Release 6 – Scheduled Automation via Vercel Cron
+### Release 5 – Scheduled Automation via Vercel Cron
 
 **Goal:** Automatically refresh job searches for all users at scheduled times.
 
@@ -271,8 +241,9 @@ Each release has a clear goal, user value, and testing plan. Releases are kept s
 
 **Implementation:**
 - Create `/api/cron/schedule-user-searches` endpoint:
-  - Fetches all users with saved preferences
+  - Fetches all users with their last search criteria from `search_runs` table (most recent successful search per user)
   - Creates one `search_runs` row per user with source=`cron`
+  - **Important:** Override the `hours_old` parameter to use 3 hours (for "Last 3 hours" Posted Within filter) regardless of user's last search setting
   - Returns immediately (doesn't wait for processing)
 - Configure `vercel.json` with cron schedules:
   - Runs at 8:00, 10:00, 14:00, 16:00, 16:45, 22:00 UK time
@@ -280,59 +251,29 @@ Each release has a clear goal, user value, and testing plan. Releases are kept s
 - Protect endpoint with `CRON_SECRET`
 - Add rate limiting to prevent abuse
 - Update Render worker to process both `manual` and `cron` runs
+- **Note:** The JobSpy API on Render supports `hours_old` parameter - verified in `main.py` that it accepts this parameter and converts it to a date filter
 
 **Testing Plan:**
 - Manually trigger the cron endpoint (with secret)
-- Verify `search_runs` rows created for all users
-- Verify Render worker processes them
-- Verify users see new jobs appear
+- Verify `search_runs` rows created for all users with correct parameters
+- **Verify `hours_old` is set to 3 (not the user's last search value)**
+- Verify Render worker processes them correctly
+- Verify users see new jobs appear (only from last 3 hours)
 - Test at actual scheduled time (deploy and wait)
 - Monitor for 24 hours to ensure all cron jobs fire
 - Check users receive fresh jobs at scheduled times
 
-**Success Criteria:** Automated searches run on schedule; all users receive fresh jobs; no failures.
-
----
-
-### Release 7 – Advanced Observability & Optimization
-
-**Goal:** Monitor system health and optimize performance.
-
-**User Value:** Faster, more reliable searches through performance improvements and proactive issue detection.
-
-**Implementation:**
-- Create admin dashboard showing:
-  - Search run success/failure rates
-  - Average search duration
-  - Queue depth
-  - Errors by type
-- Add alerting:
-  - Email when failure rate exceeds threshold
-  - Slack notification for critical errors
-- Optimize queue processing:
-  - Increase worker concurrency based on load
-  - Skip inactive users (no login in 30 days)
-  - Prioritize manual searches over cron
-- Add database indexes for query performance
-
-**Testing Plan:**
-- Access admin dashboard
-- Verify metrics display correctly
-- Trigger alerts intentionally
-- Verify notifications received
-- Load test with 100 simulated users
-- Verify queue processes efficiently
-
-**Success Criteria:** Dashboard works; alerts fire correctly; system handles load gracefully.
+**Success Criteria:** Automated searches run on schedule; all users receive fresh jobs from the last 3 hours; no failures.
 
 ## 5. Benefits of the Updated Plan
 
 - **Immediate UX win:** Users gain cross-device visibility in Release 3 (after foundational work in releases 1-2).
-- **Scalable and resilient:** Releases 5-6 introduce queue-driven processing, better error handling, and flexibility to scale worker capacity.
+- **Scalable and resilient:** Releases 4-5 introduce queue-driven processing, better error handling, and flexibility to scale worker capacity.
 - **Incremental risk:** Each release is small and testable end-to-end with real users, reducing chances of breaking existing Render functionality.
 - **Aligned triggers:** Manual searches, cron jobs, and any future integrations share the same infrastructure, simplifying maintenance.
 - **Reuses existing components:** The plan leverages existing `LoadingInsight` and `Timer` components, minimising new UI development.
 - **Clear testing path:** Each release has explicit testing scenarios, making it easier to validate and catch issues early.
+- **Smart scheduling:** Automated searches always use "Last 3 hours" filter to fetch only recent jobs, optimizing performance and relevance.
 
 ## 6. Notes on Existing Components
 

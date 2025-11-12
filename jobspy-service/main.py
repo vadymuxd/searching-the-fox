@@ -7,6 +7,12 @@ import logging
 from datetime import datetime, timedelta
 import markdownify
 from logo_fetcher import fetch_company_logos
+import os
+from supabase import create_client, Client
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -18,6 +24,21 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+# Initialize Supabase client (optional, only used if credentials are provided)
+supabase: Optional[Client] = None
+try:
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    
+    if supabase_url and supabase_service_key:
+        supabase = create_client(supabase_url, supabase_service_key)
+        logger.info("Supabase client initialized successfully")
+    else:
+        logger.warning("Supabase credentials not found - search run tracking disabled")
+except Exception as e:
+    logger.error(f"Failed to initialize Supabase client: {e}")
+    supabase = None
 
 app = FastAPI(title="JobSpy API", description="Job scraping service using JobSpy", version="1.0.0")
 
@@ -42,6 +63,7 @@ class JobSearchRequest(BaseModel):
     results_wanted: Optional[int] = 20
     hours_old: Optional[int] = 72  # hours old filter
     country_indeed: Optional[str] = "USA"
+    run_id: Optional[str] = None  # Optional search run ID for tracking
     # Removed job_type and is_remote to avoid validation issues
 
 class JobResponse(BaseModel):
@@ -79,6 +101,35 @@ async def root():
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
+def update_search_run_status(run_id: str, status: str, error: Optional[str] = None, jobs_found: Optional[int] = None):
+    """
+    Update the status of a search run in Supabase
+    """
+    if not supabase or not run_id:
+        return
+    
+    try:
+        update_data = {"status": status}
+        
+        # Add timestamps based on status
+        if status == "running":
+            update_data["started_at"] = datetime.now().isoformat()
+        elif status in ["success", "failed"]:
+            update_data["completed_at"] = datetime.now().isoformat()
+        
+        # Add optional fields
+        if error is not None:
+            update_data["error_message"] = error
+        if jobs_found is not None:
+            update_data["jobs_found"] = jobs_found
+        
+        result = supabase.table("search_runs").update(update_data).eq("id", run_id).execute()
+        logger.info(f"Updated search run {run_id} to status: {status}")
+        return result
+    except Exception as e:
+        logger.error(f"Failed to update search run {run_id}: {e}")
+        return None
+
 @app.post("/scrape", response_model=JobSearchResponse)
 async def scrape_jobs(request: JobSearchRequest):
     """
@@ -87,11 +138,18 @@ async def scrape_jobs(request: JobSearchRequest):
     try:
         logger.info(f"Starting job scrape request: {request.dict()}")
         
+        # Update search run status to 'running' if run_id is provided
+        if request.run_id:
+            update_search_run_status(request.run_id, "running")
+        
         # Import jobspy here to avoid import issues
         try:
             from jobspy import scrape_jobs
         except ImportError as e:
             logger.error(f"Failed to import jobspy: {e}")
+            # Update search run to failed if run_id is provided
+            if request.run_id:
+                update_search_run_status(request.run_id, "failed", error="JobSpy library not installed properly")
             raise HTTPException(status_code=500, detail="JobSpy library not installed properly")
         
         # Convert hours_old to date_posted parameter
@@ -116,6 +174,9 @@ async def scrape_jobs(request: JobSearchRequest):
         
         if jobs_df is None or jobs_df.empty:
             logger.warning("No jobs found")
+            # Update search run to success with 0 jobs if run_id is provided
+            if request.run_id:
+                update_search_run_status(request.run_id, "success", jobs_found=0)
             return JobSearchResponse(
                 success=True,
                 jobs=[],
@@ -218,6 +279,10 @@ async def scrape_jobs(request: JobSearchRequest):
         
         logger.info(f"Successfully processed {len(jobs_list)} jobs")
         
+        # Update search run to success with job count if run_id is provided
+        if request.run_id:
+            update_search_run_status(request.run_id, "success", jobs_found=len(jobs_list))
+        
         return JobSearchResponse(
             success=True,
             jobs=jobs_list,
@@ -228,6 +293,9 @@ async def scrape_jobs(request: JobSearchRequest):
         
     except Exception as e:
         logger.error(f"Error in scrape_jobs: {str(e)}", exc_info=True)
+        # Update search run to failed if run_id is provided
+        if request.run_id:
+            update_search_run_status(request.run_id, "failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Failed to scrape jobs: {str(e)}")
 
 if __name__ == "__main__":

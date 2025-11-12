@@ -5,3 +5,5 @@ python-multipart==0.0.20
 pydantic==2.11.9
 requests==2.32.5
 markdownify==0.13.1
+supabase==2.10.0
+python-dotenv==1.0.0
