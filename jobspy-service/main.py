@@ -42,17 +42,17 @@ except Exception as e:
 
 app = FastAPI(title="JobSpy API", description="Job scraping service using JobSpy", version="1.0.0")
 
-# Add CORS middleware
+# Add CORS middleware (use explicit origins + regex for Vercel previews)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://localhost:3001", 
+        "http://localhost:3001",
         "https://searching-the-fox.vercel.app",
-        "https://*.vercel.app"
     ],
+    allow_origin_regex=r"^https://[a-z0-9-]+\.vercel\.app$",
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -101,6 +101,13 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+# Explicit OPTIONS handler to ensure preflight responses are returned by the app
+@app.options("/scrape")
+async def options_scrape():
+    # CORSMiddleware will attach the appropriate headers
+    from fastapi.responses import Response
+    return Response(status_code=204)
 
 def update_search_run_status(run_id: str, status: str, error: Optional[str] = None, jobs_found: Optional[int] = None):
     """
