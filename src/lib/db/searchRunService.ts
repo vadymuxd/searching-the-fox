@@ -18,7 +18,7 @@ export interface ClientContext {
   userAgent?: string;
   device?: string;
   timestamp?: string;
-  [key: string]: any;
+  [key: string]: string | undefined;
 }
 
 export interface SearchRun {
@@ -102,7 +102,13 @@ export async function updateSearchRunStatus(
   try {
     const client = supabase || createBrowserClient();
     
-    const updateData: any = {
+    const updateData: Partial<{
+      status: SearchRunStatus;
+      error_message: string;
+      jobs_found: number;
+      started_at: string;
+      completed_at: string;
+    }> = {
       status: params.status,
     };
 
