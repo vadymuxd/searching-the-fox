@@ -64,6 +64,7 @@ class JobSearchRequest(BaseModel):
     hours_old: Optional[int] = 72  # hours old filter
     country_indeed: Optional[str] = "USA"
     run_id: Optional[str] = None  # Optional search run ID for tracking
+    user_id: Optional[str] = None  # Optional user ID for direct database writes
     # Removed job_type and is_remote to avoid validation issues
 
 class JobResponse(BaseModel):
@@ -129,6 +130,99 @@ def update_search_run_status(run_id: str, status: str, error: Optional[str] = No
     except Exception as e:
         logger.error(f"Failed to update search run {run_id}: {e}")
         return None
+
+def save_job_to_database(job_data: dict, user_id: str):
+    """
+    Save a single job to the database and create user_jobs relationship
+    Returns the job_id if successful, None otherwise
+    """
+    if not supabase:
+        return None
+    
+    try:
+        # First, try to insert the job (will fail if job_url already exists due to UNIQUE constraint)
+        job_insert_data = {
+            "title": job_data.get("title", "No title"),
+            "company": job_data.get("company", "Unknown"),
+            "company_url": job_data.get("company_url"),
+            "company_logo_url": job_data.get("company_logo_url"),
+            "job_url": job_data["job_url"],  # Required field
+            "location": job_data.get("location"),
+            "is_remote": job_data.get("is_remote", False),
+            "description": job_data.get("description"),
+            "job_type": job_data.get("job_type"),
+            "salary_min": job_data.get("salary_min"),
+            "salary_max": job_data.get("salary_max"),
+            "salary_currency": job_data.get("salary_currency"),
+            "date_posted": job_data.get("date_posted"),
+            "emails": job_data.get("emails"),
+            "site": job_data.get("site", "unknown"),
+            "source_site": job_data.get("source_site"),
+        }
+        
+        # Try to insert the job
+        job_result = supabase.table("jobs").insert(job_insert_data).execute()
+        job_id = job_result.data[0]["id"] if job_result.data else None
+        
+        if job_id:
+            logger.info(f"Inserted new job: {job_id}")
+        
+    except Exception as e:
+        # Job might already exist (duplicate job_url), try to get it
+        error_msg = str(e)
+        if "duplicate" in error_msg.lower() or "unique" in error_msg.lower():
+            try:
+                # Get existing job by job_url
+                existing_job = supabase.table("jobs").select("id").eq("job_url", job_data["job_url"]).execute()
+                if existing_job.data:
+                    job_id = existing_job.data[0]["id"]
+                    logger.info(f"Job already exists: {job_id}")
+                else:
+                    logger.error(f"Could not find existing job: {job_data['job_url']}")
+                    return None
+            except Exception as get_error:
+                logger.error(f"Error getting existing job: {get_error}")
+                return None
+        else:
+            logger.error(f"Error inserting job: {e}")
+            return None
+    
+    # Now create user_jobs relationship if we have a job_id
+    if job_id and user_id:
+        try:
+            user_job_data = {
+                "user_id": user_id,
+                "job_id": job_id,
+                "status": "new",
+            }
+            
+            # Insert user_job relationship (might fail if already exists)
+            supabase.table("user_jobs").insert(user_job_data).execute()
+            logger.info(f"Created user_job relationship for user {user_id} and job {job_id}")
+            
+        except Exception as uj_error:
+            # User might already have this job, which is fine
+            error_msg = str(uj_error)
+            if "duplicate" not in error_msg.lower() and "unique" not in error_msg.lower():
+                logger.error(f"Error creating user_job relationship: {uj_error}")
+    
+    return job_id
+
+def save_jobs_to_database(jobs_list: List[dict], user_id: str) -> int:
+    """
+    Save multiple jobs to database
+    Returns count of successfully saved jobs
+    """
+    if not supabase or not user_id:
+        return 0
+    
+    saved_count = 0
+    for job in jobs_list:
+        if save_job_to_database(job, user_id):
+            saved_count += 1
+    
+    logger.info(f"Saved {saved_count} out of {len(jobs_list)} jobs to database for user {user_id}")
+    return saved_count
 
 @app.post("/scrape", response_model=JobSearchResponse)
 async def scrape_jobs(request: JobSearchRequest):
@@ -279,9 +373,28 @@ async def scrape_jobs(request: JobSearchRequest):
         
         logger.info(f"Successfully processed {len(jobs_list)} jobs")
         
-        # Update search run to success with job count if run_id is provided
-        if request.run_id:
-            update_search_run_status(request.run_id, "success", jobs_found=len(jobs_list))
+        # Save jobs to database if user_id is provided (authenticated user)
+        if request.user_id:
+            try:
+                logger.info(f"Saving jobs to database for user {request.user_id}")
+                # Convert jobs_list (Pydantic models) to dicts for database insertion
+                jobs_dict_list = [job.dict() for job in jobs_list]
+                saved_count = save_jobs_to_database(jobs_dict_list, request.user_id)
+                logger.info(f"Successfully saved {saved_count} jobs to database")
+                
+                # Update search run with actual saved count
+                if request.run_id:
+                    update_search_run_status(request.run_id, "success", jobs_found=saved_count)
+            except Exception as db_error:
+                logger.error(f"Error saving jobs to database: {db_error}")
+                # Don't fail the entire request if database save fails
+                # Still update search run to success since scraping worked
+                if request.run_id:
+                    update_search_run_status(request.run_id, "success", jobs_found=len(jobs_list))
+        else:
+            # Guest user - just update search run if provided
+            if request.run_id:
+                update_search_run_status(request.run_id, "success", jobs_found=len(jobs_list))
         
         return JobSearchResponse(
             success=True,

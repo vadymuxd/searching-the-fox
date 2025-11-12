@@ -139,11 +139,120 @@ Each release has a clear goal, user value, and testing plan. Releases are kept s
 
 ---
 
-### Release 3 – Frontend: Cross-Device Search Status Visibility
+### Release 3 – Render Direct Database Writes: Browser-Independent Job Saving
+
+**Goal:** Enable Render to save jobs directly to the database, allowing users to close their browser while searches complete.
+
+**User Value:** **High impact** - Users can click "Search", close the browser, and return later to find completed results. No need to keep the browser open during long searches.
+
+**Implementation:**
+- Update Render `jobspy-service` to save jobs directly to Supabase:
+  - Add function to insert jobs into `jobs` table (with deduplication by `job_url`)
+  - Add function to create `user_jobs` relationships for authenticated users
+  - After scraping completes, if `user_id` is provided:
+    - Save each job to `jobs` table (skip if already exists)
+    - Create `user_jobs` entry linking user to job (status: `new`)
+  - Still return JSON to Next.js for backward compatibility with guest users
+- Update Next.js to pass `user_id` to Render:
+  - Modify `JobService.searchJobs()` to include `user_id` in request payload
+  - Render will save to database if `user_id` is provided
+  - Next.js still handles guest user job storage in localStorage
+- Ensure guest users continue working normally:
+  - If no `user_id` provided, Render just returns JSON (existing behavior)
+  - Next.js saves to localStorage for guests
+
+**Testing Plan:**
+
+**Test 1: Guest User (No Change)**
+- Log out completely
+- Perform a search
+- Verify: Jobs appear in UI
+- Verify: Jobs stored in localStorage
+- Verify: No database writes (guest behavior unchanged)
+
+**Test 2: Authenticated User - Browser Open**
+- Log in as test user
+- Perform a search: "Software Engineer" in "London"
+- Wait for completion (keep browser open)
+- Verify in Supabase:
+  ```sql
+  -- Check search run
+  SELECT * FROM search_runs ORDER BY created_at DESC LIMIT 1;
+  -- Should show status = 'success', jobs_found = X
+  
+  -- Check jobs were saved
+  SELECT COUNT(*) FROM jobs WHERE created_at > NOW() - INTERVAL '5 minutes';
+  -- Should show new jobs
+  
+  -- Check user_jobs relationship
+  SELECT COUNT(*) FROM user_jobs 
+  WHERE user_id = '<test-user-id>' 
+  AND created_at > NOW() - INTERVAL '5 minutes';
+  -- Should match jobs_found count
+  ```
+- Verify in UI: Jobs appear in results page
+
+**Test 3: Authenticated User - Browser Closed (KEY TEST)**
+- Log in as test user
+- Initiate search: "Product Manager" in "Manchester"
+- **Immediately close browser tab** (don't wait)
+- Wait 10 minutes
+- Open browser, log in again
+- Navigate to /results page
+- Verify in Supabase:
+  ```sql
+  SELECT * FROM search_runs 
+  WHERE user_id = '<test-user-id>' 
+  ORDER BY created_at DESC LIMIT 1;
+  -- Should show status = 'success' even though browser was closed
+  
+  SELECT COUNT(*) FROM user_jobs 
+  WHERE user_id = '<test-user-id>' 
+  AND created_at > NOW() - INTERVAL '15 minutes';
+  -- Should show new jobs from the closed-browser search
+  ```
+- Verify: New jobs appear in UI (from database, not localStorage)
+
+**Test 4: Search Run Tracking**
+- Log in as test user
+- Perform search
+- Check `search_runs` table:
+  - Verify `run_id` passed to Render
+  - Verify status progresses: pending → running → success
+  - Verify `jobs_found` matches actual jobs saved
+  - Verify timestamps populated correctly
+
+**Test 5: Deduplication**
+- Log in as test user
+- Perform same search twice
+- Verify:
+  - No duplicate jobs in `jobs` table (dedup by `job_url`)
+  - User has relationship to each job only once
+  - Both searches show correct `jobs_found` count
+
+**Test 6: Error Handling**
+- Trigger a search that will fail (invalid parameters)
+- Verify:
+  - `search_runs` status = 'failed'
+  - No jobs saved
+  - User sees error message
+  - Can retry search
+
+**Success Criteria:** 
+- ✅ Guest users work exactly as before (localStorage)
+- ✅ Authenticated users can close browser mid-search
+- ✅ Jobs saved directly to database by Render
+- ✅ Search runs tracked correctly
+- ✅ No duplicate jobs in database
+- ✅ Existing UI/UX unchanged
+
+---
+
+### Release 4 – Frontend: Cross-Device Search Status Visibility
 
 **Goal:** Allow users to see their ongoing search status even after closing the app or switching devices.
 
-**User Value:** **High impact UX improvement** - Users can initiate a search on their phone, close the app, and check progress later on their laptop. No more wondering if the search is still running.
+**User Value:** **High impact UX improvement** - Users can see real-time search progress and status across devices.
 
 **Implementation:**
 - Create `src/lib/db/searchRunService.ts` client-side functions:
@@ -197,7 +306,7 @@ Each release has a clear goal, user value, and testing plan. Releases are kept s
 
 ---
 
-### Release 4 – Render Worker: Queue-Based Processing
+### Release 5 – Render Worker: Queue-Based Processing
 
 **Goal:** Decouple search execution from the HTTP request/response cycle by having Render poll the queue.
 
@@ -233,7 +342,42 @@ Each release has a clear goal, user value, and testing plan. Releases are kept s
 
 ---
 
-### Release 5 – Scheduled Automation via Vercel Cron
+### Release 5 – Render Worker: Queue-Based Processing
+
+**Goal:** Decouple search execution from the HTTP request/response cycle by having Render poll the queue.
+
+**User Value:** More reliable searches - if Render worker crashes, searches can be retried automatically.
+
+**Implementation:**
+- Update Render `jobspy-service`:
+  - Create `/worker/poll-queue` endpoint
+  - Poll `search_runs` for `pending` runs (batch of 5)
+  - Mark each as `running`, execute scrape, update status
+  - Add retry logic (3 attempts) for failed runs
+  - Add idempotency checks (skip if already running/completed)
+- Update Next.js manual search flow:
+  - Create run with status `pending`
+  - Return run_id to client immediately (don't wait for Render)
+  - Client polls run status or subscribes via realtime
+- Add Render worker as a background job (not triggered by HTTP):
+  - Configure Render to run the polling endpoint every 30 seconds
+  - Or use Render background worker (if available on plan)
+
+**Testing Plan:**
+- Initiate search from UI
+- Verify search run created with `pending` status
+- Verify UI immediately shows loading state
+- Monitor Render logs for queue polling
+- Verify run status changes to `running` then `success`
+- Test with multiple concurrent searches
+- Test retry logic by simulating failures
+- Verify searches complete even if Next.js restarts
+
+**Success Criteria:** Searches complete reliably via queue polling; no long HTTP requests; retries work.
+
+---
+
+### Release 6 – Scheduled Automation via Vercel Cron
 
 **Goal:** Automatically refresh job searches for all users at scheduled times.
 
@@ -267,8 +411,9 @@ Each release has a clear goal, user value, and testing plan. Releases are kept s
 
 ## 5. Benefits of the Updated Plan
 
-- **Immediate UX win:** Users gain cross-device visibility in Release 3 (after foundational work in releases 1-2).
-- **Scalable and resilient:** Releases 4-5 introduce queue-driven processing, better error handling, and flexibility to scale worker capacity.
+- **Immediate UX win:** Users gain browser-independent searches in Release 3 (can close browser mid-search).
+- **Progressive enhancement:** Release 4 adds cross-device visibility, Release 5 adds queue processing, Release 6 adds automation.
+- **Scalable and resilient:** Releases 5-6 introduce queue-driven processing, better error handling, and flexibility to scale worker capacity.
 - **Incremental risk:** Each release is small and testable end-to-end with real users, reducing chances of breaking existing Render functionality.
 - **Aligned triggers:** Manual searches, cron jobs, and any future integrations share the same infrastructure, simplifying maintenance.
 - **Reuses existing components:** The plan leverages existing `LoadingInsight` and `Timer` components, minimising new UI development.

@@ -66,6 +66,7 @@ export class JobService {
         hours_old: parseInt(params.hours_old || '24'),
         country_indeed: countryIndeed || 'UK',
         run_id: searchRunId, // Pass the search run ID to Render
+        user_id: userId, // Pass user ID so Render can save to database
       };
 
       const response = await fetch(`${API_BASE_URL}/scrape`, {
