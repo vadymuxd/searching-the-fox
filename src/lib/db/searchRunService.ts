@@ -1,5 +1,4 @@
 import { createClient as createBrowserClient } from '@/lib/supabase/client';
-import { createClient as createServerClient } from '@/lib/supabase/server';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 // Types for search runs
@@ -56,7 +55,7 @@ export interface UpdateSearchRunStatusParams {
 /**
  * Creates a new search run in the database
  * @param params - Parameters for creating the search run
- * @param supabase - Optional Supabase client (defaults to server client)
+ * @param supabase - Optional Supabase client (defaults to browser client)
  * @returns The created search run or null if failed
  */
 export async function createSearchRun(
@@ -64,7 +63,7 @@ export async function createSearchRun(
   supabase?: SupabaseClient
 ): Promise<SearchRun | null> {
   try {
-    const client = supabase || await createServerClient();
+    const client = supabase || createBrowserClient();
     
     const { data, error } = await client
       .from('search_runs')
@@ -93,7 +92,7 @@ export async function createSearchRun(
 /**
  * Updates the status of a search run
  * @param params - Parameters for updating the search run
- * @param supabase - Optional Supabase client (defaults to server client)
+ * @param supabase - Optional Supabase client (defaults to browser client)
  * @returns The updated search run or null if failed
  */
 export async function updateSearchRunStatus(
@@ -101,7 +100,7 @@ export async function updateSearchRunStatus(
   supabase?: SupabaseClient
 ): Promise<SearchRun | null> {
   try {
-    const client = supabase || await createServerClient();
+    const client = supabase || createBrowserClient();
     
     const updateData: any = {
       status: params.status,
@@ -156,7 +155,7 @@ export async function updateSearchRunStatus(
 /**
  * Retrieves a single search run by ID
  * @param runId - The ID of the search run to retrieve
- * @param supabase - Optional Supabase client (defaults to server client)
+ * @param supabase - Optional Supabase client (defaults to browser client)
  * @returns The search run or null if not found
  */
 export async function getSearchRun(
@@ -164,7 +163,7 @@ export async function getSearchRun(
   supabase?: SupabaseClient
 ): Promise<SearchRun | null> {
   try {
-    const client = supabase || await createServerClient();
+    const client = supabase || createBrowserClient();
     
     const { data, error } = await client
       .from('search_runs')
@@ -188,7 +187,7 @@ export async function getSearchRun(
  * Retrieves recent search runs for a user
  * @param userId - The ID of the user
  * @param limit - Maximum number of runs to retrieve (default: 10)
- * @param supabase - Optional Supabase client (defaults to server client)
+ * @param supabase - Optional Supabase client (defaults to browser client)
  * @returns Array of search runs
  */
 export async function getUserSearchRuns(
@@ -197,7 +196,7 @@ export async function getUserSearchRuns(
   supabase?: SupabaseClient
 ): Promise<SearchRun[]> {
   try {
-    const client = supabase || await createServerClient();
+    const client = supabase || createBrowserClient();
     
     const { data, error } = await client
       .from('search_runs')
@@ -296,7 +295,7 @@ export function subscribeToSearchRun(
  * Gets the most recent successful search run for a user
  * Used by cron jobs to get last search criteria
  * @param userId - The ID of the user
- * @param supabase - Optional Supabase client
+ * @param supabase - Optional Supabase client (defaults to browser client)
  * @returns The most recent successful search run or null
  */
 export async function getLastSuccessfulSearchRun(
@@ -304,7 +303,7 @@ export async function getLastSuccessfulSearchRun(
   supabase?: SupabaseClient
 ): Promise<SearchRun | null> {
   try {
-    const client = supabase || await createServerClient();
+    const client = supabase || createBrowserClient();
     
     const { data, error } = await client
       .from('search_runs')
