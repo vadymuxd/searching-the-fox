@@ -104,8 +104,8 @@ export class JobService {
       // Enhance company logos
       const enhancedJobs = await this.enhanceCompanyLogos(jobsWithSourceSite);
       
-      // Update search run to success status with job count
-      if (searchRunId && userId) {
+      // Update search run to success status with job count (only if we created a search run)
+      if (searchRunId && userId && !skipSearchRunCreation) {
         const supabase = createClient();
         await updateSearchRunStatus(
           {
@@ -126,8 +126,8 @@ export class JobService {
     } catch (error) {
       console.error('Job search error:', error);
       
-      // Update search run to failed status if we have one
-      if (searchRunId && userId) {
+      // Update search run to failed status if we have one (only if we created a search run)
+      if (searchRunId && userId && !skipSearchRunCreation) {
         const supabase = createClient();
         await updateSearchRunStatus(
           {

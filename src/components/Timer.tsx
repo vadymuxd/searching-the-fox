@@ -21,15 +21,14 @@ export function Timer({ isRunning, onReset, progressInfo, initialElapsedTime = 0
     let interval: NodeJS.Timeout | null = null;
 
     if (isRunning) {
-      // Set initial time if provided (for resuming persisted searches)
-      if (initialElapsedTime > 0 && seconds === 0) {
-        setSeconds(initialElapsedTime);
-      }
+      // Set initial time when starting (for resuming persisted searches)
+      setSeconds(initialElapsedTime);
       
       interval = setInterval(() => {
         setSeconds(prev => prev + 1);
       }, 1000);
     } else {
+      // Reset timer when not running
       setSeconds(0);
       if (onReset) {
         onReset();
@@ -41,7 +40,7 @@ export function Timer({ isRunning, onReset, progressInfo, initialElapsedTime = 0
         clearInterval(interval);
       }
     };
-  }, [isRunning, onReset, initialElapsedTime, seconds]);
+  }, [isRunning, onReset, initialElapsedTime]);
 
   const formatTime = (totalSeconds: number) => {
     const minutes = Math.floor(totalSeconds / 60);

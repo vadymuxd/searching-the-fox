@@ -208,7 +208,9 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
 
   // Check for active run on mount and when userId changes
   useEffect(() => {
-    checkActiveRun();
+    if (userId) {
+      checkActiveRun();
+    }
 
     // Cleanup on unmount
     return () => {
@@ -219,7 +221,23 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
       }
       stopTimer();
     };
-  }, [checkActiveRun, stopTimer]);
+  }, [userId, checkActiveRun, stopTimer]);
+
+  // Re-check when page becomes visible (user returns to tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && userId) {
+        console.log('[useSearchStatus] Page visible again, re-checking active runs');
+        checkActiveRun();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [userId, checkActiveRun]);
 
   // Method to manually start monitoring a specific run
   const monitorRun = useCallback(async (runId: string) => {
