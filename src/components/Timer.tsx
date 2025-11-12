@@ -11,15 +11,21 @@ interface TimerProps {
     completed: number;
     total: number;
   };
+  initialElapsedTime?: number; // Support resuming from persisted time
 }
 
-export function Timer({ isRunning, onReset, progressInfo }: TimerProps) {
-  const [seconds, setSeconds] = useState(0);
+export function Timer({ isRunning, onReset, progressInfo, initialElapsedTime = 0 }: TimerProps) {
+  const [seconds, setSeconds] = useState(initialElapsedTime);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
     if (isRunning) {
+      // Set initial time if provided (for resuming persisted searches)
+      if (initialElapsedTime > 0 && seconds === 0) {
+        setSeconds(initialElapsedTime);
+      }
+      
       interval = setInterval(() => {
         setSeconds(prev => prev + 1);
       }, 1000);
@@ -35,7 +41,7 @@ export function Timer({ isRunning, onReset, progressInfo }: TimerProps) {
         clearInterval(interval);
       }
     };
-  }, [isRunning, onReset]);
+  }, [isRunning, onReset, initialElapsedTime, seconds]);
 
   const formatTime = (totalSeconds: number) => {
     const minutes = Math.floor(totalSeconds / 60);

@@ -24,10 +24,20 @@ import { searchStorage } from '@/lib/localStorage';
 import { SearchFormData, JobSearchResponse } from '@/types/job';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { jobsDataManager } from '@/lib/jobsDataManager';
+import { useSearchStatus } from '@/hooks/useSearchStatus';
 
 export default function HomePage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  
+  // Monitor active search runs for cross-device visibility
+  const {
+    activeRun,
+    isLoading: isSearchRunActive,
+    elapsedTime,
+  } = useSearchStatus({
+    userId: user?.id,
+  });
   
   const [loading, setLoading] = useState(false);
   const [currentSearch, setCurrentSearch] = useState<SearchFormData | null>(null);
@@ -39,6 +49,9 @@ export default function HomePage() {
     completed: number;
     total: number;
   } | undefined>(undefined);
+
+  // Determine if we should show loading state (either manual search in progress or active search run)
+  const showLoadingState = loading || isSearchRunActive;
 
   // Don't auto-redirect authenticated users - let them use homepage too
   useEffect(() => {
@@ -238,7 +251,7 @@ export default function HomePage() {
   return (
     <>
       {/* Header - Show only during loading */}
-      {loading && <Header onSignInClick={() => setAuthModalOpened(true)} />}
+      {showLoadingState && <Header onSignInClick={() => setAuthModalOpened(true)} />}
       
       {!mounted ? (
         // Show loading skeleton during hydration
@@ -281,21 +294,29 @@ export default function HomePage() {
         </Box>
       ) : (
         // Main homepage layout - centered search form or loading state
-        <Box style={{ backgroundColor: loading ? '#ffffff' : '#f8f9fa', minHeight: '100vh', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box style={{ backgroundColor: showLoadingState ? '#ffffff' : '#f8f9fa', minHeight: '100vh', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Box style={{ width: '100%' }}>
-            {loading ? (
+            {showLoadingState ? (
               // Loading state with progress
               <Container size="xl">
                 <Stack gap="xl" align="center">
                   {/* Loading Progress */}
                   <Paper p="md" radius="md" style={{ width: '100%', maxWidth: '600px' }}>
                     <Stack gap={8} align="center">
-                      <LoadingInsight isActive={loading} />
+                      <LoadingInsight isActive={showLoadingState} />
                       <Timer 
-                        isRunning={loading} 
+                        isRunning={showLoadingState} 
                         progressInfo={progressInfo}
+                        initialElapsedTime={isSearchRunActive ? elapsedTime : 0}
                       />
-                      {!progressInfo && (
+                      {!progressInfo && activeRun && (
+                        <Text size="sm" c="dimmed" ta="center">
+                          {activeRun.status === 'pending' 
+                            ? 'Your search is queued and will start shortly...'
+                            : `Searching ${activeRun.parameters.site === 'all' ? 'all job boards' : activeRun.parameters.site}...`}
+                        </Text>
+                      )}
+                      {!progressInfo && !activeRun && (
                         <Text size="sm" c="dimmed" ta="center">
                           This may take up to 2 minutes depending on the job board and number of results
                         </Text>
@@ -371,8 +392,14 @@ export default function HomePage() {
                 <Box style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>
                   <SearchForm
                     onSearch={handleSearch}
-                    loading={loading}
-                    initialValues={currentSearch || undefined}
+                    loading={showLoadingState}
+                    initialValues={currentSearch || (activeRun?.parameters ? {
+                      jobTitle: activeRun.parameters.jobTitle,
+                      location: activeRun.parameters.location,
+                      site: activeRun.parameters.site,
+                      resultsWanted: activeRun.parameters.results_wanted || 1000,
+                      hoursOld: activeRun.parameters.hours_old?.toString() || '24',
+                    } : undefined)}
                   />
                 </Box>
               </Stack>
