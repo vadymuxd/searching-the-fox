@@ -237,7 +237,7 @@ async def scrape_jobs(request: JobSearchRequest):
     Scrape jobs using JobSpy from multiple job sites
     """
     try:
-        logger.info(f"Starting job scrape request: {request.dict()}")
+        logger.info(f"Starting job scrape request: {request.model_dump()}")
         
         # Update search run status to 'running' if run_id is provided
         if request.run_id:
@@ -282,7 +282,7 @@ async def scrape_jobs(request: JobSearchRequest):
                 success=True,
                 jobs=[],
                 total_results=0,
-                search_criteria=request.dict(),
+                search_criteria=request.model_dump(),
                 timestamp=datetime.now().isoformat()
             )
         
@@ -385,7 +385,7 @@ async def scrape_jobs(request: JobSearchRequest):
             try:
                 logger.info(f"Saving jobs to database for user {request.user_id}")
                 # Convert jobs_list (Pydantic models) to dicts for database insertion
-                jobs_dict_list = [job.dict() for job in jobs_list]
+                jobs_dict_list = [job.model_dump(mode='json') for job in jobs_list]
                 saved_count = save_jobs_to_database(jobs_dict_list, request.user_id)
                 logger.info(f"Successfully saved {saved_count} jobs to database")
                 
@@ -407,7 +407,7 @@ async def scrape_jobs(request: JobSearchRequest):
             success=True,
             jobs=jobs_list,
             total_results=len(jobs_list),
-            search_criteria=request.dict(),
+            search_criteria=request.model_dump(),
             timestamp=datetime.now().isoformat()
         )
         
