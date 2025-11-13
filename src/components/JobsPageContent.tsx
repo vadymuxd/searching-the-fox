@@ -299,49 +299,94 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
   };
 
   const handleRefresh = async () => {
-    // Initiate search directly from results page without navigation
-    // The SearchRunning component (global) will appear and user stays in context
+    // Initiate search directly from results page without page reload
+    // Create search_run, send API request, then trigger SearchRunning to appear
     if (!currentSearch) return;
     
     try {
-      // Import JobService to initiate search
-      const { JobService } = await import('@/lib/api');
+      console.log('[handleRefresh] Creating search run and initiating search...');
       
-      // Initiate the search in background (don't await - let it run independently)
-      // This creates search_run and starts backend processing
-      if (currentSearch.site === 'all') {
-        JobService.searchAllJobBoards(
-          {
-            location: currentSearch.location,
-            job_title: currentSearch.jobTitle,
-            results_wanted: currentSearch.resultsWanted,
-            hours_old: currentSearch.hoursOld,
-          },
-          undefined, // no progress callback needed
-          user?.id
-        ).catch(error => {
-          console.error('Error during search:', error);
-        });
-      } else {
-        JobService.searchJobs(
-          {
-            site: currentSearch.site,
-            location: currentSearch.location,
-            job_title: currentSearch.jobTitle,
-            results_wanted: currentSearch.resultsWanted,
-            hours_old: currentSearch.hoursOld,
-          },
-          user?.id
-        ).catch(error => {
-          console.error('Error during search:', error);
-        });
+      // Import needed services
+      const { createClient } = await import('@/lib/supabase/client');
+      const { createSearchRun } = await import('@/lib/db/searchRunService');
+      
+      if (!user?.id) {
+        console.error('[handleRefresh] No user ID - cannot create search run');
+        return;
       }
       
-      // Immediately refresh the page to show SearchRunning component
-      // User stays on results page - SearchRunning appears globally at top-right
-      window.location.reload();
+      // Create the search_run in database first (status: "pending")
+      const supabase = createClient();
+      const searchRun = await createSearchRun(
+        {
+          userId: user.id,
+          parameters: {
+            jobTitle: currentSearch.jobTitle,
+            location: currentSearch.location,
+            site: currentSearch.site,
+            hours_old: parseInt(currentSearch.hoursOld || '24'),
+            results_wanted: currentSearch.resultsWanted || 1000,
+          },
+          source: 'manual',
+          clientContext: {
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+            timestamp: new Date().toISOString(),
+          },
+        },
+        supabase
+      );
+      
+      if (!searchRun) {
+        console.error('[handleRefresh] Failed to create search run');
+        return;
+      }
+      
+      console.log('[handleRefresh] Search run created:', searchRun.id);
+      
+      // Now make the API call with the search_run ID
+      // Use keepalive to ensure request completes even if user navigates away
+      const endpoint = '/api/proxy-scrape';
+      const requestBody = {
+        search_term: currentSearch.jobTitle,
+        location: currentSearch.location,
+        site_name: currentSearch.site === 'all' 
+          ? ['linkedin', 'indeed']
+          : [currentSearch.site],
+        results_wanted: currentSearch.resultsWanted || 1000,
+        hours_old: parseInt(currentSearch.hoursOld || '24'),
+        country_indeed: 'UK',
+        run_id: searchRun.id,
+        user_id: user.id,
+      };
+      
+      // Send request with keepalive (continues even if user closes tab)
+      fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        keepalive: true,
+      }).catch(error => {
+        console.error('[handleRefresh] Fetch error:', error);
+      });
+      
+      console.log('[handleRefresh] API request sent, triggering SearchRunning component...');
+      
+      // Trigger SearchRunning component to appear by calling refreshStatus
+      // This is exposed globally by GlobalSearchMonitor
+      if (typeof window !== 'undefined' && (window as any).__searchStatus_refresh) {
+        (window as any).__searchStatus_refresh();
+        console.log('[handleRefresh] SearchRunning component triggered');
+      } else {
+        console.warn('[handleRefresh] refreshStatus not available, SearchRunning may not appear immediately');
+      }
+      
+      // No page reload needed - SearchRunning will appear and poll database
+      // User stays in context on results page
+      
     } catch (error) {
-      console.error('Error initiating search:', error);
+      console.error('[handleRefresh] Error initiating search:', error);
     }
   };
 
