@@ -77,27 +77,7 @@ class LogoFetcher:
         clean_name = re.sub(r'[^\w\s-]', '', company_name.lower())
         clean_name = re.sub(r'\s+', '', clean_name.strip())
         
-        # Try to extract domain from job URL if available
-        if job_url:
-            try:
-                parsed_url = urlparse(job_url)
-                if 'linkedin.com' in parsed_url.netloc:
-                    # For LinkedIn jobs, try common domain patterns
-                    common_domains = [
-                        f"{clean_name}.com",
-                        f"{clean_name}.io",
-                        f"{clean_name}.net",
-                    ]
-                else:
-                    # For other job sites, try to use the job site domain
-                    domain_parts = parsed_url.netloc.split('.')
-                    if len(domain_parts) >= 2:
-                        main_domain = '.'.join(domain_parts[-2:])
-                        return f"https://logo.clearbit.com/{main_domain}"
-            except Exception:
-                pass
-        
-        # Default to .com domain
+        # Default to .com domain using company name
         return f"https://logo.clearbit.com/{clean_name}.com"
     
     def get_logo_dev_url(self, company_name: str) -> str:
