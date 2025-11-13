@@ -243,18 +243,14 @@ export async function getActiveSearchRun(
       .in('status', ['pending', 'running'])
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle(); // Use maybeSingle() instead of single() to avoid errors when no rows
 
     if (error) {
-      // No active search run found is not an error
-      if (error.code === 'PGRST116') {
-        return null;
-      }
       console.error('Error getting active search run:', error);
       return null;
     }
 
-    return data as SearchRun;
+    return data as SearchRun | null;
   } catch (error) {
     console.error('Exception getting active search run:', error);
     return null;
