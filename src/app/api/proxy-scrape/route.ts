@@ -3,7 +3,16 @@ import { NextRequest, NextResponse } from 'next/server';
 const RENDER_API_URL = 'https://truelist-jobspy-api.onrender.com';
 
 export async function POST(request: NextRequest) {
-  let body: any;
+  let body: {
+    search_term?: string;
+    location?: string;
+    site_name?: string[];
+    results_wanted?: number;
+    hours_old?: number;
+    country_indeed?: string;
+    run_id?: string;
+    user_id?: string;
+  } = {};
   
   try {
     console.log('[Proxy] Received scrape request');
