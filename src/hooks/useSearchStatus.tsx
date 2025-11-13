@@ -15,6 +15,8 @@ interface UseSearchStatusOptions {
   userId?: string;
   onSearchComplete?: () => void;
   onSearchFailed?: (error: string) => void;
+  pollingInterval?: number; // Polling interval in milliseconds (default: 3000ms / 3s)
+  enablePolling?: boolean; // Enable polling in addition to real-time updates (default: true)
 }
 
 interface SearchStatusState {
@@ -27,9 +29,16 @@ interface SearchStatusState {
 /**
  * Hook to manage search run status and real-time updates
  * Handles cross-device search visibility and automatic status updates
+ * Uses both real-time subscriptions and periodic polling for reliability
  */
 export function useSearchStatus(options: UseSearchStatusOptions = {}) {
-  const { userId, onSearchComplete, onSearchFailed } = options;
+  const { 
+    userId, 
+    onSearchComplete, 
+    onSearchFailed,
+    pollingInterval = 3000, // Poll every 3 seconds by default
+    enablePolling = true, // Enable polling by default
+  } = options;
   const router = useRouter();
   
   const [state, setState] = useState<SearchStatusState>({
@@ -41,6 +50,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
 
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const previousStatusRef = useRef<SearchRunStatus | null>(null);
 
   // Calculate elapsed time based on created_at timestamp
@@ -73,6 +83,15 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
     }
   }, []);
 
+  // Stop polling
+  const stopPolling = useCallback(() => {
+    if (pollingTimerRef.current) {
+      console.log('[useSearchStatus] Stopping polling');
+      clearInterval(pollingTimerRef.current);
+      pollingTimerRef.current = null;
+    }
+  }, []);
+
   // Handle status updates
   const handleStatusUpdate = useCallback((searchRun: SearchRun) => {
     console.log('[useSearchStatus] Status update:', searchRun.status, 'Previous:', previousStatusRef.current);
@@ -91,6 +110,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
     if (searchRun.status === 'success' && previousStatus !== 'success') {
       console.log('[useSearchStatus] Search completed successfully');
       stopTimer();
+      stopPolling();
       
       // Show success notification
       notifications.show({
@@ -106,13 +126,14 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
         onSearchComplete();
       }
 
-      // Redirect to results page after a short delay
+      // Refresh the page to show new results
       setTimeout(() => {
-        router.push('/results');
+        window.location.reload();
       }, 500);
     } else if (searchRun.status === 'failed' && previousStatus !== 'failed') {
       console.log('[useSearchStatus] Search failed:', searchRun.error_message);
       stopTimer();
+      stopPolling();
       
       // Show error notification
       notifications.show({
@@ -138,7 +159,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
       console.log('[useSearchStatus] Search started running');
       // No notification needed, user already sees the loading state
     }
-  }, [router, stopTimer, onSearchComplete, onSearchFailed]);
+  }, [router, stopTimer, stopPolling, onSearchComplete, onSearchFailed]);
 
   // Subscribe to search run updates
   const subscribeToRun = useCallback((runId: string) => {
@@ -154,6 +175,47 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
     const unsubscribe = subscribeToSearchRun(runId, handleStatusUpdate);
     unsubscribeRef.current = unsubscribe;
   }, [handleStatusUpdate]);
+
+  // Start polling for status updates
+  const startPolling = useCallback(() => {
+    if (!enablePolling || !userId) {
+      return;
+    }
+
+    // Clear existing polling timer
+    if (pollingTimerRef.current) {
+      clearInterval(pollingTimerRef.current);
+    }
+
+    console.log('[useSearchStatus] Starting polling with interval:', pollingInterval);
+
+    // Poll immediately and then on interval
+    const poll = async () => {
+      try {
+        const activeRun = await getActiveSearchRun(userId);
+        
+        if (activeRun) {
+          // Update state with latest data
+          handleStatusUpdate(activeRun);
+        } else if (state.activeRun) {
+          // Active run disappeared - might have been deleted or completed
+          console.log('[useSearchStatus] Active run no longer exists');
+          setState({
+            activeRun: null,
+            isLoading: false,
+            elapsedTime: 0,
+            error: null,
+          });
+          stopTimer();
+        }
+      } catch (error) {
+        console.error('[useSearchStatus] Polling error:', error);
+      }
+    };
+
+    // Start polling
+    pollingTimerRef.current = setInterval(poll, pollingInterval);
+  }, [enablePolling, userId, pollingInterval, handleStatusUpdate, state.activeRun, stopTimer, stopPolling]);
 
   // Check for active search run
   const checkActiveRun = useCallback(async () => {
@@ -186,6 +248,9 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
 
         // Subscribe to updates
         subscribeToRun(activeRun.id);
+
+        // Start polling as fallback
+        startPolling();
       } else {
         console.log('[useSearchStatus] No active search run found');
         setState({
@@ -194,6 +259,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
           elapsedTime: 0,
           error: null,
         });
+        stopPolling();
       }
     } catch (error) {
       console.error('[useSearchStatus] Error checking active run:', error);
@@ -204,7 +270,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
         error: 'Failed to check search status',
       });
     }
-  }, [userId, calculateElapsedTime, startTimer, subscribeToRun]);
+  }, [userId, calculateElapsedTime, startTimer, subscribeToRun, startPolling, stopPolling]);
 
   // Check for active run on mount and when userId changes
   useEffect(() => {
@@ -220,8 +286,9 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
         unsubscribeRef.current = null;
       }
       stopTimer();
+      stopPolling();
     };
-  }, [userId, checkActiveRun, stopTimer]);
+  }, [userId, checkActiveRun, stopTimer, stopPolling]);
 
   // Re-check when page becomes visible (user returns to tab)
   useEffect(() => {
@@ -258,11 +325,12 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
 
         startTimer(searchRun.created_at);
         subscribeToRun(runId);
+        startPolling();
       }
     } catch (error) {
       console.error('[useSearchStatus] Error monitoring run:', error);
     }
-  }, [userId, calculateElapsedTime, startTimer, subscribeToRun]);
+  }, [userId, calculateElapsedTime, startTimer, subscribeToRun, startPolling]);
 
   // Method to clear active run (e.g., after user acknowledges error)
   const clearActiveRun = useCallback(() => {
@@ -274,6 +342,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
     }
     
     stopTimer();
+    stopPolling();
     previousStatusRef.current = null;
     
     setState({
@@ -282,7 +351,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
       elapsedTime: 0,
       error: null,
     });
-  }, [stopTimer]);
+  }, [stopTimer, stopPolling]);
 
   return {
     activeRun: state.activeRun,

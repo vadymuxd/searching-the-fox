@@ -204,6 +204,11 @@ def save_job_to_database(job_data: dict, user_id: str):
         return None
     
     try:
+        # Prepare date_posted - convert None to null, not string "None"
+        date_posted = job_data.get("date_posted")
+        if date_posted is None or date_posted == "None" or date_posted == "":
+            date_posted = None  # Explicitly set to None (will be NULL in DB)
+        
         # First, try to insert the job (will fail if job_url already exists due to UNIQUE constraint)
         job_insert_data = {
             "title": job_data.get("title", "No title"),
@@ -218,7 +223,7 @@ def save_job_to_database(job_data: dict, user_id: str):
             "salary_min": job_data.get("salary_min"),
             "salary_max": job_data.get("salary_max"),
             "salary_currency": job_data.get("salary_currency"),
-            "date_posted": job_data.get("date_posted"),
+            "date_posted": date_posted,  # Use cleaned date
             "emails": job_data.get("emails"),
             "site": job_data.get("site", "unknown"),
             "source_site": job_data.get("source_site"),
@@ -408,7 +413,7 @@ async def scrape_jobs(request: JobSearchRequest):
                 company=job_data['company'],
                 location=str(job.location) if hasattr(job, 'location') and str(job.location) != 'nan' else "Unknown location",
                 job_url=job_data['job_url'],
-                date_posted=str(job.date_posted) if hasattr(job, 'date_posted') and str(job.date_posted) != 'nan' else None,
+                date_posted=str(job.date_posted) if (hasattr(job, 'date_posted') and str(job.date_posted) != 'nan' and str(job.date_posted) != 'None') else None,
                 salary_min=salary_min,
                 salary_max=salary_max,
                 salary_currency=salary_currency,
@@ -453,13 +458,29 @@ async def scrape_jobs(request: JobSearchRequest):
                         update_search_run_status(request.run_id, "", jobs_found=saved_count, increment_only=True)
                     else:
                         # Final update with status change
-                        update_search_run_status(request.run_id, "success", jobs_found=saved_count)
+                        # If we found jobs but saved 0, mark as failed with explanation
+                        if len(jobs_list) > 0 and saved_count == 0:
+                            update_search_run_status(
+                                request.run_id, 
+                                "failed", 
+                                error=f"Found {len(jobs_list)} jobs but failed to save any to database. Check database logs for details.",
+                                jobs_found=0
+                            )
+                        else:
+                            update_search_run_status(request.run_id, "success", jobs_found=saved_count)
             except Exception as db_error:
                 logger.error(f"Error saving jobs to database: {db_error}")
-                # Don't fail the entire request if database save fails
-                # Still update search run to success since scraping worked
+                # Mark as failed if database save completely failed
                 if request.run_id:
-                    update_search_run_status(request.run_id, "success", jobs_found=len(jobs_list))
+                    if request.increment_only:
+                        # For increment_only, just don't increment
+                        pass
+                    else:
+                        update_search_run_status(
+                            request.run_id, 
+                            "failed", 
+                            error=f"Database error: {str(db_error)}"
+                        )
         else:
             # Guest user - just update search run if provided
             if request.run_id:

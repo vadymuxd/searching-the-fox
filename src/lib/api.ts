@@ -7,7 +7,11 @@ import {
   SearchRunParameters 
 } from '@/lib/db/searchRunService';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001';
+// For local development, use Next.js API proxy to avoid CORS issues
+// For production (Vercel), call Render directly since CORS is configured
+const isLocalDev = process.env.NODE_ENV === 'development';
+const RENDER_API_URL = 'https://truelist-jobspy-api.onrender.com';
+const API_BASE_URL = isLocalDev ? '/api/proxy-scrape' : RENDER_API_URL;
 
 export class JobService {
   // Helper method to get site label from site value
@@ -70,7 +74,10 @@ export class JobService {
         increment_only: incrementOnly, // For multi-site searches, only increment count on first 3 sites
       };
 
-      const response = await fetch(`${API_BASE_URL}/scrape`, {
+      // For local dev, use proxy route; for production, call /scrape directly
+      const endpoint = isLocalDev ? API_BASE_URL : `${API_BASE_URL}/scrape`;
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

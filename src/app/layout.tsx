@@ -8,6 +8,7 @@ import localFont from "next/font/local";
 import { ColorSchemeScript, MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { AuthProvider } from '@/lib/auth/AuthContext';
+import { GlobalSearchMonitor } from '@/components/GlobalSearchMonitor';
 import { theme } from './theme';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -97,6 +98,7 @@ export default function RootLayout({
         <MantineProvider theme={theme} defaultColorScheme="light">
           <AuthProvider>
             <Notifications />
+            <GlobalSearchMonitor />
             {children}
           </AuthProvider>
         </MantineProvider>

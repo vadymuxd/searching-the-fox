@@ -34,7 +34,6 @@ export default function HomePage() {
   const {
     activeRun,
     isLoading: isSearchRunActive,
-    elapsedTime,
   } = useSearchStatus({
     userId: user?.id,
   });
@@ -50,7 +49,7 @@ export default function HomePage() {
     total: number;
   } | undefined>(undefined);
 
-  // Determine if we should show loading state (either manual search in progress or active search run)
+  // Show loading state when manual search is in progress OR when there's an active search run
   const showLoadingState = loading || isSearchRunActive;
 
   // Don't auto-redirect authenticated users - let them use homepage too
@@ -307,7 +306,7 @@ export default function HomePage() {
                       <Timer 
                         isRunning={showLoadingState} 
                         progressInfo={progressInfo}
-                        initialElapsedTime={isSearchRunActive ? elapsedTime : 0}
+                        initialElapsedTime={0}
                       />
                       {!progressInfo && activeRun && (
                         <Text size="sm" c="dimmed" ta="center">
