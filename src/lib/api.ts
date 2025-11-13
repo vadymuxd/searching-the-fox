@@ -209,7 +209,8 @@ export class JobService {
       );
     }
 
-    for (const site of INDIVIDUAL_SITES) {
+    for (let i = 0; i < INDIVIDUAL_SITES.length; i++) {
+      const site = INDIVIDUAL_SITES[i];
       try {
         if (onProgress) {
           onProgress(site.label, completedSites, totalSites);
@@ -220,11 +221,13 @@ export class JobService {
           site: site.value,
         };
 
-        // Determine if this is the last site
-        const isLastSite = completedSites === totalSites - 1;
+        // Determine if this is the last site in the array (not based on completedSites counter)
+        const isLastSite = i === INDIVIDUAL_SITES.length - 1;
+        
+        console.log(`[Multi-site] Processing ${site.label} (${i + 1}/${INDIVIDUAL_SITES.length}): completedSites=${completedSites}, totalSites=${totalSites}, isLastSite=${isLastSite}, incrementOnly=${!isLastSite}`);
         
         // Pass run_id to ALL sites for job counting
-        // First 3 sites: increment_only=true (just add to jobs_found, don't change status)
+        // First N-1 sites: increment_only=true (just add to jobs_found, don't change status)
         // Last site: increment_only=false (add to jobs_found AND update status to success)
         const response = await this.searchJobs(siteParams, userId, true, searchRunId, !isLastSite);
         

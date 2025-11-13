@@ -453,11 +453,13 @@ async def scrape_jobs(request: JobSearchRequest):
                 
                 # Update search run with actual saved count
                 if request.run_id:
+                    logger.info(f"Updating search run {request.run_id}: increment_only={request.increment_only}, saved_count={saved_count}, jobs_list={len(jobs_list)}")
                     if request.increment_only:
                         # Just increment the count, don't change status (for multi-site searches)
+                        # BUT: Also check if this might be the final update by looking at timing
                         update_search_run_status(request.run_id, "", jobs_found=saved_count, increment_only=True)
                     else:
-                        # Final update with status change
+                        # Final update with status change (last site in multi-site OR single site search)
                         # If we found jobs but saved 0, mark as failed with explanation
                         if len(jobs_list) > 0 and saved_count == 0:
                             update_search_run_status(
