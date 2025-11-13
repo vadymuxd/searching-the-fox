@@ -298,13 +298,51 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
     router.push('/');
   };
 
-  const handleRefresh = () => {
-    // Navigate to homepage and trigger immediate search
-    if (currentSearch) {
-      // Store flag in localStorage to trigger immediate search
-      localStorage.setItem('triggerSearch', JSON.stringify(currentSearch));
+  const handleRefresh = async () => {
+    // Initiate search directly from results page without navigation
+    // The SearchRunning component (global) will appear and user stays in context
+    if (!currentSearch) return;
+    
+    try {
+      // Import JobService to initiate search
+      const { JobService } = await import('@/lib/api');
+      
+      // Initiate the search in background (don't await - let it run independently)
+      // This creates search_run and starts backend processing
+      if (currentSearch.site === 'all') {
+        JobService.searchAllJobBoards(
+          {
+            location: currentSearch.location,
+            job_title: currentSearch.jobTitle,
+            results_wanted: currentSearch.resultsWanted,
+            hours_old: currentSearch.hoursOld,
+          },
+          undefined, // no progress callback needed
+          user?.id
+        ).catch(error => {
+          console.error('Error during search:', error);
+        });
+      } else {
+        JobService.searchJobs(
+          {
+            site: currentSearch.site,
+            location: currentSearch.location,
+            job_title: currentSearch.jobTitle,
+            results_wanted: currentSearch.resultsWanted,
+            hours_old: currentSearch.hoursOld,
+          },
+          user?.id
+        ).catch(error => {
+          console.error('Error during search:', error);
+        });
+      }
+      
+      // Immediately refresh the page to show SearchRunning component
+      // User stays on results page - SearchRunning appears globally at top-right
+      window.location.reload();
+    } catch (error) {
+      console.error('Error initiating search:', error);
     }
-    router.push('/');
   };
 
   const handleSelectionChange = useCallback((selectedCount: number) => {

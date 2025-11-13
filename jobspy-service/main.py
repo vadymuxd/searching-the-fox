@@ -65,8 +65,7 @@ class JobSearchRequest(BaseModel):
     country_indeed: Optional[str] = "USA"
     run_id: Optional[str] = None  # Optional search run ID for tracking
     user_id: Optional[str] = None  # Optional user ID for direct database writes
-    increment_only: Optional[bool] = False  # If True, only increment jobs_found without changing status
-    # Removed job_type and is_remote to avoid validation issues
+    # Removed increment_only - backend now handles all sites internally
 
 class JobResponse(BaseModel):
     site: str
@@ -293,13 +292,79 @@ def save_jobs_to_database(jobs_list: List[dict], user_id: str) -> int:
     logger.info(f"Saved {saved_count} out of {len(jobs_list)} jobs to database for user {user_id}")
     return saved_count
 
+def log_final_status(site_statuses: dict, total_jobs: int, increment_only: bool, run_id: Optional[str] = None):
+    """
+    Log a comprehensive summary of job board statuses and overall result
+    Also updates the search_run status in database if run_id is provided
+    """
+    logger.info("=" * 80)
+    logger.info("JOB SCRAPING SUMMARY")
+    logger.info("=" * 80)
+    
+    # Count statuses
+    completed_count = sum(1 for status in site_statuses.values() if status == "completed")
+    failed_count = sum(1 for status in site_statuses.values() if "failed" in status)
+    pending_count = sum(1 for status in site_statuses.values() if status == "pending")
+    
+    # Log each job board status
+    for site, status in site_statuses.items():
+        status_emoji = "✓" if status == "completed" else "✗" if "failed" in status else "○"
+        logger.info(f"  {status_emoji} {site.capitalize()}: {status}")
+    
+    # Determine overall status
+    if completed_count == len(site_statuses):
+        overall_status = "SUCCESS"
+        db_status = "success"
+    elif completed_count > 0:
+        overall_status = "PARTIAL SUCCESS"
+        db_status = "success"  # Still mark as success if we got some results
+    else:
+        overall_status = "FAILED"
+        db_status = "failed"
+    
+    logger.info("-" * 80)
+    logger.info(f"Overall Status: {overall_status}")
+    logger.info(f"Job Boards: {completed_count} completed, {failed_count} failed, {pending_count} pending")
+    logger.info(f"Total Jobs Found: {total_jobs}")
+    logger.info(f"Increment Only Mode: {'Yes' if increment_only else 'No (Final Update)'}")
+    logger.info("=" * 80)
+    
+    # Update database status based on overall result
+    # This ensures every search run gets properly closed, regardless of increment_only
+    if run_id and not increment_only:
+        # Only update status if this is NOT an increment_only call
+        # (increment_only calls should only update job counts, not finalize status)
+        error_message = None
+        if db_status == "failed":
+            # Compile error messages from failed sites
+            failed_sites = [f"{site}: {status}" for site, status in site_statuses.items() if "failed" in status]
+            error_message = "; ".join(failed_sites)
+        
+        logger.info(f"[Database] Finalizing search_run {run_id} with status: {db_status}")
+        update_search_run_status(run_id, db_status, error=error_message)
+    elif run_id and increment_only:
+        logger.info(f"[Database] Skipping status finalization for search_run {run_id} (increment_only mode)")
+    
+    return overall_status, db_status
+
 @app.post("/scrape", response_model=JobSearchResponse)
 async def scrape_jobs(request: JobSearchRequest):
     """
     Scrape jobs using JobSpy from multiple job sites
+    Processes ALL requested job boards in a single API call
+    Updates database with progress and final status
+    Frontend should poll database for status updates
     """
+    # Track status of each job board requested
+    site_statuses = {}
+    for site in request.site_name:
+        site_statuses[site] = "pending"
+    
+    all_jobs_list = []  # Accumulate jobs from all sites
+    
     try:
         logger.info(f"Starting job scrape request: {request.model_dump()}")
+        logger.info(f"Job boards requested: {', '.join(request.site_name)}")
         
         # Update search run status to 'running' if run_id is provided
         if request.run_id:
@@ -310,197 +375,187 @@ async def scrape_jobs(request: JobSearchRequest):
             from jobspy import scrape_jobs
         except ImportError as e:
             logger.error(f"Failed to import jobspy: {e}")
-            # Update search run to failed if run_id is provided
-            if request.run_id:
-                update_search_run_status(request.run_id, "failed", error="JobSpy library not installed properly")
+            for site in request.site_name:
+                site_statuses[site] = "failed: library error"
+            # log_final_status will update the database status
+            log_final_status(site_statuses, 0, False, request.run_id)
             raise HTTPException(status_code=500, detail="JobSpy library not installed properly")
         
-        # Convert hours_old to date_posted parameter
-        if request.hours_old:
-            cutoff_date = datetime.now() - timedelta(hours=request.hours_old)
-            date_posted = cutoff_date.strftime("%Y-%m-%d")
-        else:
-            date_posted = None
-        
-        logger.info(f"Scraping jobs with date filter: {date_posted}")
-        
-        # Call JobSpy
-        jobs_df = scrape_jobs(
-            site_name=request.site_name,
-            search_term=request.search_term,
-            location=request.location,
-            results_wanted=request.results_wanted,
-            hours_old=request.hours_old,
-            country_indeed=request.country_indeed,
-            is_remote=False  # Add this required parameter
-        )
-        
-        if jobs_df is None or jobs_df.empty:
-            logger.warning("No jobs found")
-            # Update search run to success with 0 jobs if run_id is provided
-            if request.run_id:
-                update_search_run_status(request.run_id, "success", jobs_found=0)
-            return JobSearchResponse(
-                success=True,
-                jobs=[],
-                total_results=0,
-                search_criteria=request.model_dump(),
-                timestamp=datetime.now().isoformat()
-            )
-        
-        logger.info(f"Found {len(jobs_df)} jobs")
-        
-        # Convert DataFrame to our response format
-        jobs_list = []
-        jobs_for_logo_fetch = []  # Prepare data for logo fetching
-        
-        for _, job in jobs_df.iterrows():
-            # Convert description from markdown to plain text if it exists
-            description = None
-            if hasattr(job, 'description') and job.description and str(job.description) != 'nan':
-                try:
-                    # Convert markdown to plain text
-                    description = markdownify.markdownify(str(job.description), strip=['a', 'img'])
-                    # Limit description length
-                    if len(description) > 500:
-                        description = description[:497] + "..."
-                except Exception as e:
-                    logger.warning(f"Failed to process description: {e}")
-                    description = str(job.description)[:500] if str(job.description) != 'nan' else None
-            
-            # Handle salary information
-            salary_min = None
-            salary_max = None
-            salary_currency = None
-            
-            if hasattr(job, 'min_amount') and job.min_amount and str(job.min_amount) != 'nan':
-                try:
-                    salary_min = float(job.min_amount)
-                except (ValueError, TypeError):
-                    pass
-            
-            if hasattr(job, 'max_amount') and job.max_amount and str(job.max_amount) != 'nan':
-                try:
-                    salary_max = float(job.max_amount)
-                except (ValueError, TypeError):
-                    pass
-            
-            if hasattr(job, 'currency') and job.currency and str(job.currency) != 'nan':
-                salary_currency = str(job.currency)
-            
-            # Handle emails
-            emails = None
-            if hasattr(job, 'emails') and job.emails and str(job.emails) != 'nan':
-                try:
-                    if isinstance(job.emails, str):
-                        emails = [job.emails]
-                    elif isinstance(job.emails, list):
-                        emails = job.emails
-                except Exception:
-                    pass
-            
-            # Prepare job data for logo fetching
-            job_data = {
-                'job_url': str(job.job_url) if hasattr(job, 'job_url') else "",
-                'company': str(job.company) if hasattr(job, 'company') and str(job.company) != 'nan' else "Unknown company",
-                'site': str(job.site) if hasattr(job, 'site') else "unknown"
-            }
-            jobs_for_logo_fetch.append(job_data)
-            
-            job_response = JobResponse(
-                site=job_data['site'],
-                title=str(job.title) if hasattr(job, 'title') else "No title",
-                company=job_data['company'],
-                location=str(job.location) if hasattr(job, 'location') and str(job.location) != 'nan' else "Unknown location",
-                job_url=job_data['job_url'],
-                date_posted=str(job.date_posted) if (hasattr(job, 'date_posted') and str(job.date_posted) != 'nan' and str(job.date_posted) != 'None') else None,
-                salary_min=salary_min,
-                salary_max=salary_max,
-                salary_currency=salary_currency,
-                description=description,
-                job_type=str(job.job_type) if hasattr(job, 'job_type') and str(job.job_type) != 'nan' else None,
-                emails=emails,
-                company_logo_url=None  # Will be filled after logo fetch
-            )
-            jobs_list.append(job_response)
-        
-        logger.info(f"Successfully processed {len(jobs_list)} jobs, starting logo fetch...")
-        
-        # Fetch company logos in parallel
-        try:
-            logo_urls = fetch_company_logos(jobs_for_logo_fetch, max_workers=10)
-            
-            # Add logo URLs to job responses
-            for i, logo_url in enumerate(logo_urls):
-                if i < len(jobs_list):
-                    jobs_list[i].company_logo_url = logo_url
-                    
-            logger.info(f"Successfully fetched logos for {len(logo_urls)} jobs")
-        except Exception as e:
-            logger.warning(f"Error fetching logos: {e}")
-            # Continue without logos if fetch fails
-        
-        logger.info(f"Successfully processed {len(jobs_list)} jobs")
-        
-        # Save jobs to database if user_id is provided (authenticated user)
-        if request.user_id:
+        # Process each job board sequentially
+        # This ensures all boards are processed even if user closes browser
+        for i, site_name in enumerate(request.site_name):
             try:
-                logger.info(f"Saving jobs to database for user {request.user_id}")
-                # Convert jobs_list (Pydantic models) to dicts for database insertion
-                jobs_dict_list = [job.model_dump(mode='json') for job in jobs_list]
-                saved_count = save_jobs_to_database(jobs_dict_list, request.user_id)
-                logger.info(f"Successfully saved {saved_count} jobs to database")
+                logger.info(f"[Site {i+1}/{len(request.site_name)}] Processing {site_name}...")
+                site_statuses[site_name] = "processing"
                 
-                # Update search run with actual saved count
-                if request.run_id:
-                    logger.info(f"Updating search run {request.run_id}: increment_only={request.increment_only}, saved_count={saved_count}, jobs_list={len(jobs_list)}")
-                    if request.increment_only:
-                        # Just increment the count, don't change status (for multi-site searches)
-                        # BUT: Also check if this might be the final update by looking at timing
-                        update_search_run_status(request.run_id, "", jobs_found=saved_count, increment_only=True)
-                    else:
-                        # Final update with status change (last site in multi-site OR single site search)
-                        # If we found jobs but saved 0, mark as failed with explanation
-                        if len(jobs_list) > 0 and saved_count == 0:
-                            update_search_run_status(
-                                request.run_id, 
-                                "failed", 
-                                error=f"Found {len(jobs_list)} jobs but failed to save any to database. Check database logs for details.",
-                                jobs_found=0
-                            )
+                # Convert hours_old to date_posted parameter
+                if request.hours_old:
+                    cutoff_date = datetime.now() - timedelta(hours=request.hours_old)
+                    date_posted = cutoff_date.strftime("%Y-%m-%d")
+                else:
+                    date_posted = None
+                
+                logger.info(f"[{site_name}] Scraping jobs with date filter: {date_posted}")
+                
+                # Call JobSpy for this specific site
+                jobs_df = scrape_jobs(
+                    site_name=[site_name],  # Single site at a time
+                    search_term=request.search_term,
+                    location=request.location,
+                    results_wanted=request.results_wanted,
+                    hours_old=request.hours_old,
+                    country_indeed=request.country_indeed,
+                    is_remote=False
+                )
+                
+                if jobs_df is None or jobs_df.empty:
+                    logger.warning(f"[{site_name}] No jobs found")
+                    site_statuses[site_name] = "completed: 0 jobs"
+                    continue
+                
+                logger.info(f"[{site_name}] Found {len(jobs_df)} jobs")
+                
+                # Convert DataFrame to our response format
+                jobs_for_site = []
+                jobs_for_logo_fetch = []
+                
+                for _, job in jobs_df.iterrows():
+                    # Convert description from markdown to plain text if it exists
+                    description = None
+                    if hasattr(job, 'description') and job.description and str(job.description) != 'nan':
+                        try:
+                            # Convert markdown to plain text
+                            description = markdownify.markdownify(str(job.description), strip=['a', 'img'])
+                            # Limit description length
+                            if len(description) > 500:
+                                description = description[:497] + "..."
+                        except Exception as e:
+                            logger.warning(f"Failed to process description: {e}")
+                            description = str(job.description)[:500] if str(job.description) != 'nan' else None
+                    
+                    # Handle salary information
+                    salary_min = None
+                    salary_max = None
+                    salary_currency = None
+                    
+                    if hasattr(job, 'min_amount') and job.min_amount and str(job.min_amount) != 'nan':
+                        try:
+                            salary_min = float(job.min_amount)
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    if hasattr(job, 'max_amount') and job.max_amount and str(job.max_amount) != 'nan':
+                        try:
+                            salary_max = float(job.max_amount)
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    if hasattr(job, 'currency') and job.currency and str(job.currency) != 'nan':
+                        salary_currency = str(job.currency)
+                    
+                    # Handle emails
+                    emails = None
+                    if hasattr(job, 'emails') and job.emails and str(job.emails) != 'nan':
+                        try:
+                            if isinstance(job.emails, str):
+                                emails = [job.emails]
+                            elif isinstance(job.emails, list):
+                                emails = job.emails
+                        except Exception:
+                            pass
+                    
+                    # Prepare job data for logo fetching
+                    job_data = {
+                        'job_url': str(job.job_url) if hasattr(job, 'job_url') else "",
+                        'company': str(job.company) if hasattr(job, 'company') and str(job.company) != 'nan' else "Unknown company",
+                        'site': str(job.site) if hasattr(job, 'site') else site_name
+                    }
+                    jobs_for_logo_fetch.append(job_data)
+                    
+                    job_response = JobResponse(
+                        site=job_data['site'],
+                        title=str(job.title) if hasattr(job, 'title') else "No title",
+                        company=job_data['company'],
+                        location=str(job.location) if hasattr(job, 'location') and str(job.location) != 'nan' else "Unknown location",
+                        job_url=job_data['job_url'],
+                        date_posted=str(job.date_posted) if (hasattr(job, 'date_posted') and str(job.date_posted) != 'nan' and str(job.date_posted) != 'None') else None,
+                        salary_min=salary_min,
+                        salary_max=salary_max,
+                        salary_currency=salary_currency,
+                        description=description,
+                        job_type=str(job.job_type) if hasattr(job, 'job_type') and str(job.job_type) != 'nan' else None,
+                        emails=emails,
+                        company_logo_url=None  # Will be filled after logo fetch
+                    )
+                    jobs_for_site.append(job_response)
+                
+                logger.info(f"[{site_name}] Successfully processed {len(jobs_for_site)} jobs, fetching logos...")
+                
+                # Fetch company logos for this site's jobs
+                try:
+                    logo_urls = fetch_company_logos(jobs_for_logo_fetch, max_workers=10)
+                    for i, logo_url in enumerate(logo_urls):
+                        if i < len(jobs_for_site):
+                            jobs_for_site[i].company_logo_url = logo_url
+                    logger.info(f"[{site_name}] Successfully fetched logos for {len(logo_urls)} jobs")
+                except Exception as e:
+                    logger.warning(f"[{site_name}] Error fetching logos: {e}")
+                
+                # Save jobs to database if user_id is provided
+                if request.user_id and jobs_for_site:
+                    try:
+                        logger.info(f"[{site_name}] Saving {len(jobs_for_site)} jobs to database for user {request.user_id}")
+                        jobs_dict_list = [job.model_dump(mode='json') for job in jobs_for_site]
+                        saved_count = save_jobs_to_database(jobs_dict_list, request.user_id)
+                        logger.info(f"[{site_name}] Successfully saved {saved_count}/{len(jobs_for_site)} jobs to database")
+                        
+                        # Update search run with cumulative count
+                        if request.run_id:
+                            update_search_run_status(request.run_id, "", jobs_found=saved_count, increment_only=True)
+                        
+                        if saved_count > 0:
+                            site_statuses[site_name] = f"completed: {saved_count} jobs"
                         else:
-                            update_search_run_status(request.run_id, "success", jobs_found=saved_count)
-            except Exception as db_error:
-                logger.error(f"Error saving jobs to database: {db_error}")
-                # Mark as failed if database save completely failed
-                if request.run_id:
-                    if request.increment_only:
-                        # For increment_only, just don't increment
-                        pass
-                    else:
-                        update_search_run_status(
-                            request.run_id, 
-                            "failed", 
-                            error=f"Database error: {str(db_error)}"
-                        )
-        else:
-            # Guest user - just update search run if provided
-            if request.run_id:
-                update_search_run_status(request.run_id, "success", jobs_found=len(jobs_list))
+                            site_statuses[site_name] = "completed: 0 saved (duplicates)"
+                    except Exception as db_error:
+                        logger.error(f"[{site_name}] Error saving jobs to database: {db_error}")
+                        site_statuses[site_name] = f"failed: database error"
+                else:
+                    # No user_id or no jobs - just mark as completed
+                    site_statuses[site_name] = f"completed: {len(jobs_for_site)} jobs"
+                
+                # Add this site's jobs to the overall list
+                all_jobs_list.extend(jobs_for_site)
+                
+                logger.info(f"[{site_name}] ✓ Completed. Total jobs so far: {len(all_jobs_list)}")
+                
+            except Exception as site_error:
+                logger.error(f"[{site_name}] Failed: {site_error}")
+                site_statuses[site_name] = f"failed: {str(site_error)[:50]}"
+                # Continue to next site even if this one failed
+        
+        # All sites processed - log final status and update database
+        log_final_status(site_statuses, len(all_jobs_list), False, request.run_id)
         
         return JobSearchResponse(
-            success=True,
-            jobs=jobs_list,
-            total_results=len(jobs_list),
+            success=len(all_jobs_list) > 0,
+            jobs=all_jobs_list,
+            total_results=len(all_jobs_list),
             search_criteria=request.model_dump(),
             timestamp=datetime.now().isoformat()
         )
         
     except Exception as e:
         logger.error(f"Error in scrape_jobs: {str(e)}", exc_info=True)
-        # Update search run to failed if run_id is provided
-        if request.run_id:
-            update_search_run_status(request.run_id, "failed", error=str(e))
+        # Mark all unprocessed sites as failed
+        if 'site_statuses' in locals():
+            for site in site_statuses:
+                if site_statuses[site] == "pending" or site_statuses[site] == "processing":
+                    site_statuses[site] = f"failed: {str(e)[:50]}"
+            run_id = request.run_id if 'request' in locals() else None
+            total_jobs = len(all_jobs_list) if 'all_jobs_list' in locals() else 0
+            # log_final_status will update the database status
+            log_final_status(site_statuses, total_jobs, False, run_id)
         raise HTTPException(status_code=500, detail=f"Failed to scrape jobs: {str(e)}")
 
 if __name__ == "__main__":

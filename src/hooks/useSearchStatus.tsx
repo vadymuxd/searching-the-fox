@@ -52,6 +52,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const previousStatusRef = useRef<SearchRunStatus | null>(null);
+  const activeRunRef = useRef<SearchRun | null>(null); // Track active run to avoid state dependency
 
   // Calculate elapsed time based on created_at timestamp
   const calculateElapsedTime = useCallback((createdAt: string): number => {
@@ -98,6 +99,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
     
     const previousStatus = previousStatusRef.current;
     previousStatusRef.current = searchRun.status;
+    activeRunRef.current = searchRun; // Update ref
 
     setState((prev) => ({
       ...prev,
@@ -155,6 +157,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
         activeRun: null,
         isLoading: false,
       }));
+      activeRunRef.current = null;
     } else if (searchRun.status === 'running' && previousStatus === 'pending') {
       console.log('[useSearchStatus] Search started running');
       // No notification needed, user already sees the loading state
@@ -197,9 +200,10 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
         if (activeRun) {
           // Update state with latest data
           handleStatusUpdate(activeRun);
-        } else if (state.activeRun) {
+        } else if (activeRunRef.current) {
           // Active run disappeared - might have been deleted or completed
           console.log('[useSearchStatus] Active run no longer exists');
+          activeRunRef.current = null;
           setState({
             activeRun: null,
             isLoading: false,
@@ -215,7 +219,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
 
     // Start polling
     pollingTimerRef.current = setInterval(poll, pollingInterval);
-  }, [enablePolling, userId, pollingInterval, handleStatusUpdate, state.activeRun, stopTimer, stopPolling]);
+  }, [enablePolling, userId, pollingInterval, handleStatusUpdate, stopTimer]);
 
   // Check for active search run
   const checkActiveRun = useCallback(async () => {
@@ -234,6 +238,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
         
         // Initialize previous status
         previousStatusRef.current = activeRun.status;
+        activeRunRef.current = activeRun;
         
         // Set state with active run
         setState({
@@ -253,6 +258,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
         startPolling();
       } else {
         console.log('[useSearchStatus] No active search run found');
+        activeRunRef.current = null;
         setState({
           activeRun: null,
           isLoading: false,
@@ -263,6 +269,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
       }
     } catch (error) {
       console.error('[useSearchStatus] Error checking active run:', error);
+      activeRunRef.current = null;
       setState({
         activeRun: null,
         isLoading: false,
@@ -288,7 +295,9 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
       stopTimer();
       stopPolling();
     };
-  }, [userId, checkActiveRun, stopTimer, stopPolling]);
+    // Only re-run when userId changes, not when callbacks change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   // Re-check when page becomes visible (user returns to tab)
   useEffect(() => {
@@ -304,7 +313,9 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [userId, checkActiveRun]);
+    // Only re-run when userId changes, not when checkActiveRun changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   // Method to manually start monitoring a specific run
   const monitorRun = useCallback(async (runId: string) => {
@@ -315,6 +326,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
       
       if (searchRun && searchRun.id === runId) {
         previousStatusRef.current = searchRun.status;
+        activeRunRef.current = searchRun;
         
         setState({
           activeRun: searchRun,
@@ -344,6 +356,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
     stopTimer();
     stopPolling();
     previousStatusRef.current = null;
+    activeRunRef.current = null;
     
     setState({
       activeRun: null,

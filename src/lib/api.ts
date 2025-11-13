@@ -21,7 +21,7 @@ export class JobService {
     return siteMap[siteValue] || siteValue;
   }
 
-  static async searchJobs(params: JobSearchParams, userId?: string, skipSearchRunCreation = false, parentRunId?: string, incrementOnly = false): Promise<JobSearchResponse> {
+  static async searchJobs(params: JobSearchParams, userId?: string, skipSearchRunCreation = false, parentRunId?: string): Promise<JobSearchResponse> {
     let searchRunId: string | undefined = parentRunId;
     
     try {
@@ -69,7 +69,6 @@ export class JobService {
         country_indeed: countryIndeed || 'UK',
         run_id: searchRunId, // Pass the search run ID to Render
         user_id: userId, // Pass user ID so Render can save to database
-        increment_only: incrementOnly, // For multi-site searches, only increment count on first 3 sites
       };
 
       // Always use the proxy route - it forwards to Render API
@@ -189,92 +188,73 @@ export class JobService {
         console.log('Created search run for all job boards:', searchRunId);
       }
     }
-    
-    const allJobs: Job[] = [];
-    const errors: string[] = [];
-    const totalSites = INDIVIDUAL_SITES.length;
-    let completedSites = 0;
 
-    // Update status to 'running' when we start
-    if (searchRunId && userId) {
-      const supabase = createClient();
-      await updateSearchRunStatus(
-        {
-          runId: searchRunId,
-          status: 'running',
+    try {
+      // Prepare the request body with ALL job boards
+      const sitesToSearch = INDIVIDUAL_SITES.map(s => s.value);
+      
+      const requestBody = {
+        search_term: params.job_title,
+        location: params.location,
+        site_name: sitesToSearch, // Pass ALL sites in a single request
+        results_wanted: params.results_wanted || 1000,
+        hours_old: parseInt(params.hours_old || '24'),
+        country_indeed: 'UK',
+        run_id: searchRunId,
+        user_id: userId,
+      };
+
+      console.log('[Multi-site] Making single API call with all sites:', sitesToSearch);
+
+      // Make a single API call - backend will handle all sites
+      const endpoint = API_BASE_URL;
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        supabase
-      );
-    }
+        body: JSON.stringify(requestBody),
+      });
 
-    for (let i = 0; i < INDIVIDUAL_SITES.length; i++) {
-      const site = INDIVIDUAL_SITES[i];
-      try {
-        if (onProgress) {
-          onProgress(site.label, completedSites, totalSites);
-        }
-
-        const siteParams: JobSearchParams = {
-          ...params,
-          site: site.value,
-        };
-
-        // Determine if this is the last site in the array (not based on completedSites counter)
-        const isLastSite = i === INDIVIDUAL_SITES.length - 1;
-        
-        console.log(`[Multi-site] Processing ${site.label} (${i + 1}/${INDIVIDUAL_SITES.length}): completedSites=${completedSites}, totalSites=${totalSites}, isLastSite=${isLastSite}, incrementOnly=${!isLastSite}`);
-        
-        // Pass run_id to ALL sites for job counting
-        // First N-1 sites: increment_only=true (just add to jobs_found, don't change status)
-        // Last site: increment_only=false (add to jobs_found AND update status to success)
-        const response = await this.searchJobs(siteParams, userId, true, searchRunId, !isLastSite);
-        
-        if (response.success && response.jobs) {
-          // Add site information to each job for identification
-          const jobsWithSite = response.jobs.map(job => ({
-            ...job,
-            source_site: site.label,
-          }));
-          allJobs.push(...jobsWithSite);
-        } else if (response.error) {
-          errors.push(`${site.label}: ${response.error}`);
-        }
-
-        completedSites++;
-        
-        if (onProgress) {
-          onProgress(site.label, completedSites, totalSites);
-        }
-
-        // Small delay between requests to avoid overwhelming the API
-        await new Promise(resolve => setTimeout(resolve, 500));
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        errors.push(`${site.label}: ${errorMessage}`);
-        completedSites++;
-        
-        if (onProgress) {
-          onProgress(site.label, completedSites, totalSites);
-        }
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const data = await response.json();
+      
+      // Enhance company logos
+      const enhancedJobs = await this.enhanceCompanyLogos(data.jobs || []);
+      
+      console.log(`[Multi-site] API completed. Jobs returned: ${enhancedJobs.length}`);
+
+      return {
+        success: data.success,
+        jobs: enhancedJobs,
+        totalResults: data.total_results,
+        jobCount: enhancedJobs?.length || 0,
+      };
+    } catch (error) {
+      console.error('[Multi-site] Search error:', error);
+      
+      // Update search run to failed status if we have one
+      if (searchRunId && userId) {
+        const supabase = createClient();
+        await updateSearchRunStatus(
+          {
+            runId: searchRunId,
+            status: 'failed',
+            error: error instanceof Error ? error.message : 'Unknown error occurred',
+          },
+          supabase
+        );
+      }
+      
+      return {
+        success: false,
+        jobs: [],
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+      };
     }
-
-    // Remove duplicates based on job title and company name with priority order
-    const deduplicatedJobs = this.removeDuplicateJobs(allJobs);
-    
-    // Enhance company logos for better fallback
-    const enhancedJobs = await this.enhanceCompanyLogos(deduplicatedJobs);
-
-    // Note: Status update is handled by Render when the last site completes
-    // This ensures status is updated even if user closes browser
-
-    return {
-      success: enhancedJobs.length > 0,
-      jobs: enhancedJobs,
-      totalResults: enhancedJobs.length,
-      jobCount: enhancedJobs.length,
-      error: errors.length > 0 ? `Some sites failed: ${errors.join('; ')}` : undefined,
-    };
   }
 
   // Helper method to remove duplicate jobs with priority order
