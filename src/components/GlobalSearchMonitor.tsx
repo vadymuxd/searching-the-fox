@@ -24,11 +24,11 @@ export function GlobalSearchMonitor() {
   // Expose refreshStatus globally so other components can trigger a check
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      (window as any).__searchStatus_refresh = refreshStatus;
+      (window as { __searchStatus_refresh?: () => Promise<void> }).__searchStatus_refresh = refreshStatus;
     }
     return () => {
       if (typeof window !== 'undefined') {
-        delete (window as any).__searchStatus_refresh;
+        delete (window as { __searchStatus_refresh?: () => Promise<void> }).__searchStatus_refresh;
       }
     };
   }, [refreshStatus]);

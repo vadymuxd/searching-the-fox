@@ -375,11 +375,14 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
       
       // Trigger SearchRunning component to appear by calling refreshStatus
       // This is exposed globally by GlobalSearchMonitor
-      if (typeof window !== 'undefined' && (window as any).__searchStatus_refresh) {
-        (window as any).__searchStatus_refresh();
-        console.log('[handleRefresh] SearchRunning component triggered');
-      } else {
-        console.warn('[handleRefresh] refreshStatus not available, SearchRunning may not appear immediately');
+      if (typeof window !== 'undefined') {
+        const globalWindow = window as { __searchStatus_refresh?: () => Promise<void> };
+        if (globalWindow.__searchStatus_refresh) {
+          globalWindow.__searchStatus_refresh();
+          console.log('[handleRefresh] SearchRunning component triggered');
+        } else {
+          console.warn('[handleRefresh] refreshStatus not available, SearchRunning may not appear immediately');
+        }
       }
       
       // No page reload needed - SearchRunning will appear and poll database
