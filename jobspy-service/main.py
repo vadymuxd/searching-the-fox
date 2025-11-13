@@ -301,14 +301,14 @@ def log_final_status(site_statuses: dict, total_jobs: int, increment_only: bool,
     logger.info("JOB SCRAPING SUMMARY")
     logger.info("=" * 80)
     
-    # Count statuses
-    completed_count = sum(1 for status in site_statuses.values() if status == "completed")
+    # Count statuses - check if status string STARTS WITH "completed"
+    completed_count = sum(1 for status in site_statuses.values() if status.startswith("completed"))
     failed_count = sum(1 for status in site_statuses.values() if "failed" in status)
     pending_count = sum(1 for status in site_statuses.values() if status == "pending")
     
     # Log each job board status
     for site, status in site_statuses.items():
-        status_emoji = "✓" if status == "completed" else "✗" if "failed" in status else "○"
+        status_emoji = "✓" if status.startswith("completed") else "✗" if "failed" in status else "○"
         logger.info(f"  {status_emoji} {site.capitalize()}: {status}")
     
     # Determine overall status
