@@ -94,7 +94,7 @@ export function SearchRunning({ startedAt, status, onComplete, site }: SearchRun
           style={{
             ...styles,
             position: 'fixed',
-            top: '80px',
+            bottom: '24px',
             right: '24px',
             zIndex: 1000,
             maxWidth: '320px',
