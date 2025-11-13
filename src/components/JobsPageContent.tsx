@@ -360,6 +360,7 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
       };
       
       // Send request with keepalive (continues even if user closes tab)
+      console.log('[handleRefresh] Sending API request to:', endpoint, 'with body:', requestBody);
       fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -367,11 +368,19 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
         },
         body: JSON.stringify(requestBody),
         keepalive: true,
-      }).catch(error => {
-        console.error('[handleRefresh] Fetch error:', error);
-      });
+      })
+        .then(response => {
+          console.log('[handleRefresh] API response received, status:', response.status);
+          return response.json();
+        })
+        .then(data => {
+          console.log('[handleRefresh] API response data:', data);
+        })
+        .catch(error => {
+          console.error('[handleRefresh] Fetch error:', error);
+        });
       
-      console.log('[handleRefresh] API request sent, triggering SearchRunning component...');
+      console.log('[handleRefresh] API request initiated, triggering SearchRunning component...');
       
       // Trigger SearchRunning component to appear by calling refreshStatus
       // This is exposed globally by GlobalSearchMonitor
