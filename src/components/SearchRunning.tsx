@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Box, Text, Stack, Group, Transition } from '@mantine/core';
+import { Box, Text, Stack, Group } from '@mantine/core';
 import { IconCheck, IconX } from '@tabler/icons-react';
 
 interface SearchRunningProps {
@@ -13,7 +13,6 @@ interface SearchRunningProps {
 
 export function SearchRunning({ startedAt, status, onComplete, site }: SearchRunningProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
 
   // Calculate elapsed time from when search started
   useEffect(() => {
@@ -36,26 +35,19 @@ export function SearchRunning({ startedAt, status, onComplete, site }: SearchRun
     }
   }, [startedAt, status]);
 
-  // When status changes to success or failed, wait a bit then notify parent
+  // When status changes to success or failed, immediately reload the page
   useEffect(() => {
     if (status === 'success' || status === 'failed') {
-      // Show completion status for 2 seconds before calling onComplete
-      const timer = setTimeout(() => {
-        setIsVisible(false);
-        // Wait for fade out animation to complete
-        setTimeout(() => {
-          if (onComplete) {
-            onComplete();
-          }
-          // Force browser refresh after the component disappears so the
-          // user sees updated jobs fetched to the database
-          if (typeof window !== 'undefined') {
-            window.location.reload();
-          }
-        }, 300);
-      }, 2000);
-
-      return () => clearTimeout(timer);
+      // Call onComplete callback if provided
+      if (onComplete) {
+        onComplete();
+      }
+      
+      // Immediately reload to show updated jobs
+      // The active search check will determine if component should show again
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
     }
   }, [status, onComplete]);
 
@@ -88,78 +80,68 @@ export function SearchRunning({ startedAt, status, onComplete, site }: SearchRun
   const showIcon = status === 'success' || status === 'failed';
 
   return (
-    <Transition
-      mounted={isVisible}
-      transition="fade"
-      duration={300}
-      timingFunction="ease"
+    <Box
+      style={{
+        position: 'fixed',
+        bottom: '24px',
+        right: '24px',
+        zIndex: 1000,
+        maxWidth: '320px',
+      }}
     >
-      {(styles) => (
-        <Box
-          style={{
-            ...styles,
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            zIndex: 1000,
-            maxWidth: '320px',
-          }}
-        >
+      <Box
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          padding: '16px',
+          border: '1px solid #e9ecef',
+        }}
+      >
+        <Group gap="md" wrap="nowrap">
+          {/* Timer Circle or Status Icon */}
           <Box
             style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-              padding: '16px',
-              border: '1px solid #e9ecef',
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              backgroundColor: getBackgroundColor(),
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
-            <Group gap="md" wrap="nowrap">
-              {/* Timer Circle or Status Icon */}
-              <Box
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  backgroundColor: getBackgroundColor(),
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
+            {showIcon ? (
+              status === 'success' ? (
+                <IconCheck size={24} color="#ffffff" stroke={2.5} />
+              ) : (
+                <IconX size={24} color="#ffffff" stroke={2.5} />
+              )
+            ) : (
+              <Text
+                fw={600}
+                size="sm"
+                style={{ color: '#ffffff', lineHeight: 1 }}
               >
-                {showIcon ? (
-                  status === 'success' ? (
-                    <IconCheck size={24} color="#ffffff" stroke={2.5} />
-                  ) : (
-                    <IconX size={24} color="#ffffff" stroke={2.5} />
-                  )
-                ) : (
-                  <Text
-                    fw={600}
-                    size="sm"
-                    style={{ color: '#ffffff', lineHeight: 1 }}
-                  >
-                    {formatTime(elapsedSeconds)}
-                  </Text>
-                )}
-              </Box>
-
-              {/* Message */}
-              <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
-                <Text fw={600} size="sm" style={{ lineHeight: 1.3 }}>
-                  {getMessage()}
-                </Text>
-                {site && (status === 'running' || status === 'pending') && (
-                  <Text size="xs" c="dimmed" style={{ lineHeight: 1.3 }}>
-                    {site === 'all' ? 'Searching all job boards' : `Searching ${site}`}
-                  </Text>
-                )}
-              </Stack>
-            </Group>
+                {formatTime(elapsedSeconds)}
+              </Text>
+            )}
           </Box>
-        </Box>
-      )}
-    </Transition>
+
+          {/* Message */}
+          <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
+            <Text fw={600} size="sm" style={{ lineHeight: 1.3 }}>
+              {getMessage()}
+            </Text>
+            {site && (status === 'running' || status === 'pending') && (
+              <Text size="xs" c="dimmed" style={{ lineHeight: 1.3 }}>
+                {site === 'all' ? 'Searching all job boards' : `Searching ${site}`}
+              </Text>
+            )}
+          </Stack>
+        </Group>
+      </Box>
+    </Box>
   );
 }

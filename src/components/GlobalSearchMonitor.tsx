@@ -34,7 +34,8 @@ export function GlobalSearchMonitor() {
   }, [refreshStatus]);
 
   // Only show SearchRunning if there's an active search
-  if (!activeRun || !isLoading) {
+  // When status is "success" or "failed", the component will immediately reload the page
+  if (!activeRun) {
     return null;
   }
 
@@ -44,9 +45,7 @@ export function GlobalSearchMonitor() {
       status={activeRun.status}
       site={activeRun.parameters.site}
       onComplete={() => {
-        // The useSearchStatus hook already handles page refresh via window.location.reload()
-        // after the 2 second display + 300ms fade out animation
-        console.log('[GlobalSearchMonitor] SearchRunning component completed');
+        console.log('[GlobalSearchMonitor] SearchRunning completed, page will reload');
       }}
     />
   );

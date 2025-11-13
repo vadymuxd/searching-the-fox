@@ -128,8 +128,8 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
         onSearchComplete();
       }
 
-      // Note: Do NOT refresh here. Refresh is handled in SearchRunning after
-      // it finishes displaying completion status and fade-out animation.
+      // Note: Page reload is handled immediately in SearchRunning component
+      // when it detects success status
     } else if (searchRun.status === 'failed' && previousStatus !== 'failed') {
       console.log('[useSearchStatus] Search failed:', searchRun.error_message);
       stopTimer();
@@ -149,13 +149,9 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
         onSearchFailed(searchRun.error_message || 'Unknown error');
       }
 
-      // Clear active run after showing error
-      setState((prev) => ({
-        ...prev,
-        activeRun: null,
-        isLoading: false,
-      }));
-      activeRunRef.current = null;
+      // Note: Page reload is handled immediately in SearchRunning component
+      // when it detects failed status. The activeRun stays in state to allow
+      // the component to trigger the reload, then will be cleared after page reloads.
     } else if (searchRun.status === 'running' && previousStatus === 'pending') {
       console.log('[useSearchStatus] Search started running');
       // No notification needed, user already sees the loading state
