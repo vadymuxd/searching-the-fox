@@ -44,9 +44,9 @@ export function GlobalSearchMonitor() {
       status={activeRun.status}
       site={activeRun.parameters.site}
       onComplete={() => {
-        // The useSearchStatus hook already handles page refresh
-        // This is just a placeholder if we need additional logic
-        console.log('[GlobalSearchMonitor] Search completed');
+        // The useSearchStatus hook already handles page refresh via window.location.reload()
+        // after the 2 second display + 300ms fade out animation
+        console.log('[GlobalSearchMonitor] SearchRunning component completed');
       }}
     />
   );

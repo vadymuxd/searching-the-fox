@@ -128,10 +128,8 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
         onSearchComplete();
       }
 
-      // Refresh the page to show new results
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // Note: Do NOT refresh here. Refresh is handled in SearchRunning after
+      // it finishes displaying completion status and fade-out animation.
     } else if (searchRun.status === 'failed' && previousStatus !== 'failed') {
       console.log('[useSearchStatus] Search failed:', searchRun.error_message);
       stopTimer();

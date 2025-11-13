@@ -47,6 +47,11 @@ export function SearchRunning({ startedAt, status, onComplete, site }: SearchRun
           if (onComplete) {
             onComplete();
           }
+          // Force browser refresh after the component disappears so the
+          // user sees updated jobs fetched to the database
+          if (typeof window !== 'undefined') {
+            window.location.reload();
+          }
         }, 300);
       }, 2000);
 
