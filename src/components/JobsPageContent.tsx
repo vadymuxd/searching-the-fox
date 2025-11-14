@@ -417,11 +417,25 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
   }, []);
 
   const handleStatusUpdate = useCallback(async () => {
-    router.refresh();
+    // Avoid full router.refresh which clears in-memory caches and can cause flicker.
     if (user) {
       await loadUserJobsFromCache(user.id, true); // Force sync after status update
     }
-  }, [router, user, loadUserJobsFromCache]);
+  }, [user, loadUserJobsFromCache]);
+
+  // Listen for cache update events (jobsCacheUpdated dispatched by jobsDataManager) and legacy jobsUpdated
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user) return;
+    const handler = () => {
+      loadUserJobsFromCache(user.id); // Use cache-first (already fresh) to avoid double sync
+    };
+    window.addEventListener('jobsCacheUpdated', handler as EventListener);
+    window.addEventListener('jobsUpdated', handler as EventListener);
+    return () => {
+      window.removeEventListener('jobsCacheUpdated', handler as EventListener);
+      window.removeEventListener('jobsUpdated', handler as EventListener);
+    };
+  }, [user, loadUserJobsFromCache]);
 
   // Handler to clear selections after jobs are moved
   const handleJobsMoved = useCallback(() => {
