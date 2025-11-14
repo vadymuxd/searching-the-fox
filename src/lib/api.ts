@@ -87,7 +87,7 @@ export class JobService {
             'X-Trace-Id': traceId,
           },
           body: JSON.stringify(requestBody),
-          // @ts-ignore - keepalive ensures request is sent even when we don't await
+          // keepalive ensures the request is sent even when we don't await the response
           keepalive: true,
         }).catch((error) => {
           console.error('[API] Error sending request to Render:', error);
@@ -247,7 +247,7 @@ export class JobService {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Trace-Id': traceId },
           body: JSON.stringify(requestBody),
-          // @ts-ignore
+          // keepalive ensures the request is sent even when we don't await the response
           keepalive: true,
         }).catch((error) => {
           console.error('[Multi-site] Error sending request to Render:', error);

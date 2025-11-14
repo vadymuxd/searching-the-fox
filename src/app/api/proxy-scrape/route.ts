@@ -70,7 +70,6 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify(body),
         signal: controller.signal,
-        // @ts-ignore - keepalive helps ensure request is sent even if response is slow
         keepalive: true,
       });
       
