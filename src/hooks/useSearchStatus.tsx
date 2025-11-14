@@ -7,6 +7,7 @@ import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
 import {
   getActiveSearchRun,
   subscribeToSearchRun,
+  updateSearchRunStatus,
   SearchRun,
   SearchRunStatus,
 } from '@/lib/db/searchRunService';
@@ -51,6 +52,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutCheckRef = useRef<NodeJS.Timeout | null>(null);
   const previousStatusRef = useRef<SearchRunStatus | null>(null);
   const activeRunRef = useRef<SearchRun | null>(null); // Track active run to avoid state dependency
 
@@ -93,6 +95,78 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
     }
   }, []);
 
+  // Stop timeout check
+  const stopTimeoutCheck = useCallback(() => {
+    if (timeoutCheckRef.current) {
+      console.log('[useSearchStatus] Stopping timeout check');
+      clearTimeout(timeoutCheckRef.current);
+      timeoutCheckRef.current = null;
+    }
+  }, []);
+
+  // Check if search run has been pending for too long (>2 minutes)
+  const checkPendingTimeout = useCallback(async (searchRun: SearchRun) => {
+    if (searchRun.status !== 'pending') {
+      stopTimeoutCheck();
+      return;
+    }
+
+    const createdAt = new Date(searchRun.created_at).getTime();
+    const now = Date.now();
+    const elapsedMinutes = (now - createdAt) / (1000 * 60);
+
+    console.log('[useSearchStatus] Checking pending timeout, elapsed:', elapsedMinutes.toFixed(2), 'minutes');
+
+    if (elapsedMinutes >= 2) {
+      console.log('[useSearchStatus] Search run stuck in pending for >2 minutes, marking as failed');
+      
+      // Update search run to failed status
+      try {
+        const updated = await updateSearchRunStatus({
+          runId: searchRun.id,
+          status: 'failed',
+          error: 'Search timed out - API service failed to wake up',
+        });
+
+        if (updated) {
+          console.log('[useSearchStatus] Successfully marked search run as failed');
+          // The status update will trigger handleStatusUpdate via subscription
+        } else {
+          console.error('[useSearchStatus] Failed to update search run status');
+        }
+      } catch (error) {
+        console.error('[useSearchStatus] Error updating search run status:', error);
+      }
+      
+      stopTimeoutCheck();
+    }
+  }, [stopTimeoutCheck]);
+
+  // Start timeout check for pending status
+  const startTimeoutCheck = useCallback((searchRun: SearchRun) => {
+    if (searchRun.status !== 'pending') {
+      return;
+    }
+
+    // Clear existing timeout check
+    if (timeoutCheckRef.current) {
+      clearTimeout(timeoutCheckRef.current);
+    }
+
+    const createdAt = new Date(searchRun.created_at).getTime();
+    const now = Date.now();
+    const elapsedMs = now - createdAt;
+    const timeoutMs = 2 * 60 * 1000; // 2 minutes
+    const remainingMs = Math.max(0, timeoutMs - elapsedMs);
+
+    console.log('[useSearchStatus] Starting timeout check, will check in', (remainingMs / 1000).toFixed(0), 'seconds');
+
+    // Schedule timeout check
+    timeoutCheckRef.current = setTimeout(() => {
+      checkPendingTimeout(searchRun);
+    }, remainingMs);
+  }, [checkPendingTimeout]);
+
   // Handle status updates
   const handleStatusUpdate = useCallback((searchRun: SearchRun) => {
     console.log('[useSearchStatus] Status update:', searchRun.status, 'Previous:', previousStatusRef.current);
@@ -107,6 +181,13 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
       isLoading: searchRun.status === 'pending' || searchRun.status === 'running',
       error: searchRun.error_message || null,
     }));
+
+    // Start timeout check for pending status
+    if (searchRun.status === 'pending') {
+      startTimeoutCheck(searchRun);
+    } else {
+      stopTimeoutCheck();
+    }
 
     // Handle status transitions
     if (searchRun.status === 'success' && previousStatus !== 'success') {
@@ -156,7 +237,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
       console.log('[useSearchStatus] Search started running');
       // No notification needed, user already sees the loading state
     }
-  }, [router, stopTimer, stopPolling, onSearchComplete, onSearchFailed]);
+  }, [router, stopTimer, stopPolling, stopTimeoutCheck, startTimeoutCheck, onSearchComplete, onSearchFailed]);
 
   // Subscribe to search run updates
   const subscribeToRun = useCallback((runId: string) => {
@@ -250,6 +331,11 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
 
         // Start polling as fallback
         startPolling();
+        
+        // Start timeout check if pending
+        if (activeRun.status === 'pending') {
+          startTimeoutCheck(activeRun);
+        }
       } else {
         console.log('[useSearchStatus] No active search run found');
         activeRunRef.current = null;
@@ -271,7 +357,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
         error: 'Failed to check search status',
       });
     }
-  }, [userId, calculateElapsedTime, startTimer, subscribeToRun, startPolling, stopPolling]);
+  }, [userId, calculateElapsedTime, startTimer, subscribeToRun, startPolling, startTimeoutCheck, stopPolling]);
 
   // Check for active run on mount and when userId changes
   useEffect(() => {
@@ -288,6 +374,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
       }
       stopTimer();
       stopPolling();
+      stopTimeoutCheck();
     };
     // Only re-run when userId changes, not when callbacks change
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -332,11 +419,16 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
         startTimer(searchRun.created_at);
         subscribeToRun(runId);
         startPolling();
+        
+        // Start timeout check if pending
+        if (searchRun.status === 'pending') {
+          startTimeoutCheck(searchRun);
+        }
       }
     } catch (error) {
       console.error('[useSearchStatus] Error monitoring run:', error);
     }
-  }, [userId, calculateElapsedTime, startTimer, subscribeToRun, startPolling]);
+  }, [userId, calculateElapsedTime, startTimer, subscribeToRun, startPolling, startTimeoutCheck]);
 
   // Method to clear active run (e.g., after user acknowledges error)
   const clearActiveRun = useCallback(() => {
@@ -349,6 +441,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
     
     stopTimer();
     stopPolling();
+    stopTimeoutCheck();
     previousStatusRef.current = null;
     activeRunRef.current = null;
     
@@ -358,7 +451,7 @@ export function useSearchStatus(options: UseSearchStatusOptions = {}) {
       elapsedTime: 0,
       error: null,
     });
-  }, [stopTimer, stopPolling]);
+  }, [stopTimer, stopPolling, stopTimeoutCheck]);
 
   return {
     activeRun: state.activeRun,

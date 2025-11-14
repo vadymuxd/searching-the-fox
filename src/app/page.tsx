@@ -34,8 +34,20 @@ export default function HomePage() {
   const {
     activeRun,
     isLoading: isSearchRunActive,
+    monitorRun,
   } = useSearchStatus({
     userId: user?.id,
+    onSearchComplete: () => {
+      // When search completes, reload page to show results
+      console.log('[HomePage] Search completed, reloading page');
+      router.push('/results');
+    },
+    onSearchFailed: (error) => {
+      // When search fails, show error and stop loading
+      console.log('[HomePage] Search failed:', error);
+      setLoading(false);
+      setError(error);
+    },
   });
   
   const [loading, setLoading] = useState(false);
@@ -132,7 +144,7 @@ export default function HomePage() {
     // Save search parameters to database if user is authenticated
     if (user) {
       try {
-  await jobsDataManager.saveLastSearch(user.id, searchData);
+        await jobsDataManager.saveLastSearch(user.id, searchData);
       } catch (error) {
         console.error('Error saving search to database:', error);
       }
@@ -170,43 +182,35 @@ export default function HomePage() {
         }, user?.id); // Pass userId for search run tracking
       }
 
-      if (response.success) {
-        console.log(`[Search] API returned ${response.jobs?.length || 0} jobs`);
-        
-        // Check if we got any jobs
-        if (!response.jobs || response.jobs.length === 0) {
-          notifications.show({
-            title: 'No jobs found',
-            message: 'No jobs were found matching your search criteria. Try adjusting your search parameters.',
-            icon: <IconAlertCircle size={16} />,
-            color: 'yellow',
-            autoClose: 5000,
-          });
-          // Still redirect to show empty results page
-          router.push('/results');
-          return;
-        }
-        
-        // Save jobs and redirect
-        if (user) {
-          // For authenticated users: save to database and sync with cache
-          console.log(`[Search] Saving ${response.jobs.length} jobs for authenticated user`);
-          const saveResult = await jobsDataManager.saveNewJobsAndSync(response.jobs, user.id, searchData);
+      // For authenticated users, the API uses fire-and-forget approach
+      // The search_run will be created and we need to monitor it via useSearchStatus
+      if (user && response.success) {
+        console.log('[Search] API request forwarded to Render. Monitoring search_run for completion...');
+        // The useSearchStatus hook will handle monitoring and redirect on completion
+        // Keep loading state active and wait for search_run updates
+        // Don't set loading to false here - let the search_run completion handle it
+        return;
+      }
+
+      // For guest users, API returns results directly (old behavior)
+      if (!user) {
+        if (response.success) {
+          console.log(`[Search] API returned ${response.jobs?.length || 0} jobs for guest user`);
           
-          if (!saveResult.success) {
-            throw new Error(saveResult.error || 'Failed to save jobs to database');
+          // Check if we got any jobs
+          if (!response.jobs || response.jobs.length === 0) {
+            notifications.show({
+              title: 'No jobs found',
+              message: 'No jobs were found matching your search criteria. Try adjusting your search parameters.',
+              icon: <IconAlertCircle size={16} />,
+              color: 'yellow',
+              autoClose: 5000,
+            });
+            // Still redirect to show empty results page
+            router.push('/results');
+            return;
           }
           
-          console.log(`[Search] Successfully saved ${saveResult.jobsSaved || response.jobs.length} jobs to database`);
-          
-          // Show success notification
-          notifications.show({
-            title: 'Search completed',
-            message: `Found and saved ${saveResult.jobsSaved || response.jobs.length} jobs`,
-            color: 'green',
-            autoClose: 3000,
-          });
-        } else {
           // For guest users: save to localStorage
           console.log(`[Search] Saving ${response.jobs.length} jobs to localStorage for guest user`);
           searchStorage.saveSearchResults({
@@ -222,12 +226,12 @@ export default function HomePage() {
             color: 'green',
             autoClose: 3000,
           });
+          
+          // Redirect to results page (defaults to 'new' tab)
+          router.push('/results');
+        } else {
+          throw new Error(response.error || 'Failed to search jobs');
         }
-        
-  // Redirect to results page (defaults to 'new' tab)
-  router.push('/results');
-      } else {
-        throw new Error(response.error || 'Failed to search jobs');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
@@ -241,11 +245,17 @@ export default function HomePage() {
         color: 'red',
         autoClose: 5000,
       });
-    } finally {
+      
       setLoading(false);
-      setProgressInfo(undefined);
+    } finally {
+      // Only clear progress for guest users or on error
+      // For authenticated users, keep loading state until search_run completes
+      if (!user) {
+        setLoading(false);
+        setProgressInfo(undefined);
+      }
     }
-  }, [user, router]);
+  }, [user, router, monitorRun]);
 
   return (
     <>
@@ -306,16 +316,20 @@ export default function HomePage() {
                       <Timer 
                         isRunning={showLoadingState} 
                         progressInfo={progressInfo}
-                        initialElapsedTime={0}
+                        initialElapsedTime={activeRun ? Math.floor((Date.now() - new Date(activeRun.created_at).getTime()) / 1000) : 0}
                       />
-                      {!progressInfo && activeRun && (
+                      {activeRun && (
                         <Text size="sm" c="dimmed" ta="center">
                           {activeRun.status === 'pending' 
-                            ? 'Your search is queued and will start shortly...'
-                            : `Searching ${activeRun.parameters.site === 'all' ? 'all job boards' : activeRun.parameters.site}...`}
+                            ? 'Your search is queued and will start shortly. This may take up to 2 minutes to wake up the job search API...'
+                            : activeRun.status === 'running'
+                            ? `Searching ${activeRun.parameters.site === 'all' ? 'all job boards' : activeRun.parameters.site}...`
+                            : activeRun.status === 'success'
+                            ? `Found ${activeRun.jobs_found || 0} jobs!`
+                            : `Search failed: ${activeRun.error_message || 'Unknown error'}`}
                         </Text>
                       )}
-                      {!progressInfo && !activeRun && (
+                      {!activeRun && !progressInfo && (
                         <Text size="sm" c="dimmed" ta="center">
                           This may take up to 2 minutes depending on the job board and number of results
                         </Text>
