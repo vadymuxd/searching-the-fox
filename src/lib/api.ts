@@ -7,9 +7,8 @@ import {
   SearchRunParameters 
 } from '@/lib/db/searchRunService';
 
-// Always use Next.js API proxy to avoid CORS issues
-// The proxy handles forwarding to Render API (both local and production)
-const API_BASE_URL = '/api/proxy-scrape';
+// Direct call to Render API (CORS is configured on Render side)
+const RENDER_API_URL = 'https://truelist-jobspy-api.onrender.com';
 
 export class JobService {
   // Helper method to get site label from site value
@@ -60,6 +59,7 @@ export class JobService {
       const countryIndeed = params.site === 'indeed' ? 'UK' : params.country_indeed;
       
       // Prepare the request body for POST request
+      const traceId = (globalThis.crypto && 'randomUUID' in globalThis.crypto) ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const requestBody = {
         search_term: params.job_title,
         location: params.location,
@@ -69,11 +69,40 @@ export class JobService {
         country_indeed: countryIndeed || 'UK',
         run_id: searchRunId, // Pass the search run ID to Render
         user_id: userId, // Pass user ID so Render can save to database
+        trace_id: traceId,
       };
 
-      // Always use the proxy route - it forwards to Render API
-      const endpoint = API_BASE_URL;
+      // Direct call to Render API
+      const endpoint = `${RENDER_API_URL}/scrape`;
       
+      // For authenticated users: fire-and-forget - just wake up Render and let it process
+      // The search_run will be monitored via real-time subscriptions
+      if (userId) {
+        console.log('[API] Sending request to Render (fire-and-forget mode)...');
+        // Send the request but don't wait for response
+        fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Trace-Id': traceId,
+          },
+          body: JSON.stringify(requestBody),
+          // @ts-ignore - keepalive ensures request is sent even when we don't await
+          keepalive: true,
+        }).catch((error) => {
+          console.error('[API] Error sending request to Render:', error);
+        });
+        
+        // Return immediately - frontend will monitor search_run status
+        return {
+          success: true,
+          jobs: [],
+          totalResults: 0,
+          jobCount: 0,
+        };
+      }
+      
+      // For guest users: wait for full response (old behavior)
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -159,40 +188,41 @@ export class JobService {
   ): Promise<JobSearchResponse> {
     let searchRunId: string | undefined;
     
-    // Create ONE search run for "all job boards" search
-    if (userId) {
-      const supabase = createClient();
-      const searchRunParams: SearchRunParameters = {
-        jobTitle: params.job_title,
-        location: params.location,
-        site: 'all', // Mark as "all job boards"
-        hours_old: parseInt(params.hours_old || '24'),
-        results_wanted: params.results_wanted || 1000,
-      };
-
-      const searchRun = await createSearchRun(
-        {
-          userId,
-          parameters: searchRunParams,
-          source: 'manual',
-          clientContext: {
-            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
-            timestamp: new Date().toISOString(),
-          },
-        },
-        supabase
-      );
-
-      if (searchRun) {
-        searchRunId = searchRun.id;
-        console.log('Created search run for all job boards:', searchRunId);
-      }
-    }
-
     try {
+      // Create ONE search run for "all job boards" search
+      if (userId) {
+        const supabase = createClient();
+        const searchRunParams: SearchRunParameters = {
+          jobTitle: params.job_title,
+          location: params.location,
+          site: 'all', // Mark as "all job boards"
+          hours_old: parseInt(params.hours_old || '24'),
+          results_wanted: params.results_wanted || 1000,
+        };
+
+        const searchRun = await createSearchRun(
+          {
+            userId,
+            parameters: searchRunParams,
+            source: 'manual',
+            clientContext: {
+              userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+              timestamp: new Date().toISOString(),
+            },
+          },
+          supabase
+        );
+
+        if (searchRun) {
+          searchRunId = searchRun.id;
+          console.log('Created search run for all job boards:', searchRunId);
+        }
+      }
+
       // Prepare the request body with ALL job boards
       const sitesToSearch = INDIVIDUAL_SITES.map(s => s.value);
       
+      const traceId = (globalThis.crypto && 'randomUUID' in globalThis.crypto) ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const requestBody = {
         search_term: params.job_title,
         location: params.location,
@@ -202,17 +232,40 @@ export class JobService {
         country_indeed: 'UK',
         run_id: searchRunId,
         user_id: userId,
+        trace_id: traceId,
       };
 
       console.log('[Multi-site] Making single API call with all sites:', sitesToSearch);
 
-      // Make a single API call - backend will handle all sites
-      const endpoint = API_BASE_URL;
+      // Direct call to Render API - backend will handle all sites
+      const endpoint = `${RENDER_API_URL}/scrape`;
+      
+      // For authenticated users: fire-and-forget
+      if (userId) {
+        console.log('[Multi-site] Sending request to Render (fire-and-forget mode)...');
+        fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Trace-Id': traceId },
+          body: JSON.stringify(requestBody),
+          // @ts-ignore
+          keepalive: true,
+        }).catch((error) => {
+          console.error('[Multi-site] Error sending request to Render:', error);
+        });
+        
+        // Return immediately
+        return {
+          success: true,
+          jobs: [],
+          totalResults: 0,
+          jobCount: 0,
+        };
+      }
+      
+      // For guest users: wait for response
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
       });
 
@@ -315,7 +368,7 @@ export class JobService {
 
   static async checkApiHealth(): Promise<boolean> {
     try {
-      const response = await fetch(`${API_BASE_URL}/health`, {
+      const response = await fetch(`${RENDER_API_URL}/health`, {
         method: 'GET',
       });
       return response.ok;

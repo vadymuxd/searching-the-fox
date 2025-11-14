@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -41,6 +41,24 @@ except Exception as e:
     supabase = None
 
 app = FastAPI(title="JobSpy API", description="Job scraping service using JobSpy", version="1.0.0")
+
+# Low-level ingress logging middleware to confirm ANY traffic reaches the server
+@app.middleware("http")
+async def ingress_logger(request: Request, call_next):
+    try:
+        logger.info(
+            f"[INGRESS] method={request.method} path={request.url.path} origin={request.headers.get('origin')} ua={request.headers.get('user-agent')} trace_id={request.headers.get('x-trace-id')} content_type={request.headers.get('content-type')}"
+        )
+    except Exception as e:
+        logger.error(f"[INGRESS] failed to log request: {e}")
+    response = await call_next(request)
+    try:
+        logger.info(
+            f"[EGRESS] status={response.status_code} path={request.url.path} trace_id={request.headers.get('x-trace-id')}"
+        )
+    except Exception:
+        pass
+    return response
 
 # Add CORS middleware (use explicit origins + regex for Vercel previews)
 app.add_middleware(
@@ -148,6 +166,13 @@ async def cleanup_stuck_searches():
 async def options_scrape():
     # CORSMiddleware will attach the appropriate headers
     from fastapi.responses import Response
+    return Response(status_code=204)
+
+# Generic OPTIONS handler for debugging (catches other preflight paths)
+@app.options("/{full_path:path}")
+async def catch_all_options(full_path: str):
+    from fastapi.responses import Response
+    logger.info(f"[CORS-OPTIONS] path=/{full_path}")
     return Response(status_code=204)
 
 def update_search_run_status(run_id: str, status: str, error: Optional[str] = None, jobs_found: Optional[int] = None, increment_only: bool = False):

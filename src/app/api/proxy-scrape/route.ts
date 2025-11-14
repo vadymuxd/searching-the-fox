@@ -48,27 +48,48 @@ export async function POST(request: NextRequest) {
       log({ event: 'health_ping_failed', error: e instanceof Error ? e.message : 'unknown_error' });
     }
 
-    // 2. Send the scrape request. We AWAIT the initial response to be certain the request left Vercel
-    //    (fire-and-forget inside a serverless context can be dropped when the function exits).
-    //    Render may still be cold; if it times out Vercel will terminate, but the request should have reached Render.
+    // 2. Send the scrape request. We AWAIT until we get initial TCP connection established.
+    //    This ensures Render receives the request even if Vercel times out waiting for full response.
+    //    Vercel Hobby has 10s function timeout, Render cold start can take 50s+
     const scrapeStart = Date.now();
     let delivered = false;
     let status: number | null = null;
     let scrapeError: string | null = null;
 
     try {
+      // Set a custom timeout that allows enough time for TCP handshake
+      // but returns quickly enough to avoid Vercel timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s - leaves margin for Vercel's 10s limit
+
       const scrapeResp = await fetch(`${RENDER_API_URL}/scrape`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Connection': 'keep-alive', // Try to keep connection open
+        },
         body: JSON.stringify(body),
+        signal: controller.signal,
+        // @ts-ignore - keepalive helps ensure request is sent even if response is slow
+        keepalive: true,
       });
+      
+      clearTimeout(timeoutId);
       status = scrapeResp.status;
-      delivered = true; // Reaching any HTTP status means Render received the request
-      // We DO NOT parse the body fully to minimize time spent in this function.
+      delivered = true;
       log({ event: 'scrape_response', status, elapsed_ms: Date.now() - scrapeStart });
     } catch (e) {
       scrapeError = e instanceof Error ? e.message : 'unknown_error';
-      log({ event: 'scrape_fetch_failed', error: scrapeError, elapsed_ms: Date.now() - scrapeStart });
+      
+      // If we aborted due to timeout, the request may still have been delivered
+      if (scrapeError.includes('aborted')) {
+        log({ event: 'scrape_timeout', note: 'Request likely delivered but response timed out', elapsed_ms: Date.now() - scrapeStart });
+        // Consider this a success - the request was sent, just response was slow
+        delivered = true;
+        status = null; // Unknown status
+      } else {
+        log({ event: 'scrape_fetch_failed', error: scrapeError, elapsed_ms: Date.now() - scrapeStart });
+      }
     }
 
     // 3. Respond back to client quickly with delivery info. The client/browser will subscribe to DB changes.
@@ -99,6 +120,28 @@ export async function POST(request: NextRequest) {
       error: 'proxy_failed',
       details: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 500 });
+  }
+}
+
+export async function GET(request: NextRequest) {
+  // Health check endpoint - forward to Render
+  try {
+    const response = await fetch(`${RENDER_API_URL}/health`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      return NextResponse.json(data);
+    } else {
+      return NextResponse.json({ error: 'Render health check failed' }, { status: response.status });
+    }
+  } catch (error) {
+    return NextResponse.json({ 
+      error: 'Failed to reach Render', 
+      details: error instanceof Error ? error.message : 'unknown' 
+    }, { status: 503 });
   }
 }
 
