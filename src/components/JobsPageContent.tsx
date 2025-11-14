@@ -74,44 +74,47 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
 
 
 
-  // Load user jobs with cache-first strategy
-  const loadUserJobsFromCache = useCallback(async (userId: string, forceSync = false) => {
+  // Track latest status to avoid stale closures when async operations finish after tab switches
+  const currentStatusRef = useRef(status);
+  useEffect(() => { currentStatusRef.current = status; }, [status]);
+
+  // Load user jobs with cache-first strategy for a specific status
+  const loadUserJobsFromCache = useCallback(async (userId: string, statusParam: string | undefined, forceSync = false) => {
     try {
-      
       let result;
       if (forceSync) {
-        // Force sync with database
-        result = await jobsDataManager.syncWithDatabase(userId, status, true);
+        result = await jobsDataManager.syncWithDatabase(userId, statusParam, true);
       } else {
-        // Cache-first strategy
-        result = await jobsDataManager.getJobsForUser(userId, status);
+        result = await jobsDataManager.getJobsForUser(userId, statusParam);
       }
-      
+
       if (result.success) {
         setJobs(result.jobs);
-        // Don't set filteredJobs here - let PageFilter handle it through onFilteredJobsChange
-        
-        // Load search data for authenticated users
         const searchData = jobsDataManager.getCachedSearchData(userId);
-        if (searchData) {
-          setCurrentSearch(searchData);
-        }
+        if (searchData) setCurrentSearch(searchData);
       } else {
         setJobs([]);
-        // Don't set filteredJobs here - let PageFilter handle it through onFilteredJobsChange
       }
     } catch (error) {
       console.error('Error loading user jobs:', error);
       setJobs([]);
-      // Don't set filteredJobs here - let PageFilter handle it through onFilteredJobsChange
     }
-  }, [status]);
+  }, []);
+
+  // Stable refresh function referencing latest status via ref
+  const refreshJobs = useCallback(async (force = false) => {
+    if (user) {
+      await loadUserJobsFromCache(user.id, currentStatusRef.current, force);
+    } else {
+      loadGuestData();
+    }
+  }, [user, loadUserJobsFromCache]);
 
   const loadData = useCallback(async () => {
     setSearchDataLoading(true);
     
     if (user) {
-      await loadUserJobsFromCache(user.id);
+      await loadUserJobsFromCache(user.id, currentStatusRef.current);
 
       const cachedSearch = jobsDataManager.getCachedSearchData(user.id);
       const cacheIsFresh = jobsDataManager.hasFreshPreferences(user.id);
@@ -417,25 +420,23 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
   }, []);
 
   const handleStatusUpdate = useCallback(async () => {
-    // Avoid full router.refresh which clears in-memory caches and can cause flicker.
+    // Force sync using latest status (not the status captured when operation started)
     if (user) {
-      await loadUserJobsFromCache(user.id, true); // Force sync after status update
+      await loadUserJobsFromCache(user.id, currentStatusRef.current, true);
     }
   }, [user, loadUserJobsFromCache]);
 
   // Listen for cache update events (jobsCacheUpdated dispatched by jobsDataManager) and legacy jobsUpdated
   useEffect(() => {
     if (typeof window === 'undefined' || !user) return;
-    const handler = () => {
-      loadUserJobsFromCache(user.id); // Use cache-first (already fresh) to avoid double sync
-    };
+    const handler = () => { refreshJobs(false); };
     window.addEventListener('jobsCacheUpdated', handler as EventListener);
     window.addEventListener('jobsUpdated', handler as EventListener);
     return () => {
       window.removeEventListener('jobsCacheUpdated', handler as EventListener);
       window.removeEventListener('jobsUpdated', handler as EventListener);
     };
-  }, [user, loadUserJobsFromCache]);
+  }, [user, refreshJobs]);
 
   // Handler to clear selections after jobs are moved
   const handleJobsMoved = useCallback(() => {
