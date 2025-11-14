@@ -572,6 +572,7 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
                     {/* Page Filter */}
                     <PageFilter 
                       jobs={jobs} 
+                      status={status}
                       onFilteredJobsChange={handleFilteredJobsChange}
                       onFilterStateChange={handleFilterStateChange}
                     />

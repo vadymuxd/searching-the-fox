@@ -41,6 +41,7 @@ class JobsDataManager {
   private cachedJobs: CachedJobsData | null = null;
   private cachedMetadata: CachedJobsMetadata | null = null;
   private syncInProgress = false;
+  private static JOBS_CACHE_UPDATED_EVENT = 'jobsCacheUpdated';
 
   static getInstance(): JobsDataManager {
     if (!JobsDataManager.instance) {
@@ -101,6 +102,51 @@ class JobsDataManager {
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
+  }
+
+  /**
+   * Get counts for each status from the in-memory/local cache.
+   * Does not hit the backend.
+   */
+  getStatusCounts(userId: string): Record<string, number> {
+    try {
+      // Prefer in-memory cache if for same user
+      if (this.cachedJobs && this.cachedMetadata?.userId === userId) {
+        return {
+          new: this.cachedJobs.new?.length || 0,
+          interested: this.cachedJobs.interested?.length || 0,
+          applied: this.cachedJobs.applied?.length || 0,
+          progressed: this.cachedJobs.progressed?.length || 0,
+          rejected: this.cachedJobs.rejected?.length || 0,
+          archived: this.cachedJobs.archived?.length || 0,
+          all: this.cachedJobs.all?.length || 0,
+        } as Record<string, number>;
+      }
+
+      // Fallback to localStorage cache
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem(CACHED_JOBS_KEY);
+        const meta = localStorage.getItem(CACHED_JOBS_METADATA_KEY);
+        if (cached && meta) {
+          const metadata = JSON.parse(meta) as CachedJobsMetadata;
+          if (metadata.userId === userId) {
+            const data = JSON.parse(cached) as CachedJobsData;
+            return {
+              new: data.new?.length || 0,
+              interested: data.interested?.length || 0,
+              applied: data.applied?.length || 0,
+              progressed: data.progressed?.length || 0,
+              rejected: data.rejected?.length || 0,
+              archived: data.archived?.length || 0,
+              all: data.all?.length || 0,
+            } as Record<string, number>;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('getStatusCounts failed', e);
+    }
+    return { new: 0, interested: 0, applied: 0, progressed: 0, rejected: 0, archived: 0, all: 0 };
   }
 
   /**
@@ -452,6 +498,11 @@ class JobsDataManager {
       
       this.cachedJobs = null;
       this.cachedMetadata = null;
+
+      // Notify listeners within the same tab
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(JobsDataManager.JOBS_CACHE_UPDATED_EVENT));
+      }
     } catch (error) {
       console.error('Error clearing cache:', error);
     }
@@ -630,6 +681,11 @@ class JobsDataManager {
       localStorage.setItem(CACHED_JOBS_KEY, JSON.stringify(jobs));
       this.cachedJobs = jobs;
       this.saveMetadata(metadata);
+
+      // Notify listeners (same-tab) that cache changed for immediate UI updates
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(JobsDataManager.JOBS_CACHE_UPDATED_EVENT));
+      }
     } catch (error) {
       console.error('Error setting cached jobs:', error);
     }

@@ -7,6 +7,7 @@ import { useMantineTheme } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { useRef, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { jobsDataManager } from '@/lib/jobsDataManager';
 
 // Job status types based on database enum
 export type JobStatus = 'new' | 'interested' | 'applied' | 'progressed' | 'rejected' | 'archived';
@@ -44,28 +45,24 @@ export function TabNavigation({ onAuthRequired, onTabChange, backgroundColor }: 
     return status || 'new';
   };
 
-  // Load job counts from cache
+  // Load job counts from cache and keep in sync
   useEffect(() => {
-    const loadJobCounts = async () => {
-      try {
-        if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return;
 
+    const updateCounts = () => {
+      try {
         if (user) {
-          // For authenticated users, get counts from jobsDataManager cache
-          const cachedData = localStorage.getItem('searchingTheFox_cachedJobs');
-          if (cachedData) {
-            const parsedData = JSON.parse(cachedData);
-            setJobCounts({
-              new: parsedData.new?.length || 0,
-              interested: parsedData.interested?.length || 0,
-              applied: parsedData.applied?.length || 0,
-              progressed: parsedData.progressed?.length || 0,
-              rejected: parsedData.rejected?.length || 0,
-              archived: parsedData.archived?.length || 0,
-            });
-          }
+          const counts = jobsDataManager.getStatusCounts(user.id);
+          setJobCounts({
+            new: counts.new || 0,
+            interested: counts.interested || 0,
+            applied: counts.applied || 0,
+            progressed: counts.progressed || 0,
+            rejected: counts.rejected || 0,
+            archived: counts.archived || 0,
+          });
         } else {
-          // For guest users, get count from localStorage (searchResults)
+          // Guest users: counts come from searchResults localStorage
           const guestData = localStorage.getItem('searchingTheFox_searchResults');
           if (guestData) {
             const parsedData = JSON.parse(guestData);
@@ -78,25 +75,32 @@ export function TabNavigation({ onAuthRequired, onTabChange, backgroundColor }: 
               rejected: 0,
               archived: 0,
             });
+          } else {
+            setJobCounts({
+              new: 0, interested: 0, applied: 0, progressed: 0, rejected: 0, archived: 0,
+            });
           }
         }
-      } catch (error) {
-        console.error('Error loading job counts:', error);
+      } catch (e) {
+        console.error('Error updating job counts:', e);
       }
     };
 
-    loadJobCounts();
+    // Initial load
+    updateCounts();
 
-    // Set up a listener for localStorage changes to update counts in real-time
-    const handleStorageChange = () => {
-      loadJobCounts();
-    };
+    // Listen for same-tab cache updates dispatched by jobsDataManager
+    const cacheEvent = 'jobsCacheUpdated';
+    const handleCacheUpdated = () => updateCounts();
+    window.addEventListener(cacheEvent, handleCacheUpdated as EventListener);
 
+    // Fallback listeners: storage (cross-tab) and legacy jobsUpdated
+    const handleStorageChange = () => updateCounts();
     window.addEventListener('storage', handleStorageChange);
-    // Also listen for custom events for same-tab updates
     window.addEventListener('jobsUpdated', handleStorageChange);
 
     return () => {
+      window.removeEventListener(cacheEvent, handleCacheUpdated as EventListener);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('jobsUpdated', handleStorageChange);
     };

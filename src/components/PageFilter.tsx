@@ -16,6 +16,7 @@ import { IconFilter, IconX, IconCornerDownLeft, IconDeviceFloppy } from '@tabler
 import { TextButton } from './TextButton';
 import { SecondaryButton } from './SecondaryButton';
 import { Job } from '@/types/job';
+import type { JobStatus } from '@/types/supabase';
 import { searchStorage } from '@/lib/localStorage';
 import { jobsDataManager } from '@/lib/jobsDataManager';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -25,9 +26,10 @@ interface PageFilterProps {
   onFilteredJobsChange: (filteredJobs: Job[]) => void;
   onReady?: () => void; // signals when initial filter state is applied
   onFilterStateChange?: (isFiltered: boolean) => void; // notify parent about filter state
+  status?: JobStatus; // current tab/status to react on tab changes
 }
 
-export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateChange }: PageFilterProps) {
+export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateChange, status }: PageFilterProps) {
   const theme = useMantineTheme();
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
   const { user } = useAuth();
@@ -40,6 +42,7 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
   // Track if we've already loaded data for this user to prevent re-loading
   const userDataLoadedRef = useRef<string | null>(null);
   const jobsLengthRef = useRef<number>(0);
+  const jobsSigRef = useRef<string>('');
   const initialLoadCompleteRef = useRef(false);
   const onReadyCalledRef = useRef(false);
   const loadingRef = useRef(false); // Prevent concurrent loads
@@ -94,7 +97,10 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
     
     // Skip if we've already completed initial load and user hasn't changed
     const currentUserId = user?.id || 'anonymous';
-    const jobsChanged = jobs.length !== jobsLengthRef.current;
+    const calcSig = (list: Job[]) =>
+      list.map(j => j.user_job_id || j.id || j.job_url || `${j.title}-${j.company}-${j.location}`).join('|');
+
+    const jobsChanged = jobs.length !== jobsLengthRef.current || calcSig(jobs) !== jobsSigRef.current;
     
     if (initialLoadCompleteRef.current && 
         userDataLoadedRef.current === currentUserId && 
@@ -111,11 +117,12 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
       return;
     }
     
-    console.log('PageFilter: Loading data for user:', currentUserId, 'jobsChanged:', jobsChanged);
+  console.log('PageFilter: Loading data for user:', currentUserId, 'jobsChanged:', jobsChanged, 'status:', status);
     
     // Update refs
     userDataLoadedRef.current = currentUserId;
-    jobsLengthRef.current = jobs.length;
+  jobsLengthRef.current = jobs.length;
+  jobsSigRef.current = calcSig(jobs);
     
     // Load filter - database for authenticated users ONLY, localStorage for anonymous users ONLY
     const loadFilter = async () => {
@@ -203,7 +210,18 @@ export function PageFilter({ jobs, onFilteredJobsChange, onReady, onFilterStateC
       isMounted = false;
       mountedRef.current = false;
     };
-  }, [jobs, user, applyFilter, onFilteredJobsChange, onFilterStateChange, onReady]);
+  }, [jobs, user, status, applyFilter, onFilteredJobsChange, onFilterStateChange, onReady]);
+
+  // Reset filters on status change to avoid stale filters hiding results between tabs
+  useEffect(() => {
+    if (!status) return;
+    // Clear filter when switching tabs; users can re-apply if desired
+    setFilterValue('');
+    setFiltersApplied(false);
+    setAppliedKeywords([]);
+    onFilteredJobsChange(jobs);
+    onFilterStateChange?.(false);
+  }, [status]);
 
   const handleFilter = useCallback(async () => {
     if (filterValue.trim()) {
