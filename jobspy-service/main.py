@@ -120,6 +120,97 @@ async def root():
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
+@app.post("/worker/poll-queue")
+async def poll_queue(batch_size: int = 5):
+    """
+    Poll the search_runs table for pending runs and process them sequentially.
+    Idempotency: uses a conditional status transition pending->running to claim a run.
+    """
+    if not supabase:
+        return {"error": "Database not configured"}
+
+    try:
+        # Fetch oldest pending runs
+        result = supabase.table("search_runs") \
+            .select("id, user_id, parameters, status") \
+            .eq("status", "pending") \
+            .order("created_at", desc=False) \
+            .limit(batch_size) \
+            .execute()
+
+        runs = result.data or []
+        if not runs:
+            return {"success": True, "processed": 0, "details": []}
+
+        processed = 0
+        details = []
+
+        # Process runs one by one to limit memory and avoid timeouts
+        for run in runs:
+            run_id = run.get("id")
+            user_id = run.get("user_id")
+            params = run.get("parameters") or {}
+
+            # Double-check and atomically transition to running only if still pending
+            try:
+                now_iso = datetime.now().isoformat()
+                claim_res = supabase.table("search_runs") \
+                    .update({"status": "running", "started_at": now_iso}) \
+                    .eq("id", run_id) \
+                    .eq("status", "pending") \
+                    .execute()
+
+                # If nothing was updated, someone else grabbed it
+                if not claim_res.data:
+                    details.append({"run_id": run_id, "skipped": True, "reason": "already claimed"})
+                    continue
+            except Exception as e:
+                logger.error(f"Failed to claim run {run_id}: {e}")
+                details.append({"run_id": run_id, "skipped": True, "reason": "claim_failed"})
+                continue
+
+            # Map stored parameters to JobSearchRequest
+            try:
+                site = params.get("site", "indeed")
+                # Support "all" to request multiple boards in one scrape
+                if site == "all":
+                    site_name = ["linkedin", "indeed"]
+                else:
+                    site_name = [site]
+
+                request_model = JobSearchRequest(
+                    search_term=params.get("jobTitle", ""),
+                    location=params.get("location", ""),
+                    site_name=site_name,
+                    results_wanted=int(params.get("results_wanted") or 1000),
+                    hours_old=int(params.get("hours_old") or 24),
+                    country_indeed=params.get("country_indeed") or "UK",
+                    run_id=run_id,
+                    user_id=user_id
+                )
+
+                # Reuse the existing scraping implementation to ensure consistent behavior
+                resp = await scrape_jobs(request_model)
+                processed += 1
+                details.append({
+                    "run_id": run_id,
+                    "status": "completed",
+                    "jobs": resp.total_results if hasattr(resp, "total_results") else None
+                })
+            except Exception as e:
+                logger.error(f"Queue processing failed for {run_id}: {e}")
+                # Finalize as failed; scrape_jobs already attempts to finalize on errors, but be safe
+                try:
+                    update_search_run_status(run_id, "failed", error=str(e))
+                except Exception:
+                    pass
+                details.append({"run_id": run_id, "status": "failed", "error": str(e)})
+
+        return {"success": True, "processed": processed, "details": details}
+    except Exception as e:
+        logger.error(f"Error polling queue: {e}")
+        return {"error": str(e)}
+
 @app.post("/cleanup-stuck-searches")
 async def cleanup_stuck_searches():
     """

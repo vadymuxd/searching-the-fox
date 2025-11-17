@@ -1,0 +1,14 @@
+{
+  "crons": [
+    { "path": "/api/cron/schedule-user-searches", "schedule": "0 8 * * *", "timezone": "Europe/London" },
+    { "path": "/api/cron/schedule-user-searches", "schedule": "0 9 * * *", "timezone": "Europe/London" },
+    { "path": "/api/cron/schedule-user-searches", "schedule": "0 10 * * *", "timezone": "Europe/London" },
+    { "path": "/api/cron/schedule-user-searches", "schedule": "0 11 * * *", "timezone": "Europe/London" },
+    { "path": "/api/cron/schedule-user-searches", "schedule": "0 12 * * *", "timezone": "Europe/London" },
+    { "path": "/api/cron/schedule-user-searches", "schedule": "0 13 * * *", "timezone": "Europe/London" },
+    { "path": "/api/cron/schedule-user-searches", "schedule": "0 14 * * *", "timezone": "Europe/London" },
+    { "path": "/api/cron/schedule-user-searches", "schedule": "0 16 * * *", "timezone": "Europe/London" },
+    { "path": "/api/cron/schedule-user-searches", "schedule": "45 16 * * *", "timezone": "Europe/London" },
+    { "path": "/api/cron/schedule-user-searches", "schedule": "0 22 * * *", "timezone": "Europe/London" }
+  ]
+}
