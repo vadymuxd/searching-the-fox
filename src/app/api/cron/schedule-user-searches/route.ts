@@ -45,8 +45,14 @@ export async function POST(req: NextRequest) {
       return json(500, { error: 'fetch_failed', details: fetchErr.message });
     }
 
-    const latestByUser = new Map<string, any>();
-    for (const r of runs || []) {
+    interface RawSearchRunRow {
+      user_id: string;
+      parameters?: Record<string, unknown> | null;
+      completed_at?: string | null;
+    }
+    const castRuns: RawSearchRunRow[] = (runs as RawSearchRunRow[] | null) || [];
+    const latestByUser = new Map<string, RawSearchRunRow>();
+    for (const r of castRuns) {
       if (!r.user_id) continue;
       if (!latestByUser.has(r.user_id)) latestByUser.set(r.user_id, r);
     }
@@ -58,9 +64,9 @@ export async function POST(req: NextRequest) {
   // 2) Build pending inserts overriding hours_old to 1 ("Within Past 1 hour")
     const nowIso = new Date().toISOString();
     const rows = Array.from(latestByUser.entries()).map(([userId, row]) => {
-      const params = { ...(row.parameters || {}) } as Record<string, any>;
-  params.hours_old = 1; // force to 1 hour window irrespective of previous search
-
+      const params: Record<string, unknown> = { ...(row.parameters || {}) };
+      // Force to 1 hour window irrespective of previous search
+      params.hours_old = 1;
       return {
         user_id: userId,
         source: 'cron',
