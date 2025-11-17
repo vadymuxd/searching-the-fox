@@ -61,12 +61,12 @@ export async function POST(req: NextRequest) {
       return json(200, { success: true, inserted: 0, note: 'no_users_with_successful_runs' });
     }
 
-  // 2) Build pending inserts overriding hours_old to 1 ("Within Past 1 hour")
+  // 2) Build pending inserts overriding hours_old to 24 ("Within Past 24 hours")
     const nowIso = new Date().toISOString();
     const rows = Array.from(latestByUser.entries()).map(([userId, row]) => {
       const params: Record<string, unknown> = { ...(row.parameters || {}) };
-      // Force to 1 hour window irrespective of previous search
-      params.hours_old = 1;
+      // Force to 24 hour window irrespective of previous search
+      params.hours_old = 24;
       return {
         user_id: userId,
         source: 'cron',
