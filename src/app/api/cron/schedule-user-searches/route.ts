@@ -6,8 +6,44 @@ import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
+const RENDER_API_URL = 'https://truelist-jobspy-api.onrender.com';
+
 function json(status: number, body: Record<string, unknown>) {
   return NextResponse.json(body, { status });
+}
+
+/**
+ * Trigger Render to scrape jobs for a given search run
+ * Fire-and-forget - don't wait for response
+ */
+async function triggerRenderScrape(runId: string, userId: string, parameters: Record<string, unknown>) {
+  const requestBody = {
+    search_term: parameters.jobTitle || '',
+    location: parameters.location || '',
+    site_name: parameters.site === 'all' 
+      ? ['linkedin', 'indeed'] 
+      : [parameters.site || 'indeed'],
+    results_wanted: Number(parameters.results_wanted) || 1000,
+    hours_old: Number(parameters.hours_old) || 24,
+    country_indeed: String(parameters.country_indeed || 'UK'),
+    run_id: runId,
+    user_id: userId,
+  };
+
+  try {
+    // Fire-and-forget: send request but don't wait for full response
+    fetch(`${RENDER_API_URL}/scrape`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+      // keepalive ensures request is sent even if function completes
+      signal: AbortSignal.timeout(8000), // Abort after 8s to avoid Vercel timeout
+    }).catch(() => {
+      // Swallow errors - Render will update the run status
+    });
+  } catch {
+    // Ignore - fire-and-forget
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -79,16 +115,28 @@ export async function POST(req: NextRequest) {
     // 3) Insert in batches to be safe
     const batchSize = 500;
     let inserted = 0;
+    const insertedRunIds: string[] = [];
+    
     for (let i = 0; i < rows.length; i += batchSize) {
       const slice = rows.slice(i, i + batchSize);
-      const { error: insertErr } = await admin.from('search_runs').insert(slice);
+      const { data: insertedRuns, error: insertErr } = await admin.from('search_runs').insert(slice).select('id, user_id, parameters');
       if (insertErr) {
         return json(500, { error: 'insert_failed', details: insertErr.message, inserted });
       }
-      inserted += slice.length;
+      if (insertedRuns) {
+        inserted += insertedRuns.length;
+        // Collect run IDs and trigger Render scrape for each
+        for (const run of insertedRuns) {
+          insertedRunIds.push(run.id);
+          // Fire-and-forget call to Render (don't await)
+          triggerRenderScrape(run.id, run.user_id, run.parameters as Record<string, unknown>).catch((err: Error) => {
+            console.error(`Failed to trigger Render for run ${run.id}:`, err.message);
+          });
+        }
+      }
     }
 
-    return json(200, { success: true, inserted });
+    return json(200, { success: true, inserted, triggered: insertedRunIds.length });
   } catch (e) {
     return json(500, { error: 'exception', details: e instanceof Error ? e.message : 'unknown' });
   }
