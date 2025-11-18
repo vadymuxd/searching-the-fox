@@ -32,17 +32,60 @@ async function triggerRenderScrape(runId: string, userId: string, parameters: Re
 
   try {
     // Fire-and-forget: send request but don't wait for full response
+    // Note: In serverless environments, truly "fire-and-forget" can be unreliable.
+    // We still dispatch without awaiting; reliability is improved by an additional
+    // /worker/poll-queue call after inserts (see below).
     fetch(`${RENDER_API_URL}/scrape`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
-      // keepalive ensures request is sent even if function completes
-      signal: AbortSignal.timeout(8000), // Abort after 8s to avoid Vercel timeout
+      // Time-bounded signal to avoid keeping the function open too long
+      signal: AbortSignal.timeout(8000),
     }).catch(() => {
       // Swallow errors - Render will update the run status
     });
   } catch {
     // Ignore - fire-and-forget
+  }
+}
+
+/**
+ * Warm up Render service to reduce cold-start impact
+ * Await up to 5s for health response; ignore errors.
+ */
+async function warmRender() {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    await fetch(`${RENDER_API_URL}/health`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      signal: controller.signal,
+      cache: 'no-store',
+    }).catch(() => {});
+    clearTimeout(timeoutId);
+  } catch {
+    // best-effort only
+  }
+}
+
+/**
+ * Ask the Render worker to poll the queue and start processing pending runs.
+ * We await the initial request (up to 8s) to ensure delivery.
+ */
+async function triggerRenderPollQueue(batchSize = 10) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const url = `${RENDER_API_URL}/worker/poll-queue?batch_size=${encodeURIComponent(batchSize)}`;
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+    }).catch(() => {});
+    clearTimeout(timeoutId);
+  } catch {
+    // Ignore - best-effort delivery
   }
 }
 
@@ -68,6 +111,8 @@ export async function POST(req: NextRequest) {
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
 
   try {
+    // Best-effort warm-up to improve first request delivery on cold starts
+    await warmRender();
     // 1) Fetch recent successful runs ordered by completion time (server-side)
     // We’ll dedupe in memory to get the latest per user
     const { data: runs, error: fetchErr } = await admin
@@ -112,7 +157,7 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    // 3) Insert in batches to be safe
+  // 3) Insert in batches to be safe
     const batchSize = 500;
     let inserted = 0;
     const insertedRunIds: string[] = [];
@@ -136,7 +181,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return json(200, { success: true, inserted, triggered: insertedRunIds.length });
+  // 4) Reliability nudge: explicitly ask Render to poll the queue so that pending runs start
+  // processing even if some per-run /scrape calls were not delivered due to serverless teardown.
+  // Use a moderate batch size; the worker will loop internally.
+  await triggerRenderPollQueue(15);
+
+  return json(200, { success: true, inserted, triggered: insertedRunIds.length, queue_wakeup: true });
   } catch (e) {
     return json(500, { error: 'exception', details: e instanceof Error ? e.message : 'unknown' });
   }
