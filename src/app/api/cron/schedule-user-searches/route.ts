@@ -31,16 +31,14 @@ async function triggerRenderScrape(runId: string, userId: string, parameters: Re
   };
 
   try {
-    // Fire-and-forget: send request but don't wait for full response
-    // Note: In serverless environments, truly "fire-and-forget" can be unreliable.
-    // We still dispatch without awaiting; reliability is improved by an additional
-    // /worker/poll-queue call after inserts (see below).
+    // Best-effort, non-blocking trigger; do not await
     fetch(`${RENDER_API_URL}/scrape`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
-      // Time-bounded signal to avoid keeping the function open too long
-      signal: AbortSignal.timeout(8000),
+      // keepalive hints the runtime to try to complete the request even
+      // if the function is about to finish
+      keepalive: true,
     }).catch(() => {
       // Swallow errors - Render will update the run status
     });
@@ -157,7 +155,7 @@ export async function POST(req: NextRequest) {
       };
     });
 
-  // 3) Insert in batches to be safe
+    // 3) Insert in batches to be safe
     const batchSize = 500;
     let inserted = 0;
     const insertedRunIds: string[] = [];
@@ -181,12 +179,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-  // 4) Reliability nudge: explicitly ask Render to poll the queue so that pending runs start
-  // processing even if some per-run /scrape calls were not delivered due to serverless teardown.
-  // Use a moderate batch size; the worker will loop internally.
-  await triggerRenderPollQueue(15);
+    // 4) Reliability nudge: explicitly ask Render to poll the queue so that pending runs start
+    // processing even if some per-run /scrape calls were not delivered due to serverless teardown.
+    // Use a moderate batch size; the worker will loop internally.
+    await triggerRenderPollQueue(15);
 
-  return json(200, { success: true, inserted, triggered: insertedRunIds.length, queue_wakeup: true });
+    return json(200, { success: true, inserted, triggered: insertedRunIds.length, queue_wakeup: true });
   } catch (e) {
     return json(500, { error: 'exception', details: e instanceof Error ? e.message : 'unknown' });
   }
