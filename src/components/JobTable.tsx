@@ -234,6 +234,49 @@ export function JobTable({ jobs, onSelectionChange, onSelectedJobsChange, clearS
     });
   };
 
+  // Helper function to parse date consistently
+  const parseDate = (dateString: string | null | undefined): number => {
+    if (!dateString || dateString === 'Not specified' || dateString === 'null' || dateString === 'undefined' || dateString === 'None') {
+      return Date.now(); // Treat as "Today"
+    }
+    
+    try {
+      // First try to parse as ISO date
+      let date = new Date(dateString);
+      
+      // If that fails, try to parse common formats
+      if (isNaN(date.getTime())) {
+        // Try parsing "DD MMM YYYY" format (e.g., "20 Oct 2024")
+        const parts = dateString.match(/(\d{1,2})\s+(\w{3})\s*(\d{4})?/);
+        if (parts) {
+          const day = parseInt(parts[1]);
+          const monthStr = parts[2];
+          const year = parts[3] ? parseInt(parts[3]) : new Date().getFullYear();
+          
+          const months: { [key: string]: number } = {
+            'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+            'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+          };
+          
+          const month = months[monthStr];
+          if (month !== undefined) {
+            date = new Date(year, month, day);
+          }
+        }
+      }
+      
+      // If still invalid, return current time
+      if (isNaN(date.getTime())) {
+        return Date.now();
+      }
+      
+      return date.getTime();
+    } catch (error) {
+      console.error('Date parsing error:', error, 'for date:', dateString);
+      return Date.now();
+    }
+  };
+
   const getSortValue = (job: Job, column: SortableColumn): string | number => {
     switch (column) {
       case 'title':
@@ -248,12 +291,8 @@ export function JobTable({ jobs, onSelectionChange, onSelectedJobsChange, clearS
         if (job.min_amount) return job.min_amount;
         return 0; // No salary specified
       case 'date_posted':
-        // Convert date to timestamp for sorting
-        if (!job.date_posted || job.date_posted === 'Not specified' || job.date_posted === 'null' || job.date_posted === 'undefined' || job.date_posted === 'None') {
-          return Date.now(); // Recent date for "Today"
-        }
-        const date = new Date(job.date_posted);
-        return isNaN(date.getTime()) ? Date.now() : date.getTime();
+        // Use the helper function for consistent date parsing
+        return parseDate(job.date_posted);
       default:
         return '';
     }
