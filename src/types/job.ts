@@ -24,6 +24,7 @@ export interface Job {
   job_function?: string;
   benefits?: string;
   source_site?: string; // For tracking which job board the job came from
+  created_at?: string; // From jobs table - used as fallback when date_posted is NULL
   
   // user_jobs fields (only present for authenticated users)
   user_job_id?: string;

@@ -402,6 +402,7 @@ export async function getUserJobs(
             salary_currency,
             company_industry,
             date_posted,
+            created_at,
             source_site,
             site
           )

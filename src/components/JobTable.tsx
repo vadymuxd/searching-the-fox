@@ -234,47 +234,37 @@ export function JobTable({ jobs, onSelectionChange, onSelectedJobsChange, clearS
     });
   };
 
-  // Helper function to parse date consistently
-  const parseDate = (dateString: string | null | undefined): number => {
-    if (!dateString || dateString === 'Not specified' || dateString === 'null' || dateString === 'undefined' || dateString === 'None') {
-      return Date.now(); // Treat as "Today"
+  // Helper function to parse date consistently, with created_at as fallback
+  const parseDate = (job: Job): number => {
+    const dateString = job.date_posted;
+    const createdAt = job.created_at;
+    
+    // If date_posted is valid, use it
+    if (dateString && dateString !== 'Not specified' && dateString !== 'null' && dateString !== 'undefined' && dateString !== 'None') {
+      try {
+        const date = new Date(dateString);
+        if (!isNaN(date.getTime())) {
+          return date.getTime();
+        }
+      } catch (error) {
+        console.error('Date parsing error for date_posted:', error, 'for date:', dateString);
+      }
     }
     
-    try {
-      // First try to parse as ISO date
-      let date = new Date(dateString);
-      
-      // If that fails, try to parse common formats
-      if (isNaN(date.getTime())) {
-        // Try parsing "DD MMM YYYY" format (e.g., "20 Oct 2024")
-        const parts = dateString.match(/(\d{1,2})\s+(\w{3})\s*(\d{4})?/);
-        if (parts) {
-          const day = parseInt(parts[1]);
-          const monthStr = parts[2];
-          const year = parts[3] ? parseInt(parts[3]) : new Date().getFullYear();
-          
-          const months: { [key: string]: number } = {
-            'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-            'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
-          };
-          
-          const month = months[monthStr];
-          if (month !== undefined) {
-            date = new Date(year, month, day);
-          }
+    // Fallback to created_at if date_posted is NULL or invalid
+    if (createdAt) {
+      try {
+        const date = new Date(createdAt);
+        if (!isNaN(date.getTime())) {
+          return date.getTime();
         }
+      } catch (error) {
+        console.error('Date parsing error for created_at:', error, 'for date:', createdAt);
       }
-      
-      // If still invalid, return current time
-      if (isNaN(date.getTime())) {
-        return Date.now();
-      }
-      
-      return date.getTime();
-    } catch (error) {
-      console.error('Date parsing error:', error, 'for date:', dateString);
-      return Date.now();
     }
+    
+    // Final fallback to current time
+    return Date.now();
   };
 
   const getSortValue = (job: Job, column: SortableColumn): string | number => {
@@ -292,7 +282,7 @@ export function JobTable({ jobs, onSelectionChange, onSelectedJobsChange, clearS
         return 0; // No salary specified
       case 'date_posted':
         // Use the helper function for consistent date parsing
-        return parseDate(job.date_posted);
+        return parseDate(job);
       default:
         return '';
     }
@@ -315,41 +305,54 @@ export function JobTable({ jobs, onSelectionChange, onSelectedJobsChange, clearS
     });
   }, [jobs, sortState]);
 
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString || dateString === 'Not specified' || dateString === 'null' || dateString === 'undefined' || dateString === 'None') {
+  const formatDate = (job: Job) => {
+    // Use date_posted if available, otherwise fall back to created_at
+    const dateString = job.date_posted;
+    const createdAt = job.created_at;
+    
+    let date: Date | null = null;
+    
+    // Try date_posted first
+    if (dateString && dateString !== 'Not specified' && dateString !== 'null' && dateString !== 'undefined' && dateString !== 'None') {
+      try {
+        const parsedDate = new Date(dateString);
+        if (!isNaN(parsedDate.getTime())) {
+          date = parsedDate;
+        }
+      } catch (error) {
+        console.error('Date parsing error for date_posted:', error, 'for date:', dateString);
+      }
+    }
+    
+    // Fallback to created_at if date_posted is invalid or NULL
+    if (!date && createdAt) {
+      try {
+        const parsedDate = new Date(createdAt);
+        if (!isNaN(parsedDate.getTime())) {
+          date = parsedDate;
+        }
+      } catch (error) {
+        console.error('Date parsing error for created_at:', error, 'for date:', createdAt);
+      }
+    }
+    
+    // If no valid date, default to "Today"
+    if (!date) {
       return 'Today';
     }
     
-    try {
-      const date = new Date(dateString);
-      
-      // Check if the date is valid
-      if (isNaN(date.getTime())) {
-        return 'Today';
-      }
-      
-      const today = new Date();
-      // Reset time to compare only dates
-      today.setHours(0, 0, 0, 0);
-      date.setHours(0, 0, 0, 0);
-      
-      const diffTime = today.getTime() - date.getTime();
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (diffDays === 0) return 'Today';
-      if (diffDays === 1) return 'Yesterday';
-      if (diffDays < 7) return `${diffDays} days ago`;
-      if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-      
-      return date.toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
-      });
-    } catch (error) {
-      console.error('Date parsing error:', error, 'for date:', dateString);
-      return 'Today';
-    }
+    const today = new Date();
+    // Reset time to compare only dates
+    today.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
+    
+    const diffTime = today.getTime() - date.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Consistent format: always show as "X days ago"
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    return `${diffDays} days ago`;
   };
 
   const formatSalary = (job: Job) => {
@@ -462,7 +465,7 @@ export function JobTable({ jobs, onSelectionChange, onSelectedJobsChange, clearS
         {/* Date Posted */}
         <Table.Td>
           <Text size="sm">
-            {formatDate(job.date_posted)}
+            {formatDate(job)}
           </Text>
         </Table.Td>
 

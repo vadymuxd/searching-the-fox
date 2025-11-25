@@ -27,42 +27,56 @@ interface JobCardProps {
 export function JobCard({ job, jobId, isSelected, onSelectionChange }: JobCardProps) {
   const theme = useMantineTheme();
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
+  
   // Use the same date formatting logic as JobTable
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString || dateString === 'Not specified' || dateString === 'null' || dateString === 'undefined' || dateString === 'None') {
+  const formatDate = (job: Job) => {
+    // Use date_posted if available, otherwise fall back to created_at
+    const dateString = job.date_posted;
+    const createdAt = job.created_at;
+    
+    let date: Date | null = null;
+    
+    // Try date_posted first
+    if (dateString && dateString !== 'Not specified' && dateString !== 'null' && dateString !== 'undefined' && dateString !== 'None') {
+      try {
+        const parsedDate = new Date(dateString);
+        if (!isNaN(parsedDate.getTime())) {
+          date = parsedDate;
+        }
+      } catch (error) {
+        console.error('Date parsing error for date_posted:', error, 'for date:', dateString);
+      }
+    }
+    
+    // Fallback to created_at if date_posted is invalid or NULL
+    if (!date && createdAt) {
+      try {
+        const parsedDate = new Date(createdAt);
+        if (!isNaN(parsedDate.getTime())) {
+          date = parsedDate;
+        }
+      } catch (error) {
+        console.error('Date parsing error for created_at:', error, 'for date:', createdAt);
+      }
+    }
+    
+    // If no valid date, default to "Today"
+    if (!date) {
       return 'Today';
     }
     
-    try {
-      const date = new Date(dateString);
-      
-      // Check if the date is valid
-      if (isNaN(date.getTime())) {
-        return 'Today';
-      }
-      
-      const today = new Date();
-      // Reset time to compare only dates
-      today.setHours(0, 0, 0, 0);
-      date.setHours(0, 0, 0, 0);
-      
-      const diffTime = today.getTime() - date.getTime();
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (diffDays === 0) return 'Today';
-      if (diffDays === 1) return 'Yesterday';
-      if (diffDays < 7) return `${diffDays} days ago`;
-      if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-      
-      return date.toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
-      });
-    } catch (error) {
-      console.error('Date parsing error:', error, 'for date:', dateString);
-      return 'Today';
-    }
+    const today = new Date();
+    // Reset time to compare only dates
+    today.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
+    
+    const diffTime = today.getTime() - date.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Consistent format: always show as "X days ago"
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    return `${diffDays} days ago`;
   };
 
   // Use the same salary formatting logic as JobTable
@@ -216,7 +230,7 @@ export function JobCard({ job, jobId, isSelected, onSelectionChange }: JobCardPr
           <Group gap="xs">
             <IconCalendar style={{ width: rem(16), height: rem(16) }} color="gray" />
             <Text size="sm" c="dimmed">
-              {formatDate(job.date_posted)}
+              {formatDate(job)}
             </Text>
           </Group>
 

@@ -73,6 +73,7 @@ export async function GET(request: NextRequest) {
           salary_currency,
           company_industry,
           date_posted,
+          created_at,
           source_site,
           site
         )
