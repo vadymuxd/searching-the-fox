@@ -59,16 +59,12 @@ export function renderEmailTemplate(jobs: Job[], userEmail: string): string {
             </div>
           </div>
 
-          <!-- Job Title -->
-          <h2 style="margin: 0 0 12px 0; font-size: 20px; font-weight: bold; color: #000000; line-height: 1.3;">
-            ${job.title}
+          <!-- Job Title (clickable) -->
+          <h2 style="margin: 0 0 12px 0; font-size: 20px; font-weight: bold; color: #1971c2; line-height: 1.3;">
+            <a href="${job.job_url}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">
+              ${job.title}
+            </a>
           </h2>
-            <!-- Job Title (clickable) -->
-            <h2 style="margin: 0 0 12px 0; font-size: 20px; font-weight: bold; color: #1971c2; line-height: 1.3;">
-              <a href="${job.job_url}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">
-                ${job.title}
-              </a>
-            </h2>
 
           <!-- Job Details -->
           <div style="margin-bottom: 15px; font-size: 14px; color: #495057;">
@@ -129,11 +125,6 @@ export function renderEmailTemplate(jobs: Job[], userEmail: string): string {
             </p>
           ` : ''}
 
-          <!-- View Job Button -->
-          <a href="${job.job_url}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #228be6; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">
-            View Job Post
-          </a>
-          
         </div>
       `).join('')}
     </div>
