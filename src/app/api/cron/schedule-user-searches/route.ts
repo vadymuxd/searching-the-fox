@@ -152,14 +152,12 @@ export async function POST(req: NextRequest) {
       if (!latestByUser.has(r.user_id)) latestByUser.set(r.user_id, r);
     }
 
-  // 3) Build pending inserts for ALL subscribed users
+    // 3) Build pending inserts for ALL subscribed users
     const nowIso = new Date().toISOString();
     const rows = subscribedUsers.map(user => {
       const userId = user.id;
-      const userPrefs = (user.preferences as Record<string, any>) || {};
-      const lastSearch = userPrefs.lastSearch as Record<string, unknown> | undefined;
-      
-      // Use parameters from latest successful search, or lastSearch from preferences, or defaults
+      const userPrefs = (user.preferences as Record<string, unknown>) || {};
+      const lastSearch = userPrefs.lastSearch as Record<string, unknown> | undefined;      // Use parameters from latest successful search, or lastSearch from preferences, or defaults
       let params: Record<string, unknown>;
       const latestRun = latestByUser.get(userId);
       
