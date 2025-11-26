@@ -6,7 +6,8 @@ Mirrors the TypeScript emailService.ts functionality
 import os
 import logging
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
+import json
 import resend
 
 logger = logging.getLogger(__name__)
@@ -226,14 +227,6 @@ def send_job_email(to: str, jobs: List[Dict], user_name: Optional[str] = None) -
         jobs: List of job dictionaries
         user_name: Optional user name for personalization
     
-    Returns:
-        dict with 'success' (bool), 'error' (str, optional), 'message_id' (str, optional)
-    """
-    try:
-        api_key = os.getenv('RESEND_API_KEY')
-        if not api_key:
-            logger.error('RESEND_API_KEY is not configured')
-            return {
                 'success': False,
                 'error': 'Email service is not configured. Please add RESEND_API_KEY to environment variables.'
             }
@@ -307,7 +300,23 @@ def send_email_to_user(supabase_client, user_id: str) -> Dict:
         
         user_email = user.get('email')
         email_enabled = user.get('email_notifications_enabled', False)
-        keywords = user.get('keywords', [])
+
+        # Normalize keywords to a proper list of strings
+        raw_keywords: Any = user.get('keywords', [])
+        keywords: List[str]
+        if isinstance(raw_keywords, list):
+            keywords = [str(k) for k in raw_keywords]
+        elif isinstance(raw_keywords, str) and raw_keywords.strip():
+            try:
+                parsed = json.loads(raw_keywords)
+                if isinstance(parsed, list):
+                    keywords = [str(k) for k in parsed]
+                else:
+                    keywords = [raw_keywords]
+            except Exception:
+                keywords = [raw_keywords]
+        else:
+            keywords = []
         
         # 2. Check if email notifications are enabled
         if not email_enabled:
@@ -333,7 +342,7 @@ def send_email_to_user(supabase_client, user_id: str) -> Dict:
                 'reason': 'no_keywords'
             }
         
-        # 3. Get NEW jobs for this user
+        # 3. Get NEW jobs for this user (same shape as /api/email-jobs & send-test)
         user_jobs_result = supabase_client.table('user_jobs') \
             .select('''
                 id,
@@ -371,33 +380,34 @@ def send_email_to_user(supabase_client, user_id: str) -> Dict:
         
         user_jobs = user_jobs_result.data if user_jobs_result.data else []
         
-        # 4. Filter jobs by keywords (case-insensitive match in title)
-        filtered_jobs = []
-        for user_job in user_jobs:
+        # 4. Filter jobs by keywords (case-insensitive match in title), mirroring Next.js logic
+        filtered_jobs: List[Dict] = []
+        for user_job in (user_jobs or []):
             job_data = user_job.get('jobs')
-            
+
             # Handle both dict and list responses from Supabase
             if isinstance(job_data, list):
                 job = job_data[0] if job_data else None
             else:
                 job = job_data
-            
+
             if not job or not job.get('title'):
                 continue
-            
-            job_title_lower = job['title'].lower()
-            
-            # Check if any keyword matches the job title
-            if any(keyword.lower() in job_title_lower for keyword in keywords):
-                # Add user_job metadata to job
+
+            job_title = str(job.get('title', '')).lower()
+
+            if any(k.lower() in job_title for k in keywords):
                 job['user_job_id'] = user_job.get('id')
                 job['status'] = user_job.get('status')
                 job['notes'] = user_job.get('notes')
                 job['user_created_at'] = user_job.get('created_at')
                 job['user_updated_at'] = user_job.get('updated_at')
                 filtered_jobs.append(job)
-        
-        logger.info(f"User {user_email}: {len(filtered_jobs)} NEW jobs match keywords {keywords}")
+
+        logger.info(
+            f"User {user_email}: {len(filtered_jobs)} NEW jobs match keywords {keywords} "
+            f"out of {len(user_jobs)} user_jobs"
+        )
         
         # 5. Send email
         result = send_job_email(
