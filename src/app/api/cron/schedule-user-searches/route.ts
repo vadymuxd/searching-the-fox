@@ -111,17 +111,33 @@ export async function POST(req: NextRequest) {
   try {
     // Best-effort warm-up to improve first request delivery on cold starts
     await warmRender();
-    // 1) Fetch recent successful runs ordered by completion time (server-side)
-    // We’ll dedupe in memory to get the latest per user
+    
+    // 1) Fetch ALL users with email_notifications_enabled=true
+    const { data: subscribedUsers, error: usersErr } = await admin
+      .from('users')
+      .select('id, preferences')
+      .eq('email_notifications_enabled', true);
+
+    if (usersErr) {
+      return json(500, { error: 'fetch_users_failed', details: usersErr.message });
+    }
+
+    if (!subscribedUsers || subscribedUsers.length === 0) {
+      return json(200, { success: true, inserted: 0, note: 'no_subscribed_users' });
+    }
+
+    // 2) For each user, try to get their latest successful search parameters
+    // If no successful search exists, use default parameters
     const { data: runs, error: fetchErr } = await admin
       .from('search_runs')
       .select('user_id, parameters, completed_at')
       .eq('status', 'success')
       .order('completed_at', { ascending: false })
-      .limit(2000); // safety cap
+      .limit(2000);
 
     if (fetchErr) {
-      return json(500, { error: 'fetch_failed', details: fetchErr.message });
+      // Continue even if we can't fetch runs - will use defaults
+      console.warn('Failed to fetch search_runs:', fetchErr.message);
     }
 
     interface RawSearchRunRow {
@@ -136,16 +152,43 @@ export async function POST(req: NextRequest) {
       if (!latestByUser.has(r.user_id)) latestByUser.set(r.user_id, r);
     }
 
-    if (latestByUser.size === 0) {
-      return json(200, { success: true, inserted: 0, note: 'no_users_with_successful_runs' });
-    }
-
-  // 2) Build pending inserts overriding hours_old to 24 ("Within Past 24 hours")
+  // 3) Build pending inserts for ALL subscribed users
     const nowIso = new Date().toISOString();
-    const rows = Array.from(latestByUser.entries()).map(([userId, row]) => {
-      const params: Record<string, unknown> = { ...(row.parameters || {}) };
-      // Force to 24 hour window irrespective of previous search
+    const rows = subscribedUsers.map(user => {
+      const userId = user.id;
+      const userPrefs = (user.preferences as Record<string, any>) || {};
+      const lastSearch = userPrefs.lastSearch as Record<string, unknown> | undefined;
+      
+      // Use parameters from latest successful search, or lastSearch from preferences, or defaults
+      let params: Record<string, unknown>;
+      const latestRun = latestByUser.get(userId);
+      
+      if (latestRun?.parameters) {
+        // Use last successful search parameters
+        params = { ...latestRun.parameters };
+      } else if (lastSearch) {
+        // Fallback to user preferences
+        params = {
+          site: lastSearch.site || 'all',
+          jobTitle: lastSearch.jobTitle || 'jobs',
+          location: lastSearch.location || 'London',
+          results_wanted: Number(lastSearch.resultsWanted) || 1000,
+          country_indeed: String(lastSearch.country_indeed || 'UK'),
+        };
+      } else {
+        // Ultimate fallback: generic search
+        params = {
+          site: 'all',
+          jobTitle: 'jobs',
+          location: 'London',
+          results_wanted: 1000,
+          country_indeed: 'UK',
+        };
+      }
+      
+      // Force to 24 hour window for CRON searches
       params.hours_old = 24;
+      
       return {
         user_id: userId,
         source: 'cron',
@@ -155,7 +198,7 @@ export async function POST(req: NextRequest) {
       };
     });
 
-    // 3) Insert in batches to be safe
+    // 4) Insert in batches to be safe
     const batchSize = 500;
     let inserted = 0;
     const insertedRunIds: string[] = [];
@@ -179,7 +222,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 4) Reliability nudge: explicitly ask Render to poll the queue so that pending runs start
+    // 5) Reliability nudge: explicitly ask Render to poll the queue so that pending runs start
     // processing even if some per-run /scrape calls were not delivered due to serverless teardown.
     // Use a moderate batch size; the worker will loop internally.
     await triggerRenderPollQueue(15);

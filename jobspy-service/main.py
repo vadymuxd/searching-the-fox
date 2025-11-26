@@ -464,6 +464,9 @@ def log_final_status(site_statuses: dict, total_jobs: int, increment_only: bool,
         # Trigger email notification for THIS specific user only (not all users)
         if db_status == "success" and user_id:
             logger.info(f"[Email] Sending notification to user {user_id}...")
+            # Small delay to ensure database has indexed all newly created jobs
+            import time
+            time.sleep(0.5)
             try:
                 email_result = send_email_to_user(supabase, user_id)
                 if email_result.get('success'):
