@@ -63,6 +63,12 @@ export function renderEmailTemplate(jobs: Job[], userEmail: string): string {
           <h2 style="margin: 0 0 12px 0; font-size: 20px; font-weight: bold; color: #000000; line-height: 1.3;">
             ${job.title}
           </h2>
+            <!-- Job Title (clickable) -->
+            <h2 style="margin: 0 0 12px 0; font-size: 20px; font-weight: bold; color: #1971c2; line-height: 1.3;">
+              <a href="${job.job_url}" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">
+                ${job.title}
+              </a>
+            </h2>
 
           <!-- Job Details -->
           <div style="margin-bottom: 15px; font-size: 14px; color: #495057;">
@@ -97,7 +103,7 @@ export function renderEmailTemplate(jobs: Job[], userEmail: string): string {
 
                 return `
                   <span style="display: inline-block; background-color: #f1f3f5; padding: 4px 10px; border-radius: 4px; margin-right: 8px; font-size: 12px;">
-                    Posted: ${postedText}
+                      ${postedText}
                   </span>
                 `;
               } catch (e) {
@@ -127,7 +133,6 @@ export function renderEmailTemplate(jobs: Job[], userEmail: string): string {
           <a href="${job.job_url}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #228be6; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">
             View Job Post
           </a>
-
           
         </div>
       `).join('')}
