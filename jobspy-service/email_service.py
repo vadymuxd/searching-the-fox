@@ -391,6 +391,11 @@ def send_email_to_user(supabase_client, user_id: str) -> Dict:
         def normalize(text):
             return re.sub(r'[^a-z0-9 ]', '', str(text).lower()).strip()
 
+        def keyword_in_title(keyword, job_title):
+            # Split keyword into words, check if all are present in job title
+            words = [w for w in keyword.split() if w]
+            return all(word in job_title for word in words)
+
         filtered_jobs: List[Dict] = []
         for user_job in (user_jobs or []):
             job_data = user_job.get('jobs')
@@ -404,7 +409,7 @@ def send_email_to_user(supabase_client, user_id: str) -> Dict:
             job_title = normalize(job.get('title', ''))
             for k in keywords:
                 keyword_norm = normalize(k)
-                if keyword_norm and keyword_norm in job_title:
+                if keyword_norm and keyword_in_title(keyword_norm, job_title):
                     job['user_job_id'] = user_job.get('id')
                     job['status'] = user_job.get('status')
                     job['notes'] = user_job.get('notes')
