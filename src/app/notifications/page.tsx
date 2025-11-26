@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter } from 'next/navigation';
-import { Container, Paper, Title, Text, Stack, Loader, Center } from '@mantine/core';
+import { Container, Paper, Title, Text, Stack, Loader, Center, Button } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { Header } from '@/components/Header';
 import { Toggle } from '@/components/Toggle';
+import { IconMail } from '@tabler/icons-react';
 
 export default function NotificationsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -14,6 +15,7 @@ export default function NotificationsPage() {
   const [emailNotifications, setEmailNotifications] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -96,6 +98,42 @@ export default function NotificationsPage() {
     }
   };
 
+  const handleSendTestEmail = async () => {
+    setSendingTest(true);
+    
+    try {
+      const response = await fetch('/api/notifications/send-test', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        notifications.show({
+          title: 'Success',
+          message: `Test email sent to ${user?.email}! Check your inbox. (${data.jobCount} jobs included)`,
+          color: 'green',
+          autoClose: 5000,
+        });
+      } else {
+        notifications.show({
+          title: 'Error',
+          message: data.error || 'Failed to send test email',
+          color: 'red',
+        });
+      }
+    } catch (error) {
+      console.error('Error sending test email:', error);
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to send test email',
+        color: 'red',
+      });
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <>
@@ -145,6 +183,29 @@ export default function NotificationsPage() {
                     ✓ You will receive email notifications for new jobs
                   </Text>
                 )}
+              </Stack>
+            </Paper>
+
+            {/* Send Test Email Button */}
+            <Paper withBorder p="md">
+              <Stack gap="md">
+                <div>
+                  <Text fw={500} size="sm" mb={4}>
+                    Test Email
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    Send a test email to {user?.email} with all NEW jobs matching your keywords
+                  </Text>
+                </div>
+                <Button
+                  leftSection={<IconMail size={16} />}
+                  onClick={handleSendTestEmail}
+                  loading={sendingTest}
+                  variant="light"
+                  color="blue"
+                >
+                  Send Test Email
+                </Button>
               </Stack>
             </Paper>
           </Stack>
