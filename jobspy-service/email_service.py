@@ -385,29 +385,33 @@ def send_email_to_user(supabase_client, user_id: str) -> Dict:
         
         user_jobs = user_jobs_result.data if user_jobs_result.data else []
         
-        # 4. Filter jobs by keywords (case-insensitive match in title), mirroring Next.js logic
+
+        # 4. Filter jobs by normalized keywords in normalized job title
+        import re
+        def normalize(text):
+            return re.sub(r'[^a-z0-9 ]', '', str(text).lower()).strip()
+
         filtered_jobs: List[Dict] = []
         for user_job in (user_jobs or []):
             job_data = user_job.get('jobs')
-
             # Handle both dict and list responses from Supabase
             if isinstance(job_data, list):
                 job = job_data[0] if job_data else None
             else:
                 job = job_data
-
             if not job or not job.get('title'):
                 continue
-
-            job_title = str(job.get('title', '')).lower()
-
-            if any(k.lower() in job_title for k in keywords):
-                job['user_job_id'] = user_job.get('id')
-                job['status'] = user_job.get('status')
-                job['notes'] = user_job.get('notes')
-                job['user_created_at'] = user_job.get('created_at')
-                job['user_updated_at'] = user_job.get('updated_at')
-                filtered_jobs.append(job)
+            job_title = normalize(job.get('title', ''))
+            for k in keywords:
+                keyword_norm = normalize(k)
+                if keyword_norm and keyword_norm in job_title:
+                    job['user_job_id'] = user_job.get('id')
+                    job['status'] = user_job.get('status')
+                    job['notes'] = user_job.get('notes')
+                    job['user_created_at'] = user_job.get('created_at')
+                    job['user_updated_at'] = user_job.get('updated_at')
+                    filtered_jobs.append(job)
+                    break
 
         logger.info(
             f"User {user_email}: {len(filtered_jobs)} NEW jobs match keywords {keywords} "
