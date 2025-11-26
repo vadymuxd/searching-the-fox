@@ -52,25 +52,58 @@ export function renderEmailTemplate(jobs: Job[], userEmail: string): string {
                 ${job.company}
               </h3>
               ${job.location ? `
-                <p style="margin: 0; font-size: 13px; color: #868e96;">
-                  📍 ${job.location}
-                </p>
-              ` : ''}
+                  <p style="margin: 0; font-size: 13px; color: #868e96;">
+                    ${job.location}
+                  </p>
+                ` : ''}
             </div>
           </div>
 
           <!-- Job Title -->
-          <h2 style="margin: 0 0 12px 0; font-size: 20px; font-weight: bold; color: #1971c2; line-height: 1.3;">
+          <h2 style="margin: 0 0 12px 0; font-size: 20px; font-weight: bold; color: #000000; line-height: 1.3;">
             ${job.title}
           </h2>
 
           <!-- Job Details -->
           <div style="margin-bottom: 15px; font-size: 14px; color: #495057;">
-            ${job.job_type ? `
-              <span style="display: inline-block; background-color: #f1f3f5; padding: 4px 10px; border-radius: 4px; margin-right: 8px; font-size: 12px; text-transform: capitalize;">
-                ${job.job_type}
-              </span>
-            ` : ''}
+            ${(() => {
+              // Render 'Posted' using the same logic as JobTable.formatDate
+              try {
+                const dateString = job.date_posted;
+                const createdAt = job.created_at;
+                let date = null as Date | null;
+
+                if (dateString && dateString !== 'Not specified' && dateString !== 'null' && dateString !== 'undefined' && dateString !== 'None') {
+                  const parsed = new Date(dateString);
+                  if (!isNaN(parsed.getTime())) date = parsed;
+                }
+
+                if (!date && createdAt) {
+                  const parsed = new Date(createdAt);
+                  if (!isNaN(parsed.getTime())) date = parsed;
+                }
+
+                let postedText = 'Today';
+                if (date) {
+                  const today = new Date();
+                  today.setHours(0,0,0,0);
+                  date.setHours(0,0,0,0);
+                  const diffTime = today.getTime() - date.getTime();
+                  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                  if (diffDays === 0) postedText = 'Today';
+                  else if (diffDays === 1) postedText = 'Yesterday';
+                  else postedText = `${diffDays} days ago`;
+                }
+
+                return `
+                  <span style="display: inline-block; background-color: #f1f3f5; padding: 4px 10px; border-radius: 4px; margin-right: 8px; font-size: 12px;">
+                    Posted: ${postedText}
+                  </span>
+                `;
+              } catch (e) {
+                return '';
+              }
+            })()}
             ${job.is_remote ? `
               <span style="display: inline-block; background-color: #d0ebff; color: #1971c2; padding: 4px 10px; border-radius: 4px; margin-right: 8px; font-size: 12px; font-weight: 500;">
                 Remote
@@ -92,15 +125,10 @@ export function renderEmailTemplate(jobs: Job[], userEmail: string): string {
 
           <!-- View Job Button -->
           <a href="${job.job_url}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #228be6; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">
-            View Job Post →
+            View Job Post
           </a>
 
-          <!-- Posted Date -->
-          ${job.date_posted ? `
-            <p style="margin: 12px 0 0 0; font-size: 12px; color: #868e96;">
-              Posted: ${new Date(job.date_posted).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-            </p>
-          ` : ''}
+          
         </div>
       `).join('')}
     </div>
