@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, Menu, Text, Avatar } from '@mantine/core';
-import { IconLogout, IconUser, IconBriefcase } from '@tabler/icons-react';
+import { IconLogout, IconUser, IconBriefcase, IconBell } from '@tabler/icons-react';
 import { signOut } from '@/lib/auth/actions';
 import { useRouter } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
@@ -84,6 +84,12 @@ export function AuthButton({ onSignInClick }: AuthButtonProps) {
           onClick={() => router.push('/results')}
         >
           Jobs
+        </Menu.Item>
+        <Menu.Item
+          leftSection={<IconBell size={14} />}
+          onClick={() => router.push('/notifications')}
+        >
+          Notifications
         </Menu.Item>
         <Menu.Item
           leftSection={<IconLogout size={14} />}
