@@ -226,7 +226,12 @@ def send_job_email(to: str, jobs: List[Dict], user_name: Optional[str] = None) -
         to: Recipient email address
         jobs: List of job dictionaries
         user_name: Optional user name for personalization
-    
+    """
+    try:
+        # Check if Resend API key is configured
+        api_key = os.getenv('RESEND_API_KEY')
+        if not api_key:
+            return {
                 'success': False,
                 'error': 'Email service is not configured. Please add RESEND_API_KEY to environment variables.'
             }
