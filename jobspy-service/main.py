@@ -10,6 +10,7 @@ from logo_fetcher import fetch_company_logos
 import os
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from email_service import send_email_to_user
 
 # Load environment variables
 load_dotenv()
@@ -408,10 +409,11 @@ def save_jobs_to_database(jobs_list: List[dict], user_id: str) -> int:
     logger.info(f"Saved {saved_count} out of {len(jobs_list)} jobs to database for user {user_id}")
     return saved_count
 
-def log_final_status(site_statuses: dict, total_jobs: int, increment_only: bool, run_id: Optional[str] = None):
+def log_final_status(site_statuses: dict, total_jobs: int, increment_only: bool, run_id: Optional[str] = None, user_id: Optional[str] = None):
     """
     Log a comprehensive summary of job board statuses and overall result
     Also updates the search_run status in database if run_id is provided
+    After successful completion, triggers email notification to the specific user (not all users)
     """
     logger.info("=" * 80)
     logger.info("JOB SCRAPING SUMMARY")
@@ -458,6 +460,26 @@ def log_final_status(site_statuses: dict, total_jobs: int, increment_only: bool,
         
         logger.info(f"[Database] Finalizing search_run {run_id} with status: {db_status}")
         update_search_run_status(run_id, db_status, error=error_message)
+        
+        # Trigger email notification for THIS specific user only (not all users)
+        if db_status == "success" and user_id:
+            logger.info(f"[Email] Sending notification to user {user_id}...")
+            try:
+                email_result = send_email_to_user(supabase, user_id)
+                if email_result.get('success'):
+                    if email_result.get('skipped'):
+                        logger.info(f"[Email] User {user_id} skipped: {email_result.get('reason')}")
+                    else:
+                        logger.info(f"[Email] ✓ Email sent to user {user_id}")
+                else:
+                    logger.error(f"[Email] ✗ Failed to send email to user {user_id}: {email_result.get('error')}")
+            except Exception as email_error:
+                logger.error(f"[Email] Exception sending to user {user_id}: {email_error}")
+        elif db_status == "success" and not user_id:
+            logger.warning("[Email] Skipping notification - no user_id provided")
+        else:
+            logger.info("[Email] Skipping notification - scraping failed")
+            
     elif run_id and increment_only:
         logger.info(f"[Database] Skipping status finalization for search_run {run_id} (increment_only mode)")
     
@@ -494,7 +516,7 @@ async def scrape_jobs(request: JobSearchRequest):
             for site in request.site_name:
                 site_statuses[site] = "failed: library error"
             # log_final_status will update the database status
-            log_final_status(site_statuses, 0, False, request.run_id)
+            log_final_status(site_statuses, 0, False, request.run_id, request.user_id)
             raise HTTPException(status_code=500, detail="JobSpy library not installed properly")
         
         # Process each job board sequentially
@@ -651,7 +673,7 @@ async def scrape_jobs(request: JobSearchRequest):
                 # Continue to next site even if this one failed
         
         # All sites processed - log final status and update database
-        log_final_status(site_statuses, len(all_jobs_list), False, request.run_id)
+        log_final_status(site_statuses, len(all_jobs_list), False, request.run_id, request.user_id)
         
         return JobSearchResponse(
             success=len(all_jobs_list) > 0,
@@ -669,9 +691,10 @@ async def scrape_jobs(request: JobSearchRequest):
                 if site_statuses[site] == "pending" or site_statuses[site] == "processing":
                     site_statuses[site] = f"failed: {str(e)[:50]}"
             run_id = request.run_id if 'request' in locals() else None
+            user_id = request.user_id if 'request' in locals() else None
             total_jobs = len(all_jobs_list) if 'all_jobs_list' in locals() else 0
             # log_final_status will update the database status
-            log_final_status(site_statuses, total_jobs, False, run_id)
+            log_final_status(site_statuses, total_jobs, False, run_id, user_id)
         raise HTTPException(status_code=500, detail=f"Failed to scrape jobs: {str(e)}")
 
 if __name__ == "__main__":

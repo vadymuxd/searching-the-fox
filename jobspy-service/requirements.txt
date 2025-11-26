@@ -7,3 +7,4 @@ requests==2.32.5
 markdownify==0.13.1
 supabase==2.10.0
 python-dotenv==1.0.0
+resend==2.4.0
