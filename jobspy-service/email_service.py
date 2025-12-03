@@ -384,18 +384,22 @@ def send_email_to_user(supabase_client, user_id: str) -> Dict:
             .execute()
         
         user_jobs = user_jobs_result.data if user_jobs_result.data else []
-        
 
-        # 4. Filter jobs by normalized keywords in normalized job title
-        import re
-        def normalize(text):
-            return re.sub(r'[^a-z0-9 ]', '', str(text).lower()).strip()
+        # Debug logging before filtering to mirror frontend behavior
+        logger.info(
+            f"[email_service] Preparing to filter jobs for user={user_email}, "
+            f"raw_keywords={raw_keywords}, normalized_keywords={keywords}, "
+            f"new_user_jobs_count={len(user_jobs)}"
+        )
 
-        def keyword_in_title(keyword, job_title):
-            # Split keyword into words, check if all are present in job title
-            words = [w for w in keyword.split() if w]
-            return all(word in job_title for word in words)
+        for sample in (user_jobs or [])[:5]:
+            job_data_sample = sample.get('jobs')
+            job_sample = job_data_sample[0] if isinstance(job_data_sample, list) and job_data_sample else job_data_sample
+            title_sample = job_sample.get('title') if job_sample else None
+            logger.info(f"[email_service] Sample job title before filtering: {title_sample}")
 
+        # 4. Filter jobs by keywords using the SAME logic as send-test route:
+        # case-insensitive substring match: jobTitle.toLowerCase().includes(keyword.toLowerCase())
         filtered_jobs: List[Dict] = []
         for user_job in (user_jobs or []):
             job_data = user_job.get('jobs')
@@ -404,23 +408,37 @@ def send_email_to_user(supabase_client, user_id: str) -> Dict:
                 job = job_data[0] if job_data else None
             else:
                 job = job_data
+
             if not job or not job.get('title'):
                 continue
-            job_title = normalize(job.get('title', ''))
+
+            job_title_lower = str(job.get('title', '')).lower()
+
+            matched_keyword: Optional[str] = None
             for k in keywords:
-                keyword_norm = normalize(k)
-                if keyword_norm and keyword_in_title(keyword_norm, job_title):
-                    job['user_job_id'] = user_job.get('id')
-                    job['status'] = user_job.get('status')
-                    job['notes'] = user_job.get('notes')
-                    job['user_created_at'] = user_job.get('created_at')
-                    job['user_updated_at'] = user_job.get('updated_at')
-                    filtered_jobs.append(job)
+                keyword_str = str(k).strip()
+                if not keyword_str:
+                    continue
+                if keyword_str.lower() in job_title_lower:
+                    matched_keyword = keyword_str
                     break
 
+            if matched_keyword is None:
+                continue
+
+            # Attach metadata to job as in the TS path
+            job['user_job_id'] = user_job.get('id')
+            job['status'] = user_job.get('status')
+            job['notes'] = user_job.get('notes')
+            job['user_created_at'] = user_job.get('created_at')
+            job['user_updated_at'] = user_job.get('updated_at')
+
+            filtered_jobs.append(job)
+
         logger.info(
-            f"User {user_email}: {len(filtered_jobs)} NEW jobs match keywords {keywords} "
-            f"out of {len(user_jobs)} user_jobs"
+            f"[email_service] Filtered jobs for user={user_email}: "
+            f"matched_jobs={len(filtered_jobs)} out_of_total={len(user_jobs)}, "
+            f"keywords_used={keywords}"
         )
         
         # 5. Send email
