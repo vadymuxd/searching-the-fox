@@ -347,73 +347,75 @@ def send_email_to_user(supabase_client, user_id: str) -> Dict:
                 'reason': 'no_keywords'
             }
         
-        # 3. Get NEW jobs for this user (same shape as /api/email-jobs & send-test)
+        # 3. Get NEW user_jobs for this user (without join; Python client wasn't populating jobs(...))
         user_jobs_result = supabase_client.table('user_jobs') \
-            .select('''
-                id,
-                status,
-                notes,
-                created_at,
-                updated_at,
-                jobs (
-                    id,
-                    title,
-                    company,
-                    company_url,
-                    company_logo_url,
-                    job_url,
-                    location,
-                    is_remote,
-                    description,
-                    job_type,
-                    job_function,
-                    job_level,
-                    salary_min,
-                    salary_max,
-                    salary_currency,
-                    company_industry,
-                    date_posted,
-                    source_site,
-                    site,
-                    created_at
-                )
-            ''') \
+            .select('id, user_id, job_id, status, notes, created_at, updated_at') \
             .eq('user_id', user_id) \
             .eq('status', 'new') \
             .order('created_at', desc=True) \
             .execute()
-        
+
         user_jobs = user_jobs_result.data if user_jobs_result.data else []
+
+        # 3b. Fetch all related jobs in a separate query and map by id
+        job_ids: List[str] = [uj.get('job_id') for uj in user_jobs if uj.get('job_id')]
+        jobs_by_id: Dict[str, Dict] = {}
+
+        if job_ids:
+            try:
+                jobs_result = supabase_client.table('jobs') \
+                    .select('''
+                        id,
+                        title,
+                        company,
+                        company_url,
+                        company_logo_url,
+                        job_url,
+                        location,
+                        is_remote,
+                        description,
+                        job_type,
+                        job_function,
+                        job_level,
+                        salary_min,
+                        salary_max,
+                        salary_currency,
+                        company_industry,
+                        date_posted,
+                        source_site,
+                        site,
+                        created_at
+                    ''') \
+                    .in_('id', job_ids) \
+                    .execute()
+
+                for job in jobs_result.data or []:
+                    if job.get('id'):
+                        jobs_by_id[job['id']] = job
+            except Exception as job_fetch_error:
+                logger.error(f"[email_service] Error fetching jobs for user {user_email}: {job_fetch_error}")
 
         # Debug logging before filtering to mirror frontend behavior
         logger.info(
             f"[email_service] Preparing to filter jobs for user={user_email}, "
             f"raw_keywords={raw_keywords}, normalized_keywords={keywords}, "
-            f"new_user_jobs_count={len(user_jobs)}"
+            f"new_user_jobs_count={len(user_jobs)}, jobs_loaded={len(jobs_by_id)}"
         )
 
-        # Log a few raw user_jobs to understand Supabase response shape
+        # Log a few raw user_jobs and corresponding jobs to understand response shape
         for idx, sample in enumerate((user_jobs or [])[:5]):
             logger.info(f"[email_service] Sample user_job[{idx}] raw: {sample}")
-            job_data_sample = sample.get('jobs')
-            job_sample = job_data_sample[0] if isinstance(job_data_sample, list) and job_data_sample else job_data_sample
-            if isinstance(job_data_sample, list):
-                logger.info(f"[email_service] Sample user_job[{idx}] jobs is list, length={len(job_data_sample)}")
-            else:
-                logger.info(f"[email_service] Sample user_job[{idx}] jobs is type={type(job_data_sample)}")
-            title_sample = job_sample.get('title') if isinstance(job_sample, dict) else None
+            sample_job = jobs_by_id.get(sample.get('job_id')) if sample.get('job_id') else None
+            logger.info(f"[email_service] Sample user_job[{idx}] joined job: {sample_job}")
+            title_sample = sample_job.get('title') if isinstance(sample_job, dict) else None
             logger.info(f"[email_service] Sample user_job[{idx}] title before filtering: {title_sample}")
 
         # 4. Filter jobs by keywords using the SAME logic as send-test route:
         # case-insensitive substring match: jobTitle.toLowerCase().includes(keyword.toLowerCase())
         filtered_jobs: List[Dict] = []
         for user_job in (user_jobs or []):
-            job_data = user_job.get('jobs')
-            # Handle both dict and list responses from Supabase
-            if isinstance(job_data, list):
-                job = job_data[0] if job_data else None
-            else:
-                job = job_data
+            job_id = user_job.get('job_id')
+            job = jobs_by_id.get(job_id) if job_id else None
 
             if not job or not job.get('title'):
                 continue
