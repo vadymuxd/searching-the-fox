@@ -392,11 +392,17 @@ def send_email_to_user(supabase_client, user_id: str) -> Dict:
             f"new_user_jobs_count={len(user_jobs)}"
         )
 
-        for sample in (user_jobs or [])[:5]:
+        # Log a few raw user_jobs to understand Supabase response shape
+        for idx, sample in enumerate((user_jobs or [])[:5]):
+            logger.info(f"[email_service] Sample user_job[{idx}] raw: {sample}")
             job_data_sample = sample.get('jobs')
             job_sample = job_data_sample[0] if isinstance(job_data_sample, list) and job_data_sample else job_data_sample
-            title_sample = job_sample.get('title') if job_sample else None
-            logger.info(f"[email_service] Sample job title before filtering: {title_sample}")
+            if isinstance(job_data_sample, list):
+                logger.info(f"[email_service] Sample user_job[{idx}] jobs is list, length={len(job_data_sample)}")
+            else:
+                logger.info(f"[email_service] Sample user_job[{idx}] jobs is type={type(job_data_sample)}")
+            title_sample = job_sample.get('title') if isinstance(job_sample, dict) else None
+            logger.info(f"[email_service] Sample user_job[{idx}] title before filtering: {title_sample}")
 
         # 4. Filter jobs by keywords using the SAME logic as send-test route:
         # case-insensitive substring match: jobTitle.toLowerCase().includes(keyword.toLowerCase())
