@@ -5,7 +5,7 @@ Mirrors the TypeScript emailService.ts functionality
 
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Optional, Any
 import json
 import resend
@@ -45,10 +45,15 @@ def render_email_template(jobs: List[Dict], user_email: str) -> str:
                 except:
                     pass
             
-            # Calculate relative time
+            # Calculate relative time (use timezone-aware UTC dates to avoid naive/aware errors)
             if date_obj:
-                today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-                date_obj = date_obj.replace(hour=0, minute=0, second=0, microsecond=0)
+                # Ensure date_obj is timezone-aware in UTC
+                if date_obj.tzinfo is None:
+                    date_obj = date_obj.replace(tzinfo=timezone.utc)
+
+                today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+                date_obj = date_obj.astimezone(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
                 diff_days = (today - date_obj).days
                 
                 if diff_days == 0:
