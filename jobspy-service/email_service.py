@@ -454,6 +454,33 @@ def send_email_to_user(supabase_client, user_id: str) -> Dict:
             f"keywords_used={keywords}"
         )
         
+        # 4b. Sort jobs by date_posted (newest first: Today -> Yesterday -> older dates)
+        def get_job_sort_key(job: Dict) -> datetime:
+            """Extract date for sorting, defaulting to epoch if not available"""
+            try:
+                date_posted = job.get('date_posted')
+                if date_posted and str(date_posted) not in ['Not specified', 'null', 'undefined', 'None', '']:
+                    date_obj = datetime.fromisoformat(str(date_posted).replace('Z', '+00:00'))
+                    if date_obj.tzinfo is None:
+                        date_obj = date_obj.replace(tzinfo=timezone.utc)
+                    return date_obj
+                
+                # Fallback to created_at
+                created_at = job.get('created_at')
+                if created_at:
+                    date_obj = datetime.fromisoformat(str(created_at).replace('Z', '+00:00'))
+                    if date_obj.tzinfo is None:
+                        date_obj = date_obj.replace(tzinfo=timezone.utc)
+                    return date_obj
+            except Exception as e:
+                logger.warning(f"Error parsing date for sorting: {e}")
+            
+            # Default to epoch (oldest possible date)
+            return datetime(1970, 1, 1, tzinfo=timezone.utc)
+        
+        # Sort in descending order (newest first)
+        filtered_jobs.sort(key=get_job_sort_key, reverse=True)
+        
         # 5. Send email
         result = send_job_email(
             to=user_email,
@@ -621,6 +648,33 @@ def send_emails_to_subscribed_users(supabase_client) -> Dict:
                         filtered_jobs.append(job)
                 
                 logger.info(f"User {user_email}: {len(filtered_jobs)} NEW jobs match keywords {keywords}")
+                
+                # 4b. Sort jobs by date_posted (newest first: Today -> Yesterday -> older dates)
+                def get_job_sort_key(job: Dict) -> datetime:
+                    """Extract date for sorting, defaulting to epoch if not available"""
+                    try:
+                        date_posted = job.get('date_posted')
+                        if date_posted and str(date_posted) not in ['Not specified', 'null', 'undefined', 'None', '']:
+                            date_obj = datetime.fromisoformat(str(date_posted).replace('Z', '+00:00'))
+                            if date_obj.tzinfo is None:
+                                date_obj = date_obj.replace(tzinfo=timezone.utc)
+                            return date_obj
+                        
+                        # Fallback to created_at
+                        created_at = job.get('created_at')
+                        if created_at:
+                            date_obj = datetime.fromisoformat(str(created_at).replace('Z', '+00:00'))
+                            if date_obj.tzinfo is None:
+                                date_obj = date_obj.replace(tzinfo=timezone.utc)
+                            return date_obj
+                    except Exception as e:
+                        logger.warning(f"Error parsing date for sorting: {e}")
+                    
+                    # Default to epoch (oldest possible date)
+                    return datetime(1970, 1, 1, tzinfo=timezone.utc)
+                
+                # Sort in descending order (newest first)
+                filtered_jobs.sort(key=get_job_sort_key, reverse=True)
                 
                 # 5. Send email (even if 0 jobs, so user knows the system is working)
                 result = send_job_email(

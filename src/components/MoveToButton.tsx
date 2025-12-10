@@ -5,8 +5,6 @@ import { Button, Menu, rem } from '@mantine/core';
 import { IconChevronDown } from '@tabler/icons-react';
 import { JobStatus } from '@/types/supabase';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { jobOperationStorage } from '@/lib/localStorage';
-import { processJobOperation } from '@/lib/jobOperationProcessor';
 
 interface MoveToButtonProps {
   selectedJobs: Array<{ userJobId: string; title: string; company: string }>;
@@ -64,43 +62,65 @@ export function MoveToButton({ selectedJobs, onStatusUpdate, disabled = false, o
     isProcessingRef.current = true;
     setLoading(true);
 
-    // Create new operation state
-    const operationId = `${operationType}-${Date.now()}`;
-    const state = {
-      operationId,
-      userId: user.id,
-      operationType,
-      targetStatus: newStatus,
-      targetStatusLabel: statusLabel,
-      jobs: jobsToProcess.map(j => ({ ...j, jobId: j.userJobId })),
-      processedJobIds: [],
-      startedAt: Date.now(),
-      lastUpdatedAt: Date.now(),
-      completed: false,
-      successCount: 0,
-      failedCount: 0,
-    };
-    
-    jobOperationStorage.saveOperation(state);
-    onOperationStart?.(operationId);
+    try {
+      // Use server-side bulk update API for better performance
+      // This continues even if browser is closed
+      const response = await fetch('/api/jobs/bulk-update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userJobIds: jobsToProcess.map(j => j.userJobId),
+          targetStatus: newStatus,
+          operationType,
+          userId: user.id,
+        }),
+        // keepalive ensures request completes even if user navigates away
+        keepalive: true,
+      });
 
-    // Start processing using the global processor (fire and forget - don't block UI)
-    processJobOperation(user.id).then((success) => {
-      if (success) {
-        // Operation completed successfully
-        onStatusUpdate();
-        onJobsMoved?.();
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Bulk update failed');
       }
+
+      console.log('[MoveToButton] Bulk update completed:', result);
+
+      // Show success notification
+      const { notifications } = await import('@mantine/notifications');
+      const { IconCheck } = await import('@tabler/icons-react');
+      
+      notifications.show({
+        title: operationType === 'remove' ? 'Jobs Removed' : 'Jobs Updated',
+        message: result.message || `${result.successCount} job(s) updated successfully`,
+        color: result.failedCount > 0 ? 'yellow' : 'green',
+        icon: IconCheck ? <IconCheck size={16} /> : undefined,
+        autoClose: 3000,
+      });
+
+      // Trigger UI updates
+      onStatusUpdate();
+      onJobsMoved?.();
+
+    } catch (error) {
+      console.error('[MoveToButton] Error in bulk operation:', error);
+      
+      const { notifications } = await import('@mantine/notifications');
+      const { IconAlertCircle } = await import('@tabler/icons-react');
+      
+      notifications.show({
+        title: 'Update Failed',
+        message: error instanceof Error ? error.message : 'Failed to update jobs',
+        color: 'red',
+        icon: IconAlertCircle ? <IconAlertCircle size={16} /> : undefined,
+        autoClose: 5000,
+      });
+    } finally {
       setLoading(false);
       isProcessingRef.current = false;
-    }).catch((error) => {
-      console.error('Error starting job operation:', error);
-      setLoading(false);
-      isProcessingRef.current = false;
-    });
-    
-    // Don't block - return immediately so user can navigate
-    // The operation will continue in the background via the global processor
+    }
   };
 
   const handleStatusChange = async (newStatus: JobStatus) => {
