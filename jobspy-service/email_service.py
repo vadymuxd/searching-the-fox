@@ -256,19 +256,15 @@ def send_job_email(to: str, jobs: List[Dict], user_name: Optional[str] = None) -
         }
         
         payload = {
-            'from': {
-                'email': SENDER_EMAIL,
-                'name': SENDER_NAME
-            },
-            'to': [
-                {
-                    'email': to,
-                    'name': user_name if user_name else to.split('@')[0]
-                }
-            ],
+            'from': SENDER_EMAIL,
+            'from_name': SENDER_NAME,
+            'to': to,
+            'to_name': user_name if user_name else to.split('@')[0],
             'subject': subject,
-            'html': html_content,
+            'html_body': html_content,
         }
+        
+        logger.info(f'Sending email via Maileroo to {to} with subject: {subject}')
         
         response = requests.post(
             MAILEROO_API_URL,

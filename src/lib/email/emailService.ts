@@ -5,8 +5,8 @@ import { renderEmailTemplate } from './renderEmailTemplate';
 const SENDER_EMAIL = 'noreply@search-the-fox.com'; // Change to your verified domain
 const SENDER_NAME = 'Search The Fox';
 
-// Maileroo API configuration
-const MAILEROO_API_URL = 'https://smtp.maileroo.com/send';
+// Maileroo API configuration (Email API v2)
+const MAILEROO_API_URL = 'https://smtp.maileroo.com/api/v2/emails';
 
 export interface SendJobEmailParams {
   to: string;
@@ -42,27 +42,36 @@ export async function sendJobEmail({
 
     const htmlContent = renderEmailTemplate(jobs, to);
 
-    // Send email via Maileroo API
+    // Build Maileroo Email API payload
+    const payload = {
+      from: {
+        address: SENDER_EMAIL,
+        display_name: SENDER_NAME,
+      },
+      to: [
+        {
+          address: to,
+          display_name: userName || to.split('@')[0],
+        },
+      ],
+      subject,
+      html: htmlContent,
+    };
+
+    console.log('Sending email via Maileroo with payload:', {
+      to,
+      subject,
+      from: SENDER_EMAIL,
+      endpoint: MAILEROO_API_URL,
+    });
+
     const response = await fetch(MAILEROO_API_URL, {
       method: 'POST',
       headers: {
-        'X-API-Key': process.env.MAILEROO_API_KEY,
+        'X-Api-Key': process.env.MAILEROO_API_KEY as string,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        from: {
-          email: SENDER_EMAIL,
-          name: SENDER_NAME,
-        },
-        to: [
-          {
-            email: to,
-            name: userName || to.split('@')[0],
-          },
-        ],
-        subject: subject,
-        html: htmlContent,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
