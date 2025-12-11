@@ -57,10 +57,6 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
   const [searchDataLoading, setSearchDataLoading] = useState(true);
   const [isFiltered, setIsFiltered] = useState(false);
   const [clearSelectionsKey, setClearSelectionsKey] = useState(0); // Key to trigger clearing selections
-  // Overlay control: keep overlay until content is stable to avoid flicker
-  const [isSettling, setIsSettling] = useState(true);
-  const [overlayMounted, setOverlayMounted] = useState(true);
-  const [hasSettledOnce, setHasSettledOnce] = useState(false);
 
   // Memoized callback for filtered jobs change to prevent PageFilter reloads
   const handleFilteredJobsChange = useCallback((filteredJobs: Job[]) => {
@@ -141,56 +137,6 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, status]);
-
-  // Start/stop settling window based on data loading and subsequent state updates
-  useEffect(() => {
-    if (searchDataLoading) {
-      setIsSettling(true);
-      return;
-    }
-    // When loading finishes, we'll wait for content changes to settle
-    const t = setTimeout(() => setIsSettling(true), 0);
-    return () => clearTimeout(t);
-  }, [searchDataLoading]);
-
-  // Debounce: once loading is done, wait for a quiet period with no content-affecting changes
-  useEffect(() => {
-    if (searchDataLoading) return;
-    const t = setTimeout(() => setIsSettling(false), 200);
-    return () => clearTimeout(t);
-  }, [jobs, filteredJobs, currentSearch, isFiltered, searchDataLoading]);
-
-  const showOverlay = !hasSettledOnce && (searchDataLoading || isSettling);
-
-  // Mount overlay during show and for the duration of fade-out
-  useEffect(() => {
-    if (showOverlay) {
-      setOverlayMounted(true);
-      return;
-    }
-    const t = setTimeout(() => setOverlayMounted(false), 300); // match CSS transition
-    return () => clearTimeout(t);
-  }, [showOverlay]);
-
-  // Mark as settled once overlay is fully hidden
-  useEffect(() => {
-    if (!searchDataLoading && !isSettling && !hasSettledOnce) {
-      const t = setTimeout(() => setHasSettledOnce(true), 310);
-      return () => clearTimeout(t);
-    }
-  }, [searchDataLoading, isSettling, hasSettledOnce]);
-
-  // Additionally, prevent overlay from ever reappearing once it transitions to hidden
-  const prevShowOverlayRef = useRef<boolean>(showOverlay);
-  useEffect(() => {
-    if (prevShowOverlayRef.current && !showOverlay && !hasSettledOnce) {
-      // Immediately lock the overlay to never show again this session
-      setHasSettledOnce(true);
-    }
-    prevShowOverlayRef.current = showOverlay;
-  }, [showOverlay, hasSettledOnce]);
-
-  // No measuring needed when overlay is absolute within the content area
 
   // Load guest data from localStorage
   const loadGuestData = () => {
@@ -544,16 +490,12 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
                   <Box
                     style={{
                       display: 'flex',
-                      flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      padding: '2rem 0',
+                      minHeight: '60vh',
                     }}
                   >
-                    <Loader size="sm" />
-                    <Text size="sm" c="dimmed" style={{ marginTop: '0.5rem' }}>
-                      Loading jobs
-                    </Text>
+                    <Loader color="dark" size="md" />
                   </Box>
                 ) : jobs.length === 0 ? (
                   <Box style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
@@ -726,30 +668,6 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
 
     </Box>
 
-      {/* Loading overlay: fixed position to cover viewport below header/tabs, not affected by content layout */}
-      {overlayMounted && (
-        <Box
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: '#ffffff',
-            zIndex: 5,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'opacity 300ms ease',
-            willChange: 'opacity',
-            opacity: showOverlay ? 1 : 0,
-            pointerEvents: showOverlay ? 'auto' : 'none',
-          }}
-        >
-          <Loader color="dark" size="md" />
-        </Box>
-      )}
-      
       {/* Auth Modal */}
       <AuthModal 
         opened={authModalOpened} 
