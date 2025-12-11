@@ -23,11 +23,11 @@ Update your Supabase site URL to use the custom confirmation callback:
 
 In your Supabase Dashboard:
 1. Go to **Authentication** → **URL Configuration**
-2. Set **Site URL** to: `https://searching-the-fox.vercel.app/auth/callback/confirm`
+2. Set **Site URL** to: `https://search-the-fox.com/auth/callback/confirm`
 3. Add the following **Redirect URLs**:
-   - `https://searching-the-fox.vercel.app/auth/callback/confirm`
-   - `https://searching-the-fox.vercel.app/auth/callback`
-   - `https://searching-the-fox.vercel.app/`
+   - `https://search-the-fox.com/auth/callback/confirm`
+   - `https://search-the-fox.com/auth/callback`
+   - `https://search-the-fox.com/`
 
 ## 2. How the Flow Works
 

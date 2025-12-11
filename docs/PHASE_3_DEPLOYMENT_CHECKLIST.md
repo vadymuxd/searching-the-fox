@@ -90,14 +90,14 @@ curl -X POST https://truelist-jobspy-api.onrender.com/test-email-queue
 **Option B: Trigger full CRON flow** (recommended for real test)
 
 Prerequisites:
-1. Go to https://searching-the-fox.vercel.app/notifications
+1. Go to https://search-the-fox.com/notifications
 2. Toggle "Email Notifications" ON
 3. Ensure you have keywords configured
 
 Then trigger:
 ```bash
 # Manually trigger CRON job from Vercel
-curl -X POST https://searching-the-fox.vercel.app/api/cron/trigger-search
+curl -X POST https://search-the-fox.com/api/cron/trigger-search
 ```
 
 Watch Render logs for:

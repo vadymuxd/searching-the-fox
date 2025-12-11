@@ -91,7 +91,7 @@ export default function EmailTemplatePage() {
         borderRadius: '8px 8px 0 0'
       }}>
         <a 
-          href="https://searching-the-fox.vercel.app/results"
+          href="https://search-the-fox.com/results"
           target="_blank"
           rel="noopener noreferrer"
           style={{

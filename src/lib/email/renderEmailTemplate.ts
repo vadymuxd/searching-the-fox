@@ -20,8 +20,8 @@ export function renderEmailTemplate(jobs: Job[], userEmail: string): string {
     
     <!-- Logo Header -->
     <div style="background-color: #ffffff; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-      <a href="https://searching-the-fox.vercel.app/results" target="_blank" style="text-decoration: none; display: inline-block;">
-        <img src="https://searching-the-fox.vercel.app/favicon.png" alt="Searching The Fox" style="height: 60px; width: auto; margin-bottom: 8px;" />
+      <a href="https://search-the-fox.com/results" target="_blank" style="text-decoration: none; display: inline-block;">
+        <img src="https://search-the-fox.com/favicon.png" alt="Searching The Fox" style="height: 60px; width: auto; margin-bottom: 8px;" />
       </a>
       <p style="color: #495057; margin: 0; font-size: 14px;">
         ${jobCount} new job${jobCount !== 1 ? 's' : ''} available

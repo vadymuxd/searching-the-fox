@@ -7,7 +7,7 @@ This document explains how to test job searches locally without CORS issues.
 ## The Problem
 
 When running the Next.js app locally (`localhost:3000`), direct API calls to the Render-hosted JobSpy API fail due to CORS restrictions. The Render API only allows requests from:
-- `https://searching-the-fox.vercel.app` (production)
+- `https://search-the-fox.com` (production)
 - Vercel preview deployments
 
 ## The Solution

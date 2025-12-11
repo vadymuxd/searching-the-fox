@@ -10,18 +10,18 @@ The original auth flow had issues with:
 ## Solution
 
 ### Updated Supabase Configuration
-**Site URL**: `https://searching-the-fox.vercel.app/auth/callback`
+**Site URL**: `https://search-the-fox.com/auth/callback`
 
 **Redirect URLs**:
-- `https://searching-the-fox.vercel.app/`
-- `https://searching-the-fox.vercel.app/auth/callback`
-- `https://searching-the-fox.vercel.app/results`
-- `https://searching-the-fox.vercel.app/auth/error`
+- `https://search-the-fox.com/`
+- `https://search-the-fox.com/auth/callback`
+- `https://search-the-fox.com/results`
+- `https://search-the-fox.com/auth/error`
 
 ### New Auth Flow
 
 1. **User clicks email confirmation link**
-   - Supabase sends user to: `https://searching-the-fox.vercel.app/auth/callback?token_hash=...&type=email`
+   - Supabase sends user to: `https://search-the-fox.com/auth/callback?token_hash=...&type=email`
 
 2. **Auth callback route handles confirmation**
    - `/auth/callback/route.ts` verifies the email token

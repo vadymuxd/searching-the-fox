@@ -40,7 +40,7 @@ By default, Resend allows sending from `onboarding@resend.dev` for testing.
 
 For production emails:
 1. In Resend dashboard, go to **Domains**
-2. Add your domain (e.g., `searching-the-fox.vercel.app`)
+2. Add your domain (e.g., `search-the-fox.com` or `mail.search-the-fox.com`)
 3. Add the DNS records they provide to your domain
 4. Wait for verification (usually takes a few minutes)
 

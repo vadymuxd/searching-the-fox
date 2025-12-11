@@ -199,14 +199,14 @@ async def test_email_queue():
 ### Test 2: End-to-End CRON Flow
 
 1. **Enable email notifications** for your test user:
-   - Go to https://searching-the-fox.vercel.app/notifications
+   - Go to https://search-the-fox.com/notifications
    - Toggle "Email Notifications" ON
    - Ensure you have keywords set up in your profile
 
 2. **Trigger CRON manually**:
    ```bash
    # From your local machine:
-   curl -X POST https://searching-the-fox.vercel.app/api/cron/trigger-search
+   curl -X POST https://search-the-fox.com/api/cron/trigger-search
    ```
 
 3. **Watch Render logs**:
@@ -344,7 +344,7 @@ Once Phase 3 is live and tested:
 2. **Gather feedback** - Ask users if emails are helpful
 3. **Optimize keywords** - If too many/too few emails, adjust keyword matching logic
 4. **Add unsubscribe link** - Required for production email compliance
-5. **Verify domain** - Move from `onboarding@resend.dev` to `noreply@searching-the-fox.vercel.app`
+5. **Verify domain** - Move from `onboarding@resend.dev` to `noreply@search-the-fox.com` (or `noreply@mail.search-the-fox.com`)
 
 ## Rollback Plan
 

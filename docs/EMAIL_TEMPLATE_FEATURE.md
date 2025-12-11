@@ -40,7 +40,7 @@ The email template feature allows users to view NEW jobs filtered by their saved
 **Features:**
 - ✅ Requires authentication (redirects to home if not logged in)
 - ✅ Fetches NEW jobs filtered by keywords via API using authenticated user's ID
-- ✅ Clickable logo linking to https://searching-the-fox.vercel.app/results
+- ✅ Clickable logo linking to https://search-the-fox.com/results
 - ✅ Displays company logo with fallback (first letter of company name)
 - ✅ Shows company name
 - ✅ Shows job title

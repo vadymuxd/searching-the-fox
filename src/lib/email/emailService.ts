@@ -4,7 +4,7 @@ import { renderEmailTemplate } from './renderEmailTemplate';
 
 // Sender email - change this after verifying your domain in Resend
 const SENDER_EMAIL = 'onboarding@resend.dev'; // Default test email
-// After domain verification, use: 'noreply@searching-the-fox.vercel.app'
+// After domain verification, use: 'noreply@search-the-fox.com' (or 'noreply@mail.search-the-fox.com')
 
 export interface SendJobEmailParams {
   to: string;

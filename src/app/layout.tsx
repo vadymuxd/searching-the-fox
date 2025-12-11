@@ -46,10 +46,14 @@ const horas = localFont({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://search-the-fox.com'),
   title: "Searching The Fox - Job Search Platform",
   description: "Find your perfect job with Searching The Fox - a comprehensive platform to lookup job postings from different job boards including LinkedIn, Indeed, and Glassdoor all in one place. Advanced search and filtering capabilities.",
   keywords: "job search, job board, linkedin jobs, indeed jobs, glassdoor jobs, job aggregator, job finder, career search, employment",
   authors: [{ name: "Searching The Fox" }],
+  alternates: {
+    canonical: '/',
+  },
   icons: {
     icon: [
       { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
