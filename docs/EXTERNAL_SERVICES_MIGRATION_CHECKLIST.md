@@ -71,9 +71,9 @@ Set up 301 redirects from old domain:
 
 ### D. Redeploy
 
-- [ ] Trigger a new deployment (push to main or click **Redeploy** button)
-- [ ] Wait for deployment to complete
-- [ ] Visit `https://search-the-fox.com` and verify site loads correctly
+- [x] Trigger a new deployment (push to main or click **Redeploy** button)
+- [x] Wait for deployment to complete
+- [x] Visit `https://search-the-fox.com` and verify site loads correctly
 
 ---
 
@@ -107,11 +107,11 @@ Update Supabase to use the new domain for auth redirects:
 
 After updating Vercel and Supabase:
 
-- [ ] Test new user sign-up flow
-- [ ] Test email confirmation link (check that it redirects to `https://search-the-fox.com/...`)
-- [ ] Test login flow
+- [X] Test new user sign-up flow
+- [x] Test email confirmation link (check that it redirects to `https://search-the-fox.com/...`)
+- [x] Test login flow
 - [ ] Test password reset flow
-- [ ] Test logout
+- [x] Test logout
 
 ### D. Clean Up Old URLs (After Stable Period)
 
@@ -127,16 +127,16 @@ After 1-2 weeks with no issues:
 
 Update OAuth redirect URIs in Google Cloud Console:
 
-- [ ] Log in to Google Cloud Console: https://console.cloud.google.com
-- [ ] Select your project
-- [ ] Go to **APIs & Services** → **Credentials**
-- [ ] Find your OAuth 2.0 Client ID (used for Supabase auth)
-- [ ] Click to edit
+- [x] Log in to Google Cloud Console: https://console.cloud.google.com
+- [x] Select your project
+- [x] Go to **APIs & Services** → **Credentials**
+- [x] Find your OAuth 2.0 Client ID (used for Supabase auth)
+- [x] Click to edit
 
 ### A. Update Authorized JavaScript Origins
 
-- [ ] Add: `https://search-the-fox.com`
-- [ ] Keep temporarily: `https://searching-the-fox.vercel.app` (for rollback safety)
+- [x] Add: `https://search-the-fox.com`
+- [x] Keep temporarily: `https://searching-the-fox.vercel.app` (for rollback safety)
 
 ### B. Update Authorized Redirect URIs
 
@@ -148,8 +148,8 @@ Update OAuth redirect URIs in Google Cloud Console:
 
 ### C. Save Changes
 
-- [ ] Click **Save**
-- [ ] Test Google OAuth login flow from `https://search-the-fox.com`
+- [x] Click **Save**
+- [x] Test Google OAuth login flow from `https://search-the-fox.com`
 
 ### D. Other Providers (if applicable)
 
@@ -172,8 +172,8 @@ If you use GitHub, Facebook, or other OAuth providers:
 
 Configure email sending from your new domain:
 
-- [ ] Log in to Resend dashboard: https://resend.com
-- [ ] Go to **Domains**
+- [x] Log in to Resend dashboard: https://resend.com
+- [x] Go to **Domains**
 
 ### A. Add and Verify Domain
 
@@ -212,9 +212,9 @@ After Vercel redeploy with new domain:
 
 Update CORS allowed origins on your Render service:
 
-- [ ] Log in to Render dashboard: https://dashboard.render.com
-- [ ] Select your service: `truelist-jobspy-api` (or similar)
-- [ ] Go to **Environment** (or wherever CORS is configured)
+- [x] Log in to Render dashboard: https://dashboard.render.com
+- [x] Select your service: `truelist-jobspy-api` (or similar)
+- [x] Go to **Environment** (or wherever CORS is configured)
 
 ### A. Update Allowed Origins
 
