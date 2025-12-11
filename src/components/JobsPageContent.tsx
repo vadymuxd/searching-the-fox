@@ -112,6 +112,9 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
 
   const loadData = useCallback(async () => {
     setSearchDataLoading(true);
+    // Clear current jobs so tab switch feels instant and we can show a loader
+    setJobs([]);
+    setFilteredJobs([]);
     
     if (user) {
       await loadUserJobsFromCache(user.id, currentStatusRef.current);
@@ -537,7 +540,22 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
             >
               <Stack gap="xl">
                 {/* Results */}
-                {jobs.length === 0 ? (
+                {searchDataLoading ? (
+                  <Box
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '2rem 0',
+                    }}
+                  >
+                    <Loader size="sm" />
+                    <Text size="sm" c="dimmed" style={{ marginTop: '0.5rem' }}>
+                      Loading jobs
+                    </Text>
+                  </Box>
+                ) : jobs.length === 0 ? (
                   <Box style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
                     {status === 'new' ? (
                       <Button
