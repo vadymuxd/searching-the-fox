@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 SENDER_EMAIL = 'noreply@search-the-fox.com'  # Change to your verified domain
 SENDER_NAME = 'Search The Fox'
 
-# Maileroo API configuration
-MAILEROO_API_URL = 'https://smtp.maileroo.com/send'
+# Maileroo Email API v2 endpoint
+MAILEROO_API_URL = 'https://smtp.maileroo.com/api/v2/emails'
 
 
 def render_email_template(jobs: List[Dict], user_email: str) -> str:
@@ -249,28 +249,34 @@ def send_job_email(to: str, jobs: List[Dict], user_name: Optional[str] = None) -
         
         html_content = render_email_template(jobs, to)
         
-        # Send email via Maileroo API
+        # Send email via Maileroo Email API v2
         headers = {
-            'X-API-Key': api_key,
+            'X-Api-Key': api_key,
             'Content-Type': 'application/json',
         }
         
         payload = {
-            'from': SENDER_EMAIL,
-            'from_name': SENDER_NAME,
-            'to': to,
-            'to_name': user_name if user_name else to.split('@')[0],
+            'from': {
+                'address': SENDER_EMAIL,
+                'display_name': SENDER_NAME,
+            },
+            'to': [
+                {
+                    'address': to,
+                    'display_name': user_name if user_name else to.split('@')[0],
+                }
+            ],
             'subject': subject,
-            'html_body': html_content,
+            'html': html_content,
         }
         
-        logger.info(f'Sending email via Maileroo to {to} with subject: {subject}')
+        logger.info(f"Sending email via Maileroo to {to} with subject: {subject}")
         
         response = requests.post(
             MAILEROO_API_URL,
             json=payload,
             headers=headers,
-            timeout=30
+            timeout=30,
         )
         
         response.raise_for_status()
