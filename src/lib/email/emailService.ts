@@ -1,10 +1,12 @@
-import { Resend } from 'resend';
 import { Job } from '@/types/job';
 import { renderEmailTemplate } from './renderEmailTemplate';
 
-// Sender email - change this after verifying your domain in Resend
-const SENDER_EMAIL = 'onboarding@resend.dev'; // Default test email
-// After domain verification, use: 'noreply@search-the-fox.com' (or 'noreply@mail.search-the-fox.com')
+// Sender email - configure this in your Maileroo account
+const SENDER_EMAIL = 'noreply@search-the-fox.com'; // Change to your verified domain
+const SENDER_NAME = 'Search The Fox';
+
+// Maileroo API configuration
+const MAILEROO_API_URL = 'https://smtp.maileroo.com/send';
 
 export interface SendJobEmailParams {
   to: string;
@@ -13,7 +15,7 @@ export interface SendJobEmailParams {
 }
 
 /**
- * Send job notification email to a user
+ * Send job notification email to a user via Maileroo
  */
 export async function sendJobEmail({
   to,
@@ -22,18 +24,16 @@ export async function sendJobEmail({
 }: SendJobEmailParams): Promise<{ success: boolean; error?: string; messageId?: string }> {
   try {
     // Debug logging
-    console.log('Checking RESEND_API_KEY...');
-    console.log('Available env vars:', Object.keys(process.env).filter(k => k.includes('RESEND') || k.includes('NEXT')));
+    console.log('Checking MAILEROO_API_KEY...');
+    console.log('Available env vars:', Object.keys(process.env).filter(k => k.includes('MAILEROO') || k.includes('NEXT')));
     
-    if (!process.env.RESEND_API_KEY) {
-      console.error('RESEND_API_KEY is not configured');
+    if (!process.env.MAILEROO_API_KEY) {
+      console.error('MAILEROO_API_KEY is not configured');
       return {
         success: false,
-        error: 'Email service is not configured. Please add RESEND_API_KEY to environment variables.',
+        error: 'Email service is not configured. Please add MAILEROO_API_KEY to environment variables.',
       };
     }
-
-    const resend = new Resend(process.env.RESEND_API_KEY);
 
     const jobCount = jobs.length;
     const subject = jobCount === 0 
@@ -42,25 +42,45 @@ export async function sendJobEmail({
 
     const htmlContent = renderEmailTemplate(jobs, to);
 
-    const { data, error } = await resend.emails.send({
-      from: SENDER_EMAIL,
-      to: [to],
-      subject: subject,
-      html: htmlContent,
+    // Send email via Maileroo API
+    const response = await fetch(MAILEROO_API_URL, {
+      method: 'POST',
+      headers: {
+        'X-API-Key': process.env.MAILEROO_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: {
+          email: SENDER_EMAIL,
+          name: SENDER_NAME,
+        },
+        to: [
+          {
+            email: to,
+            name: userName || to.split('@')[0],
+          },
+        ],
+        subject: subject,
+        html: htmlContent,
+      }),
     });
 
-    if (error) {
-      console.error('Error sending email via Resend:', error);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: response.statusText }));
+      console.error('Error sending email via Maileroo:', errorData);
       return {
         success: false,
-        error: error.message || 'Failed to send email',
+        error: errorData.message || errorData.error || 'Failed to send email',
       };
     }
 
-    console.log('Email sent successfully:', data?.id);
+    const result = await response.json();
+    const messageId = result.message_id || result.id;
+
+    console.log('Email sent successfully via Maileroo:', messageId);
     return {
       success: true,
-      messageId: data?.id,
+      messageId: messageId,
     };
   } catch (error) {
     console.error('Error in sendJobEmail:', error);

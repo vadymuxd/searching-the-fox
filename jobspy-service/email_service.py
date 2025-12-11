@@ -1,5 +1,5 @@
 """
-Email service for sending job notifications via Resend API
+Email service for sending job notifications via Maileroo API
 Mirrors the TypeScript emailService.ts functionality
 """
 
@@ -8,13 +8,16 @@ import logging
 from datetime import datetime, timezone
 from typing import List, Dict, Optional, Any
 import json
-import resend
+import requests
 
 logger = logging.getLogger(__name__)
 
-# Sender email - change this after verifying your domain in Resend
-SENDER_EMAIL = 'onboarding@resend.dev'  # Default test email
-# After domain verification, use: 'noreply@searching-the-fox.vercel.app'
+# Sender email - configure this in your Maileroo account
+SENDER_EMAIL = 'noreply@search-the-fox.com'  # Change to your verified domain
+SENDER_NAME = 'Search The Fox'
+
+# Maileroo API configuration
+MAILEROO_API_URL = 'https://smtp.maileroo.com/send'
 
 
 def render_email_template(jobs: List[Dict], user_email: str) -> str:
@@ -225,7 +228,7 @@ def render_email_template(jobs: List[Dict], user_email: str) -> str:
 
 def send_job_email(to: str, jobs: List[Dict], user_name: Optional[str] = None) -> Dict:
     """
-    Send job notification email to a user via Resend API
+    Send job notification email to a user via Maileroo API
     
     Args:
         to: Recipient email address
@@ -233,40 +236,73 @@ def send_job_email(to: str, jobs: List[Dict], user_name: Optional[str] = None) -
         user_name: Optional user name for personalization
     """
     try:
-        # Check if Resend API key is configured
-        api_key = os.getenv('RESEND_API_KEY')
+        # Check if Maileroo API key is configured
+        api_key = os.getenv('MAILEROO_API_KEY')
         if not api_key:
             return {
                 'success': False,
-                'error': 'Email service is not configured. Please add RESEND_API_KEY to environment variables.'
+                'error': 'Email service is not configured. Please add MAILEROO_API_KEY to environment variables.'
             }
-        
-        # Initialize Resend with API key
-        resend.api_key = api_key
         
         job_count = len(jobs)
         subject = 'No New Jobs This Time' if job_count == 0 else f"{job_count} New Job{'s' if job_count != 1 else ''} Matching Your Criteria"
         
         html_content = render_email_template(jobs, to)
         
-        # Send email via Resend
-        params = {
-            'from': SENDER_EMAIL,
-            'to': [to],
+        # Send email via Maileroo API
+        headers = {
+            'X-API-Key': api_key,
+            'Content-Type': 'application/json',
+        }
+        
+        payload = {
+            'from': {
+                'email': SENDER_EMAIL,
+                'name': SENDER_NAME
+            },
+            'to': [
+                {
+                    'email': to,
+                    'name': user_name if user_name else to.split('@')[0]
+                }
+            ],
             'subject': subject,
             'html': html_content,
         }
         
-        response = resend.Emails.send(params)
+        response = requests.post(
+            MAILEROO_API_URL,
+            json=payload,
+            headers=headers,
+            timeout=30
+        )
         
-        logger.info(f'Email sent successfully to {to}: {response.get("id")}')
+        response.raise_for_status()
+        
+        result = response.json()
+        message_id = result.get('message_id') or result.get('id')
+        
+        logger.info(f'Email sent successfully to {to} via Maileroo: {message_id}')
         return {
             'success': True,
-            'message_id': response.get('id')
+            'message_id': message_id
         }
         
+    except requests.exceptions.RequestException as error:
+        logger.error(f'Error sending email to {to} via Maileroo: {error}')
+        error_message = str(error)
+        if hasattr(error, 'response') and error.response is not None:
+            try:
+                error_data = error.response.json()
+                error_message = error_data.get('message') or error_data.get('error') or error_message
+            except:
+                error_message = error.response.text or error_message
+        return {
+            'success': False,
+            'error': error_message
+        }
     except Exception as error:
-        logger.error(f'Error sending email to {to}: {error}')
+        logger.error(f'Unexpected error sending email to {to}: {error}')
         return {
             'success': False,
             'error': str(error)
