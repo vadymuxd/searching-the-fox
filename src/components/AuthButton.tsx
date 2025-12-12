@@ -1,11 +1,13 @@
 'use client';
 
 import { Button, Menu, Text, Avatar } from '@mantine/core';
-import { IconLogout, IconUser, IconBriefcase, IconBell } from '@tabler/icons-react';
+import { IconLogout, IconUser, IconBriefcase, IconBell, IconMail, IconPlayerPlay, IconLogin } from '@tabler/icons-react';
 import { signOut } from '@/lib/auth/actions';
 import { useRouter } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useState } from 'react';
+import { VideoPlayerModal } from './VideoPlayerModal';
 
 interface AuthButtonProps {
   onSignInClick: () => void;
@@ -14,6 +16,15 @@ interface AuthButtonProps {
 export function AuthButton({ onSignInClick }: AuthButtonProps) {
   const { user, loading } = useAuth(); // Use the centralized auth context
   const router = useRouter();
+  const [videoModalOpened, setVideoModalOpened] = useState(false);
+
+  const handleSendFeedback = () => {
+    window.location.href = 'mailto:dhtoque@gmail.com?subject=Search The Fox: Feedback';
+  };
+
+  const handleWatchVideo = () => {
+    setVideoModalOpened(true);
+  };
 
   const handleSignOut = async () => {
     try {
@@ -51,6 +62,14 @@ export function AuthButton({ onSignInClick }: AuthButtonProps) {
         color="blue"
         onClick={onSignInClick}
         size="sm"
+        styles={{
+          root: {
+            '&:hover': {
+              backgroundColor: 'transparent',
+            },
+          },
+        }}
+        leftSection={<IconLogin size={16} />}
       >
         Sign In
       </Button>
@@ -67,6 +86,13 @@ export function AuthButton({ onSignInClick }: AuthButtonProps) {
           variant="subtle"
           color="blue"
           size="sm"
+          styles={{
+            root: {
+              '&:hover': {
+                backgroundColor: 'transparent',
+              },
+            },
+          }}
           leftSection={<Avatar size="sm" radius="xl" color="blue">{displayName[0].toUpperCase()}</Avatar>}
         >
           {displayName}
@@ -92,6 +118,19 @@ export function AuthButton({ onSignInClick }: AuthButtonProps) {
           Notifications
         </Menu.Item>
         <Menu.Item
+          leftSection={<IconMail size={14} />}
+          onClick={handleSendFeedback}
+        >
+          Feedback
+        </Menu.Item>
+        <Menu.Item
+          leftSection={<IconPlayerPlay size={14} />}
+          onClick={handleWatchVideo}
+        >
+          How It Works
+        </Menu.Item>
+        <Menu.Divider />
+        <Menu.Item
           leftSection={<IconLogout size={14} />}
           color="red"
           onClick={handleSignOut}
@@ -99,6 +138,11 @@ export function AuthButton({ onSignInClick }: AuthButtonProps) {
           Sign Out
         </Menu.Item>
       </Menu.Dropdown>
+      <VideoPlayerModal
+        opened={videoModalOpened}
+        onClose={() => setVideoModalOpened(false)}
+        videoUrl="/Search-The-Fox.mp4"
+      />
     </Menu>
   );
 }

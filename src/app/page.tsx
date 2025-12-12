@@ -279,23 +279,24 @@ export default function HomePage() {
                       style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                     />
                   </Box>
+                  {/* Headline */}
+                  <Text
+                    component="h1"
+                    ta="center"
+                    mb="sm"
+                    style={{
+                      color: '#000',
+                      fontSize: '2rem',
+                      fontWeight: 700,
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Search The Fox
+                  </Text>
                   {/* Auth Button */}
                   <Box style={{ marginBottom: '12px' }}>
                     <AuthButton onSignInClick={() => setAuthModalOpened(true)} />
                   </Box>
-                  {/* Headline as body text, grey */}
-                  <Text 
-                    ta="center" 
-                    mb="lg" 
-                    style={{ 
-                      color: '#888',
-                      fontSize: '1rem',
-                      fontWeight: 400,
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    searching the fox
-                  </Text>
                 </Stack>
               </Box>
             </Box>
@@ -367,39 +368,33 @@ export default function HomePage() {
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
                 </Box>
-                {/* Auth Button */}
-                <Box style={{ marginBottom: '12px' }}>
-                  <AuthButton onSignInClick={() => setAuthModalOpened(true)} />
-                </Box>
-                {/* Headline as body text, grey */}
-                <Text 
-                  ta="center" 
-                  mb="sm" 
-                  style={{ 
-                    color: '#888',
-                    fontSize: '1rem',
-                    fontWeight: 400,
+                {/* Headline */}
+                <Text
+                  component="h1"
+                  ta="center"
+                  mb="sm"
+                  style={{
+                    color: '#000',
+                    fontSize: '2rem',
+                    fontWeight: 700,
                     fontFamily: 'inherit',
                   }}
                 >
-                  searching the fox
+                  Search The Fox
                 </Text>
-                {/* Job Site Icons */}
-                <Box style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                  <Image 
-                    src="/indeed.svg" 
-                    alt="Indeed" 
-                    width={24}
-                    height={24}
-                    style={{ opacity: 0.2 }}
-                  />
-                  <Image 
-                    src="/Linkedin.svg" 
-                    alt="LinkedIn" 
-                    width={24}
-                    height={24}
-                    style={{ opacity: 0.2 }}
-                  />
+                {/* Description text */}
+                <Text
+                  ta="center"
+                  mb="md"
+                  size="sm"
+                  c="dimmed"
+                  style={{ maxWidth: 640, margin: '0 auto' }}
+                >
+                  Search jobs from Linkedin and Indeed. Filter them by exact job titles you want. Group and track job applications. Get email notifications that match your filters every day.
+                </Text>
+                {/* Auth Button */}
+                <Box style={{ marginBottom: '12px' }}>
+                  <AuthButton onSignInClick={() => setAuthModalOpened(true)} />
                 </Box>
                 {/* Search Form */}
                 <Box style={{ width: '100%', maxWidth: '1280px', margin: '0 auto', padding: '0 16px' }}>

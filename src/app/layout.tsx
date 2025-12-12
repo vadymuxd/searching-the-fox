@@ -5,10 +5,11 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
-import { ColorSchemeScript, MantineProvider } from '@mantine/core';
+import { ColorSchemeScript, MantineProvider, Box } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { AuthProvider } from '@/lib/auth/AuthContext';
 import { GlobalSearchMonitor } from '@/components/GlobalSearchMonitor';
+import { Footer } from '@/components/Footer';
 import { theme } from './theme';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -103,7 +104,12 @@ export default function RootLayout({
           <AuthProvider>
             <Notifications />
             <GlobalSearchMonitor />
-            {children}
+            <Box style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+              <Box component="main" style={{ flex: 1 }}>
+                {children}
+              </Box>
+              <Footer />
+            </Box>
           </AuthProvider>
         </MantineProvider>
       </body>
