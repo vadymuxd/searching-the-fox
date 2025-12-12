@@ -17,6 +17,13 @@ export function VideoPlayerModal({ opened, onClose, videoUrl }: VideoPlayerModal
 
     const video = videoRef.current;
 
+    type FullscreenVideoElement = HTMLVideoElement & {
+      webkitEnterFullscreen?: () => Promise<void> | void;
+      webkitRequestFullscreen?: () => Promise<void> | void;
+      mozRequestFullScreen?: () => Promise<void> | void;
+      msRequestFullscreen?: () => Promise<void> | void;
+    };
+
     // Start playback as soon as the video is ready
     const playPromise = video.play();
     if (playPromise && typeof playPromise.then === 'function') {
@@ -26,13 +33,13 @@ export function VideoPlayerModal({ opened, onClose, videoUrl }: VideoPlayerModal
     }
 
     // Request fullscreen for immersive view (best-effort)
-    const anyVideo: any = video;
+    const fullscreenVideo = video as FullscreenVideoElement;
     const requestFullscreen =
       video.requestFullscreen?.bind(video) ||
-      anyVideo.webkitEnterFullscreen?.bind(anyVideo) ||
-      anyVideo.webkitRequestFullscreen?.bind(anyVideo) ||
-      anyVideo.mozRequestFullScreen?.bind(anyVideo) ||
-      anyVideo.msRequestFullscreen?.bind(anyVideo);
+      fullscreenVideo.webkitEnterFullscreen?.bind(fullscreenVideo) ||
+      fullscreenVideo.webkitRequestFullscreen?.bind(fullscreenVideo) ||
+      fullscreenVideo.mozRequestFullScreen?.bind(fullscreenVideo) ||
+      fullscreenVideo.msRequestFullscreen?.bind(fullscreenVideo);
 
     if (requestFullscreen) {
       try {
@@ -69,14 +76,20 @@ export function VideoPlayerModal({ opened, onClose, videoUrl }: VideoPlayerModal
       }
     };
 
-    const handleFullscreenChange = () => {
+    const handleFullscreenChange = (_event?: Event) => {
       // When fullscreen is exited (e.g., via ESC), also close the modal
-      const anyDoc: any = document;
+      type FullscreenDocument = Document & {
+        webkitFullscreenElement?: Element | null;
+        mozFullScreenElement?: Element | null;
+        msFullscreenElement?: Element | null;
+      };
+
+      const fullscreenDoc = document as FullscreenDocument;
       const isFullscreen =
-        document.fullscreenElement ||
-        anyDoc.webkitFullscreenElement ||
-        anyDoc.mozFullScreenElement ||
-        anyDoc.msFullscreenElement;
+        fullscreenDoc.fullscreenElement ||
+        fullscreenDoc.webkitFullscreenElement ||
+        fullscreenDoc.mozFullScreenElement ||
+        fullscreenDoc.msFullscreenElement;
 
       if (!isFullscreen) {
         onClose();
@@ -86,16 +99,16 @@ export function VideoPlayerModal({ opened, onClose, videoUrl }: VideoPlayerModal
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     // Vendor-prefixed fullscreen events for broader support
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange as any);
-    document.addEventListener('mozfullscreenchange', handleFullscreenChange as any);
-    document.addEventListener('MSFullscreenChange', handleFullscreenChange as any);
+  document.addEventListener('webkitfullscreenchange', handleFullscreenChange as EventListener);
+  document.addEventListener('mozfullscreenchange', handleFullscreenChange as EventListener);
+  document.addEventListener('MSFullscreenChange', handleFullscreenChange as EventListener);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange as any);
-      document.removeEventListener('mozfullscreenchange', handleFullscreenChange as any);
-      document.removeEventListener('MSFullscreenChange', handleFullscreenChange as any);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange as EventListener);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange as EventListener);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange as EventListener);
     };
   }, [opened, onClose]);
 
