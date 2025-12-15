@@ -2,6 +2,7 @@
 
 import { useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Box, Loader } from '@mantine/core';
 import JobsPageContent from '@/components/JobsPageContent';
 
 export type JobStatus = 'new' | 'interested' | 'applied' | 'progressed' | 'rejected' | 'archived';
@@ -34,7 +35,13 @@ function ResultsPageContent() {
 
 export default function ResultsPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense
+      fallback={(
+        <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+          <Loader color="dark" size="md" />
+        </Box>
+      )}
+    >
       <ResultsPageContent />
     </Suspense>
   );

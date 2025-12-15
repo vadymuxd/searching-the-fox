@@ -429,16 +429,27 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
         <TabNavigation onAuthRequired={handleAuthRequired} onTabChange={onTabChange} backgroundColor="#fff" />
       </div>
 
-  {/* Content area wrapper (below header/tabs) */}
-  <Box style={{ position: 'relative', minHeight: '60vh' }}>
-        {/* Main content is always rendered; loading overlay will cover it to prevent flicker */}
-        <>
+      {/* Content area wrapper (below header/tabs) */}
+      <Box style={{ position: 'relative', minHeight: '60vh' }}>
+        {searchDataLoading ? (
+          <Box
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '60vh',
+            }}
+          >
+            <Loader color="dark" size="md" />
+          </Box>
+        ) : (
+          <>
             {/* Top Section - Search Summary - only show for "new" status */}
-            {status === 'new' && (
-              <Box 
-                style={{ 
+            {status === 'new' && (currentSearch || jobs.length === 0) && (
+              <Box
+                style={{
                   backgroundColor: '#fff',
-                  padding: '0 0 24px 0'
+                  padding: '0 0 24px 0',
                 }}
               >
                 <Container size="xl">
@@ -446,28 +457,21 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
                     <Stack gap="md">
                       {/* Search Summary */}
                       <Text size="sm" fw={400}>
-                        Jobs for <strong>{currentSearch.jobTitle}</strong> in <strong>{currentSearch.location}</strong> from <strong>{getJobBoardName(currentSearch.site)}</strong> posted within <strong>{getTimePeriod(currentSearch.hoursOld)}</strong>
+                        Jobs for <strong>{currentSearch.jobTitle}</strong> in <strong>{currentSearch.location}</strong> from{' '}
+                        <strong>{getJobBoardName(currentSearch.site)}</strong> posted within{' '}
+                        <strong>{getTimePeriod(currentSearch.hoursOld)}</strong>
                       </Text>
                       {/* Action Buttons */}
                       <Group gap={32}>
-                        <TextButton
-                          leftSection={<IconRefresh size={16} />}
-                          onClick={handleRefresh}
-                          size="sm"
-                        >
+                        <TextButton leftSection={<IconRefresh size={16} />} onClick={handleRefresh} size="sm">
                           Search new jobs
                         </TextButton>
-                        <TextButton
-                          leftSection={<IconEdit size={16} />}
-                          onClick={handleEditSearch}
-                          size="sm"
-                        >
+                        <TextButton leftSection={<IconEdit size={16} />} onClick={handleEditSearch} size="sm">
                           Edit search
                         </TextButton>
                       </Group>
                     </Stack>
                   ) : (
-                    // Only show empty state after verifying no data
                     <Text size="lg" c="dimmed">
                       You didn&apos;t perform any search yet
                     </Text>
@@ -486,18 +490,7 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
             >
               <Stack gap="xl">
                 {/* Results */}
-                {searchDataLoading ? (
-                  <Box
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minHeight: '60vh',
-                    }}
-                  >
-                    <Loader color="dark" size="md" />
-                  </Box>
-                ) : jobs.length === 0 ? (
+                {jobs.length === 0 ? (
                   <Box style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
                     {status === 'new' ? (
                       <Button
@@ -543,7 +536,6 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
                         </Group>
                       )}
                     </Group>
-
                     {/* Page Filter */}
                     <PageFilter 
                       jobs={jobs} 
@@ -664,9 +656,9 @@ export default function JobsPageContent({ status, onTabChange }: JobsPageContent
                 )}
               </Stack>
             </Container>
-      </>
-
-    </Box>
+          </>
+        )}
+      </Box>
 
       {/* Auth Modal */}
       <AuthModal 
