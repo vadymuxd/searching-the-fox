@@ -193,9 +193,9 @@ def render_email_template(jobs: List[Dict], user_email: str) -> str:
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f8f9fa;">
   <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
     
-    <!-- Logo Header -->
-    <div style="background-color: #ffffff; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-      <a href="https://searching-the-fox.vercel.app/results" target="_blank" style="text-decoration: none; display: inline-block;">
+        <!-- Logo Header -->
+        <div style="background-color: #ffffff; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <a href="https://www.search-the-fox.com/results" target="_blank" style="text-decoration: none; display: inline-block;">
         <img src="https://searching-the-fox.vercel.app/favicon.png" alt="Searching The Fox" style="height: 60px; width: auto; margin-bottom: 8px;" />
       </a>
       <p style="color: #495057; margin: 0; font-size: 14px;">
